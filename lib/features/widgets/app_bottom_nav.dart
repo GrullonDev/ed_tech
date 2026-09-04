@@ -2,25 +2,34 @@ import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
+/// Pestaña actualmente activa, para resaltarla en [AppBottomNav].
+enum AppTab { circles, rachas, profile }
+
 /// Barra de navegación inferior flotante en forma de píldora. El botón "+"
-/// vive dentro de la misma barra (no como FAB con muesca). La pestaña
-/// "Círculos" es la pantalla actual; "Perfil" navega a [ProfilePage] vía
-/// [onOpenProfile]. "Rachas" queda como marcador visual hasta que exista
-/// esa pantalla.
+/// vive dentro de la misma barra (no como FAB con muesca). Cada pantalla que
+/// la usa indica su [currentTab] para resaltar el ítem correspondiente y
+/// provee los callbacks de las demás pestañas.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
+    required this.currentTab,
     required this.onCreateCircle,
-    required this.onOpenProfile,
+    this.onOpenCircles,
+    this.onOpenRachas,
+    this.onOpenProfile,
   });
 
+  final AppTab currentTab;
   final VoidCallback onCreateCircle;
-  final VoidCallback onOpenProfile;
+  final VoidCallback? onOpenCircles;
+  final VoidCallback? onOpenRachas;
+  final VoidCallback? onOpenProfile;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,
         AppSpacing.lg,
@@ -37,19 +46,23 @@ class AppBottomNav extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const _NavItem(
+            _NavItem(
               icon: Icons.group_rounded,
               label: 'Círculos',
-              selected: true,
+              selected: currentTab == AppTab.circles,
+              onTap: onOpenCircles,
             ),
-            const _NavItem(
+            _NavItem(
               icon: Icons.local_fire_department_rounded,
               label: 'Rachas',
+              selected: currentTab == AppTab.rachas,
+              onTap: onOpenRachas,
             ),
             _AddButton(onTap: onCreateCircle),
             _NavItem(
               icon: Icons.emoji_events_rounded,
               label: 'Perfil',
+              selected: currentTab == AppTab.profile,
               onTap: onOpenProfile,
             ),
           ],

@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: const SafeArea(top: false, bottom: true, child: MyHomePage()),
+      home: const MyHomePage(),
     );
   }
 }

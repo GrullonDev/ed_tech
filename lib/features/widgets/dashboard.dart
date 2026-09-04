@@ -24,6 +24,7 @@ class Dashboard extends StatelessWidget {
     required this.onToggleTodayHabit,
     required this.onAddTodayHabit,
     required this.onOpenCircle,
+    required this.onOpenRachas,
     required this.onOpenProfile,
   });
 
@@ -41,6 +42,7 @@ class Dashboard extends StatelessWidget {
   final ValueChanged<TodayHabit> onToggleTodayHabit;
   final ValueChanged<String> onAddTodayHabit;
   final ValueChanged<HabitCircle> onOpenCircle;
+  final VoidCallback onOpenRachas;
   final VoidCallback onOpenProfile;
 
   @override
@@ -50,7 +52,9 @@ class Dashboard extends StatelessWidget {
       backgroundColor: AppColors.background,
       extendBody: true,
       bottomNavigationBar: AppBottomNav(
+        currentTab: AppTab.circles,
         onCreateCircle: onCreateCircle,
+        onOpenRachas: onOpenRachas,
         onOpenProfile: onOpenProfile,
       ),
       body: SafeArea(

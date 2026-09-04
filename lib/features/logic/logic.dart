@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/model/today_habit.dart';
 
 /// Estado y reglas de negocio del dashboard de hábitos.
 ///
@@ -12,30 +13,62 @@ class HomeLogic extends ChangeNotifier {
 
   final TextEditingController usernameController = TextEditingController();
 
+  final List<TodayHabit> _todayHabits = [
+    TodayHabit(label: 'Lectura 20p', done: true),
+    TodayHabit(label: 'Madrugar', done: true),
+    TodayHabit(label: 'Caminata 7k', done: false),
+  ];
+
   final List<HabitCircle> _circles = [
     HabitCircle(
-      name: 'Programar 30 min',
-      streakDays: 5,
-      members: ['A', 'B', 'C'],
-      checkedInToday: false,
-    ),
-    HabitCircle(
-      name: 'Leer 10 páginas',
-      streakDays: 12,
-      members: ['D', 'E'],
+      name: 'Club Lectura 20 Páginas',
+      category: 'Enfoque Vespertino',
+      streakDays: 24,
+      members: ['A', 'B', 'C', 'D', 'E'],
+      totalMembers: 8,
+      completedMembers: 6,
       checkedInToday: true,
     ),
     HabitCircle(
-      name: 'Beber 2L de agua',
-      streakDays: 3,
-      members: ['F', 'G', 'H', 'I'],
-      checkedInToday: false,
+      name: 'Madrugadores 6:30 AM',
+      category: 'Ritmo Matutino',
+      streakDays: 12,
+      members: ['F', 'G', 'H'],
+      totalMembers: 6,
+      completedMembers: 5,
+      checkedInToday: true,
+      pendingMemberName: 'Mateo',
+    ),
+    HabitCircle(
+      name: 'Caminata 7k Pasos',
+      category: 'Círculo Perfecto',
+      streakDays: 9,
+      members: ['I', 'J', 'K', 'L'],
+      totalMembers: 7,
+      completedMembers: 7,
+      checkedInToday: true,
     ),
   ];
 
   bool get hasUsername => _hasUsername;
   String get username => _username;
   List<HabitCircle> get circles => List.unmodifiable(_circles);
+  List<TodayHabit> get todayHabits => List.unmodifiable(_todayHabits);
+
+  int get todayCompletedCount => _todayHabits.where((h) => h.done).length;
+  int get todayTotalCount => _todayHabits.length;
+  double get todayProgress =>
+      todayTotalCount == 0 ? 0 : todayCompletedCount / todayTotalCount;
+  TodayHabit? get nextPendingHabit {
+    for (final habit in _todayHabits) {
+      if (!habit.done) return habit;
+    }
+    return null;
+  }
+
+  int get overallStreakDays => _circles.isEmpty
+      ? 0
+      : _circles.map((c) => c.streakDays).reduce((a, b) => a > b ? a : b);
 
   void completeOnboarding() {
     final name = usernameController.text.trim();
@@ -45,8 +78,16 @@ class HomeLogic extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleTodayHabit(TodayHabit habit) {
+    habit.done = !habit.done;
+    notifyListeners();
+  }
+
   void toggleCheckIn(HabitCircle circle) {
     circle.checkedInToday = !circle.checkedInToday;
+    circle.completedMembers = (circle.completedMembers +
+            (circle.checkedInToday ? 1 : -1))
+        .clamp(0, circle.totalMembers);
     notifyListeners();
   }
 
@@ -54,8 +95,11 @@ class HomeLogic extends ChangeNotifier {
     _circles.add(
       HabitCircle(
         name: 'Nuevo círculo ${_circles.length + 1}',
+        category: 'Recién creado',
         streakDays: 0,
         members: ['Yo'],
+        totalMembers: 1,
+        completedMembers: 0,
         checkedInToday: false,
       ),
     );

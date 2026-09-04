@@ -20,6 +20,7 @@ class HabitCircle {
   final String? pendingMemberName;
 
   bool get isPerfect => completedMembers >= totalMembers;
-  double get progress => totalMembers == 0 ? 0 : completedMembers / totalMembers;
+  double get progress =>
+      totalMembers == 0 ? 0 : completedMembers / totalMembers;
   int get extraMembers => totalMembers - members.length;
 }

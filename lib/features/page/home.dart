@@ -70,9 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _openCreateHabit() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CreateHabitPage(logic: _logic),
-      ),
+      MaterialPageRoute(builder: (context) => CreateHabitPage(logic: _logic)),
     );
   }
 

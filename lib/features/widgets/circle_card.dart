@@ -30,113 +30,111 @@ class CircleCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.xl),
       child: Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: AppColors.outlineWhisper),
-        boxShadow: AppShadows.card,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      circle.category.toUpperCase(),
-                      style: textTheme.labelSmall?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.04,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          border: Border.all(color: AppColors.outlineWhisper),
+          boxShadow: AppShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        circle.category.toUpperCase(),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.04,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      circle.name,
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                      const SizedBox(height: 2),
+                      Text(
+                        circle.name,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              _StreakBadge(days: circle.streakDays),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${circle.completedMembers} de ${circle.totalMembers} completados',
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              Text(
-                '${(circle.progress * 100).round()}%',
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            child: LinearProgressIndicator(
-              value: circle.progress,
-              minHeight: 6,
-              backgroundColor: AppColors.surfaceContainer,
-              color: AppColors.primary,
+                _StreakBadge(days: circle.streakDays),
+              ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (circle.pendingMemberName != null) ...[
-            _PendingBanner(name: circle.pendingMemberName!),
             const SizedBox(height: AppSpacing.md),
-          ],
-          Row(
-            children: [
-              Expanded(child: _StackedAvatars(circle: circle)),
-              const SizedBox(width: AppSpacing.md),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  shape: const StadiumBorder(),
-                  side: BorderSide.none,
-                  backgroundColor: AppColors.surfaceContainer,
-                  foregroundColor: AppColors.onSurface,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${circle.completedMembers} de ${circle.totalMembers} completados',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
-                onPressed: onCheckIn,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      circle.checkedInToday
-                          ? Icons.check_circle_rounded
-                          : Icons.chevron_right_rounded,
-                      size: 18,
-                      color: circle.checkedInToday
-                          ? AppColors.primary
-                          : AppColors.onSurface,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      circle.checkedInToday ? 'Listo' : 'Ver círculo',
-                    ),
-                  ],
+                Text(
+                  '${(circle.progress * 100).round()}%',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: LinearProgressIndicator(
+                value: circle.progress,
+                minHeight: 6,
+                backgroundColor: AppColors.surfaceContainer,
+                color: AppColors.primary,
               ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (circle.pendingMemberName != null) ...[
+              _PendingBanner(name: circle.pendingMemberName!),
+              const SizedBox(height: AppSpacing.md),
             ],
-          ),
-        ],
-      ),
+            Row(
+              children: [
+                Expanded(child: _StackedAvatars(circle: circle)),
+                const SizedBox(width: AppSpacing.md),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    side: BorderSide.none,
+                    backgroundColor: AppColors.surfaceContainer,
+                    foregroundColor: AppColors.onSurface,
+                  ),
+                  onPressed: onCheckIn,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        circle.checkedInToday
+                            ? Icons.check_circle_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 18,
+                        color: circle.checkedInToday
+                            ? AppColors.primary
+                            : AppColors.onSurface,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(circle.checkedInToday ? 'Listo' : 'Ver círculo'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -166,7 +164,10 @@ class _PerfectCircleCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -181,7 +182,10 @@ class _PerfectCircleCard extends StatelessWidget {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(AppRadius.pill),

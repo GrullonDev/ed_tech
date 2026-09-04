@@ -13,8 +13,7 @@ class HomeLogic extends ChangeNotifier {
 
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController habitNameController = TextEditingController();
-  final TextEditingController habitCategoryController =
-      TextEditingController();
+  final TextEditingController habitCategoryController = TextEditingController();
 
   final List<TodayHabit> _todayHabits = [
     TodayHabit(label: 'Lectura 20p', done: true),
@@ -88,14 +87,19 @@ class HomeLogic extends ChangeNotifier {
 
   void toggleCheckIn(HabitCircle circle) {
     circle.checkedInToday = !circle.checkedInToday;
-    circle.completedMembers = (circle.completedMembers +
-            (circle.checkedInToday ? 1 : -1))
-        .clamp(0, circle.totalMembers);
+    circle.completedMembers =
+        (circle.completedMembers + (circle.checkedInToday ? 1 : -1)).clamp(
+          0,
+          circle.totalMembers,
+        );
     notifyListeners();
   }
 
   void createNewCircle() {
-    createCircle(name: 'Nuevo círculo ${_circles.length + 1}', category: 'Recién creado');
+    createCircle(
+      name: 'Nuevo círculo ${_circles.length + 1}',
+      category: 'Recién creado',
+    );
   }
 
   void createCircle({required String name, required String category}) {

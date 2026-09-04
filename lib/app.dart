@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:edtech_tiktok/home.dart';
+import 'package:edtech_tiktok/features/page/home.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

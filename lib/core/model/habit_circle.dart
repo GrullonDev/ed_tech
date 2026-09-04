@@ -51,6 +51,25 @@ class HabitCircle {
     return streak;
   }
 
+  /// Racha consecutiva más larga alcanzada en toda la historia del círculo
+  /// (no solo la actual). Se usa como "récord personal" en el perfil.
+  int get longestStreakDays {
+    if (checkIns.isEmpty) return 0;
+    final days = checkIns.map((c) => c.date).toSet().toList()..sort();
+    var longest = 1;
+    var current = 1;
+    for (var i = 1; i < days.length; i++) {
+      final diff = days[i].difference(days[i - 1]).inDays;
+      if (diff == 1) {
+        current++;
+        longest = longest > current ? longest : current;
+      } else {
+        current = 1;
+      }
+    }
+    return longest;
+  }
+
   void addCheckInToday() {
     if (checkedInToday) return;
     checkIns.add(CheckIn(date: CheckIn.today()));

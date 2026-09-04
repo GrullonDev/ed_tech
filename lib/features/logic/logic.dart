@@ -12,6 +12,9 @@ class HomeLogic extends ChangeNotifier {
   String _username = '';
 
   final TextEditingController usernameController = TextEditingController();
+  final TextEditingController habitNameController = TextEditingController();
+  final TextEditingController habitCategoryController =
+      TextEditingController();
 
   final List<TodayHabit> _todayHabits = [
     TodayHabit(label: 'Lectura 20p', done: true),
@@ -110,9 +113,26 @@ class HomeLogic extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Crea un círculo a partir de [habitNameController] y
+  /// [habitCategoryController], y limpia ambos campos. Retorna `false` sin
+  /// hacer nada si el nombre está vacío.
+  bool submitNewCircle() {
+    final name = habitNameController.text.trim();
+    if (name.isEmpty) return false;
+    final category = habitCategoryController.text.trim().isEmpty
+        ? 'General'
+        : habitCategoryController.text.trim();
+    createCircle(name: name, category: category);
+    habitNameController.clear();
+    habitCategoryController.clear();
+    return true;
+  }
+
   @override
   void dispose() {
     usernameController.dispose();
+    habitNameController.dispose();
+    habitCategoryController.dispose();
     super.dispose();
   }
 }

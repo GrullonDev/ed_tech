@@ -12,9 +12,12 @@ class CircleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (circle.isPerfect) {
+      return _PerfectCircleCard(circle: circle);
+    }
     final textTheme = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -25,68 +28,239 @@ class CircleCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  circle.name,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      circle.category.toUpperCase(),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.04,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      circle.name,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               _StreakBadge(days: circle.streakDays),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _StackedAvatars(circle: circle),
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                gradient: circle.checkedInToday
-                    ? null
-                    : const LinearGradient(
-                        colors: [AppColors.primary, AppColors.primaryContainer],
-                      ),
-                color: circle.checkedInToday ? AppColors.surfaceContainer : null,
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${circle.completedMembers} de ${circle.totalMembers} completados',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
+              Text(
+                '${(circle.progress * 100).round()}%',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            child: LinearProgressIndicator(
+              value: circle.progress,
+              minHeight: 6,
+              backgroundColor: AppColors.surfaceContainer,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (circle.pendingMemberName != null) ...[
+            _PendingBanner(name: circle.pendingMemberName!),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          Row(
+            children: [
+              Expanded(child: _StackedAvatars(circle: circle)),
+              const SizedBox(width: AppSpacing.md),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  shape: const StadiumBorder(),
+                  side: BorderSide.none,
+                  backgroundColor: AppColors.surfaceContainer,
+                  foregroundColor: AppColors.onSurface,
+                ),
+                onPressed: onCheckIn,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      circle.checkedInToday
+                          ? Icons.check_circle_rounded
+                          : Icons.chevron_right_rounded,
+                      size: 18,
+                      color: circle.checkedInToday
+                          ? AppColors.primary
+                          : AppColors.onSurface,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      circle.checkedInToday ? 'Listo' : 'Ver círculo',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PerfectCircleCard extends StatelessWidget {
+  const _PerfectCircleCard({required this.circle});
+
+  final HabitCircle circle;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.celebrationStart, AppColors.celebrationEnd],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
-                  onTap: onCheckIn,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        circle.checkedInToday
-                            ? Icons.check_circle_rounded
-                            : Icons.check_circle_outline_rounded,
-                        color: circle.checkedInToday
-                            ? AppColors.primary
-                            : AppColors.onPrimary,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        circle.checkedInToday
-                            ? 'Check-in completado'
-                            : 'Hacer Check-in',
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: circle.checkedInToday
-                              ? AppColors.primary
-                              : AppColors.onPrimary,
-                        ),
-                      ),
-                    ],
+                ),
+                child: Text(
+                  '¡CÍRCULO PERFECTO! 🎉',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  '${circle.completedMembers}/${circle.totalMembers} listo',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: AppColors.onPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            circle.name,
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Todos los integrantes cruzaron la meta hoy. '
+            'Racha colectiva sincronizada.',
+            style: textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+              height: 1.4,
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(child: _StackedAvatars(circle: circle)),
+              const SizedBox(width: AppSpacing.md),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: const StadiumBorder(),
+                ),
+                onPressed: () {},
+                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                label: const Text('Celebrar'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingBanner extends StatelessWidget {
+  const _PendingBanner({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.warningContainer,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                style: textTheme.bodySmall,
+                children: [
+                  const TextSpan(text: 'Falta '),
+                  TextSpan(
+                    text: name,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const TextSpan(text: ' por reportar'),
+                ],
+              ),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              minimumSize: const Size(0, 32),
+            ),
+            onPressed: () {},
+            child: const Text('Dar aliento', style: TextStyle(fontSize: 12)),
           ),
         ],
       ),
@@ -117,7 +291,7 @@ class _StreakBadge extends StatelessWidget {
           const Text('🔥', style: TextStyle(fontSize: 14)),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            '$days días',
+            '${days}d',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: AppColors.secondary,
               fontWeight: FontWeight.w800,
@@ -136,63 +310,75 @@ class _StackedAvatars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visible = circle.members.take(4).toList();
     return SizedBox(
-      height: 56,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: circle.members.length,
-        itemBuilder: (context, i) {
-          final completed = circle.checkedInToday;
-          return Padding(
-            padding: EdgeInsets.only(
-              left: i == 0 ? 0 : AppSpacing.lg,
+      height: 36,
+      child: Stack(
+        children: [
+          for (var i = 0; i < visible.length; i++)
+            Positioned(
+              left: i * 26.0,
+              child: _Avatar(label: visible[i], isSample: i == 0),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: completed
-                          ? AppColors.primaryContainer
-                          : AppColors.outline.withValues(alpha: 0.35),
-                      width: 2,
-                    ),
+          if (circle.extraMembers > 0)
+            Positioned(
+              left: visible.length * 26.0,
+              child: Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainer,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.surface, width: 2),
+                ),
+                child: Text(
+                  '+${circle.extraMembers}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurfaceVariant,
                   ),
-                  child: i == 0
-                      ? const CircleAvatar(
-                          backgroundColor: AppColors.surfaceContainer,
-                          backgroundImage: AssetImage(AppAssets.avatarSample),
-                        )
-                      : CircleAvatar(
-                          backgroundColor: AppColors.surfaceContainer,
-                          child: Text(
-                            circle.members[i],
-                            style: const TextStyle(
-                              color: AppColors.onSurface,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
                 ),
-                const SizedBox(height: 2),
-                Icon(
-                  completed
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 12,
-                  color: completed ? AppColors.primaryContainer : AppColors.outline,
-                ),
-              ],
+              ),
             ),
-          );
-        },
+        ],
       ),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.label, required this.isSample});
+
+  final String label;
+  final bool isSample;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.surface, width: 2),
+      ),
+      child: isSample
+          ? const CircleAvatar(
+              backgroundColor: AppColors.surfaceContainer,
+              backgroundImage: AssetImage(AppAssets.avatarSample),
+            )
+          : CircleAvatar(
+              backgroundColor: AppColors.surfaceContainer,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.onSurface,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
     );
   }
 }

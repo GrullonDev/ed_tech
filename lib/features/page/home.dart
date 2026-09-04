@@ -34,8 +34,15 @@ class _MyHomePageState extends State<MyHomePage> {
         return Dashboard(
           username: _logic.username,
           circles: _logic.circles,
+          todayHabits: _logic.todayHabits,
+          todayCompletedCount: _logic.todayCompletedCount,
+          todayTotalCount: _logic.todayTotalCount,
+          todayProgress: _logic.todayProgress,
+          nextPendingHabit: _logic.nextPendingHabit,
+          overallStreakDays: _logic.overallStreakDays,
           onCreateCircle: _logic.createNewCircle,
           onCheckIn: _logic.toggleCheckIn,
+          onToggleTodayHabit: _logic.toggleTodayHabit,
         );
       },
     );

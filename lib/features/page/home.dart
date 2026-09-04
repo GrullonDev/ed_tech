@@ -5,6 +5,7 @@ import 'package:edtech_tiktok/features/logic/logic.dart';
 import 'package:edtech_tiktok/features/page/circle_detail.dart';
 import 'package:edtech_tiktok/features/page/create_habit.dart';
 import 'package:edtech_tiktok/features/page/profile.dart';
+import 'package:edtech_tiktok/features/page/rachas.dart';
 import 'package:edtech_tiktok/features/widgets/dashboard.dart';
 import 'package:edtech_tiktok/features/widgets/onboarding.dart';
 
@@ -50,6 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onToggleTodayHabit: _logic.toggleTodayHabit,
           onAddTodayHabit: _logic.addTodayHabit,
           onOpenCircle: _openCircleDetail,
+          onOpenRachas: _openRachas,
           onOpenProfile: _openProfile,
         );
       },
@@ -70,6 +72,24 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  void _openRachas() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ListenableBuilder(
+          listenable: _logic,
+          builder: (context, _) => RachasPage(
+            circles: _logic.circles,
+            overallStreakDays: _logic.overallStreakDays,
+            onCheckIn: _logic.toggleCheckIn,
+            onOpenCircle: _openCircleDetail,
+            onCreateCircle: _openCreateHabit,
+            onOpenProfile: _openProfile,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openCreateHabit() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => CreateHabitPage(logic: _logic)),
@@ -83,8 +103,14 @@ class _MyHomePageState extends State<MyHomePage> {
           listenable: _logic,
           builder: (context, _) => ProfilePage(
             username: _logic.username,
+            memberSince: _logic.memberSince,
             overallStreakDays: _logic.overallStreakDays,
+            recordStreakDays: _logic.recordStreakDays,
+            monthlyComplianceRate: _logic.monthlyComplianceRate,
             circles: _logic.circles,
+            onOpenCircle: _openCircleDetail,
+            onOpenRachas: _openRachas,
+            onCreateCircle: _openCreateHabit,
           ),
         ),
       ),

@@ -1,12 +1,13 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+import 'package:edtech_tiktok/core/model/app_user.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 
 /// Persistencia local temporal (Hive) para que la app sea funcional sin
-/// backend. Guarda el alias de usuario, los círculos y los check-ins del
-/// día. No usa adaptadores generados: los modelos se serializan a
-/// `Map<String, dynamic>` vía `toMap`/`fromMap` y Hive los guarda tal cual.
+/// backend. Guarda el usuario, los círculos y los hábitos diarios. No usa
+/// adaptadores generados: los modelos se serializan a `Map<String, dynamic>`
+/// vía `toMap`/`fromMap` y Hive los guarda tal cual.
 ///
 /// Cuando se integre Supabase, este servicio puede quedar como caché offline
 /// o ser reemplazado por un repositorio remoto sin tocar la UI, ya que
@@ -17,7 +18,8 @@ class LocalStorageService {
   static const String _settingsBoxName = 'settings_box';
   static const String _circlesBoxName = 'circles_box';
   static const String _todayHabitsBoxName = 'today_habits_box';
-  static const String _usernameKey = 'username';
+  static const String _userKey = 'user';
+  static const String _lastActiveDateKey = 'lastActiveDate';
 
   static late Box<dynamic> _settingsBox;
   static late Box<dynamic> _circlesBox;
@@ -34,10 +36,24 @@ class LocalStorageService {
 
   // ---- Usuario ----
 
-  static String? readUsername() => _settingsBox.get(_usernameKey) as String?;
+  static AppUser? readUser() {
+    final raw = _settingsBox.get(_userKey);
+    if (raw == null) return null;
+    return AppUser.fromMap(raw as Map<dynamic, dynamic>);
+  }
 
-  static Future<void> saveUsername(String username) =>
-      _settingsBox.put(_usernameKey, username);
+  static Future<void> saveUser(AppUser user) =>
+      _settingsBox.put(_userKey, user.toMap());
+
+  // ---- Día activo (para resetear los hábitos de "hoy" al cambiar de día) ----
+
+  static DateTime? readLastActiveDate() {
+    final raw = _settingsBox.get(_lastActiveDateKey) as String?;
+    return raw == null ? null : DateTime.parse(raw);
+  }
+
+  static Future<void> saveLastActiveDate(DateTime date) =>
+      _settingsBox.put(_lastActiveDateKey, date.toIso8601String());
 
   // ---- Círculos ----
 

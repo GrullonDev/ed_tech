@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
 class CircleCard extends StatelessWidget {
@@ -162,17 +163,22 @@ class _StackedAvatars extends StatelessWidget {
                       width: 2,
                     ),
                   ),
-                  child: CircleAvatar(
-                    backgroundColor: AppColors.surfaceContainer,
-                    child: Text(
-                      circle.members[i],
-                      style: const TextStyle(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
+                  child: i == 0
+                      ? const CircleAvatar(
+                          backgroundColor: AppColors.surfaceContainer,
+                          backgroundImage: AssetImage(AppAssets.avatarSample),
+                        )
+                      : CircleAvatar(
+                          backgroundColor: AppColors.surfaceContainer,
+                          child: Text(
+                            circle.members[i],
+                            style: const TextStyle(
+                              color: AppColors.onSurface,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 2),
                 Icon(

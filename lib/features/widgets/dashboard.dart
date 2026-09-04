@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/circle_card.dart';
 
@@ -24,6 +25,11 @@ class Dashboard extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Image.asset(AppAssets.logo),
+        ),
         title: Text('Hola, $username 👋'),
         actions: [
           IconButton(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
 class Onboarding extends StatelessWidget {
@@ -24,16 +25,7 @@ class Onboarding extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Text('🌱', style: TextStyle(fontSize: 28)),
-              ),
+              Image.asset(AppAssets.logo, width: 72, height: 72),
               const SizedBox(height: AppSpacing.xl2),
               Text(
                 'Bienvenido a\nCírculoDiario',

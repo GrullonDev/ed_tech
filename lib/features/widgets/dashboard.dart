@@ -44,14 +44,7 @@ class Dashboard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: onCreateCircle,
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.onPrimary,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add_rounded),
-      ),
+      extendBody: true,
       bottomNavigationBar: AppBottomNav(
         onCreateCircle: onCreateCircle,
         onOpenProfile: onOpenProfile,

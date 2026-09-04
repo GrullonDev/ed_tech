@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
-/// Barra de navegación inferior con FAB central. La pestaña "Círculos" es
-/// la pantalla actual; "Perfil" navega a [ProfilePage] vía [onOpenProfile].
-/// "Rachas" queda como marcador visual hasta que exista esa pantalla.
+/// Barra de navegación inferior flotante en forma de píldora. El botón "+"
+/// vive dentro de la misma barra (no como FAB con muesca). La pestaña
+/// "Círculos" es la pantalla actual; "Perfil" navega a [ProfilePage] vía
+/// [onOpenProfile]. "Rachas" queda como marcador visual hasta que exista
+/// esa pantalla.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -17,15 +19,23 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
-      color: AppColors.surface,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      padding: EdgeInsets.zero,
-      child: SizedBox(
-        height: 64,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: Container(
+        height: 68,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: AppShadows.card,
+        ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const _NavItem(
               icon: Icons.group_rounded,
@@ -36,13 +46,55 @@ class AppBottomNav extends StatelessWidget {
               icon: Icons.local_fire_department_rounded,
               label: 'Rachas',
             ),
-            const SizedBox(width: 56),
+            _AddButton(onTap: onCreateCircle),
             _NavItem(
               icon: Icons.emoji_events_rounded,
               label: 'Perfil',
               onTap: onOpenProfile,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.primaryContainer, AppColors.primary],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add_rounded,
+            color: AppColors.onPrimary,
+            size: 26,
+          ),
         ),
       ),
     );
@@ -65,25 +117,44 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.primary : AppColors.outline;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              SizedBox(
+                width: 4,
+                height: 4,
+                child: selected
+                    ? const DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
     );

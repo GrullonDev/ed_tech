@@ -18,6 +18,7 @@ class Dashboard extends StatelessWidget {
     required this.todayProgress,
     required this.nextPendingHabit,
     required this.overallStreakDays,
+    required this.streakPulseTick,
     required this.onCreateCircle,
     required this.onCheckIn,
     required this.onToggleTodayHabit,
@@ -33,6 +34,7 @@ class Dashboard extends StatelessWidget {
   final double todayProgress;
   final TodayHabit? nextPendingHabit;
   final int overallStreakDays;
+  final int streakPulseTick;
   final VoidCallback onCreateCircle;
   final ValueChanged<HabitCircle> onCheckIn;
   final ValueChanged<TodayHabit> onToggleTodayHabit;
@@ -57,7 +59,10 @@ class Dashboard extends StatelessWidget {
                 .copyWith(bottom: AppSpacing.xl2),
             children: [
               const SizedBox(height: AppSpacing.sm),
-              _TopBar(streakDays: overallStreakDays),
+              _TopBar(
+                streakDays: overallStreakDays,
+                pulseTick: streakPulseTick,
+              ),
               const SizedBox(height: AppSpacing.xl),
               Text(
                 '¡Buen día, $username! 👋',
@@ -137,9 +142,10 @@ class Dashboard extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.streakDays});
+  const _TopBar({required this.streakDays, required this.pulseTick});
 
   final int streakDays;
+  final int pulseTick;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +165,7 @@ class _TopBar extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        _StreakPill(days: streakDays),
+        _StreakPill(days: streakDays, pulseTick: pulseTick),
         const SizedBox(width: AppSpacing.md),
         const CircleAvatar(
           radius: 18,
@@ -172,9 +178,10 @@ class _TopBar extends StatelessWidget {
 }
 
 class _StreakPill extends StatelessWidget {
-  const _StreakPill({required this.days});
+  const _StreakPill({required this.days, required this.pulseTick});
 
   final int days;
+  final int pulseTick;
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +197,10 @@ class _StreakPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 13)),
+          _StreakFirePulse(
+            key: ValueKey(pulseTick),
+            child: const Text('🔥', style: TextStyle(fontSize: 13)),
+          ),
           const SizedBox(width: AppSpacing.xs),
           Text(
             '$days DÍAS',
@@ -201,6 +211,27 @@ class _StreakPill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Pulso ligero (escala con rebote) que se reproduce una vez cada vez que
+/// se le asigna una nueva [Key]. Se usa en el ícono de fuego para reforzar
+/// visualmente que se completó un hábito o check-in.
+class _StreakFirePulse extends StatelessWidget {
+  const _StreakFirePulse({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 1.5, end: 1.0),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.elasticOut,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: child,
     );
   }
 }

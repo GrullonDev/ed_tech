@@ -44,6 +44,7 @@ class _MyHomePageState extends State<MyHomePage> {
           todayProgress: _logic.todayProgress,
           nextPendingHabit: _logic.nextPendingHabit,
           overallStreakDays: _logic.overallStreakDays,
+          streakPulseTick: _logic.streakPulseTick,
           onCreateCircle: _openCreateHabit,
           onCheckIn: _logic.toggleCheckIn,
           onToggleTodayHabit: _logic.toggleTodayHabit,

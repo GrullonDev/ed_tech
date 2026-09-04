@@ -52,10 +52,17 @@ class HomeLogic extends ChangeNotifier {
     ),
   ];
 
+  /// Contador que se incrementa cada vez que se completa un hábito o
+  /// check-in. Sirve como trigger para la micro-animación de pulso en el
+  /// ícono de racha: la UI observa este valor (no su magnitud) y reproduce
+  /// la animación cada vez que cambia.
+  int _streakPulseTick = 0;
+
   bool get hasUsername => _hasUsername;
   String get username => _username;
   List<HabitCircle> get circles => List.unmodifiable(_circles);
   List<TodayHabit> get todayHabits => List.unmodifiable(_todayHabits);
+  int get streakPulseTick => _streakPulseTick;
 
   int get todayCompletedCount => _todayHabits.where((h) => h.done).length;
   int get todayTotalCount => _todayHabits.length;
@@ -81,17 +88,21 @@ class HomeLogic extends ChangeNotifier {
   }
 
   void toggleTodayHabit(TodayHabit habit) {
+    final wasDone = habit.done;
     habit.done = !habit.done;
+    if (!wasDone && habit.done) _streakPulseTick++;
     notifyListeners();
   }
 
   void toggleCheckIn(HabitCircle circle) {
+    final wasCheckedIn = circle.checkedInToday;
     circle.checkedInToday = !circle.checkedInToday;
     circle.completedMembers =
         (circle.completedMembers + (circle.checkedInToday ? 1 : -1)).clamp(
           0,
           circle.totalMembers,
         );
+    if (!wasCheckedIn && circle.checkedInToday) _streakPulseTick++;
     notifyListeners();
   }
 

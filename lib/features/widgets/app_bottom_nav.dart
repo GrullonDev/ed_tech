@@ -125,22 +125,23 @@ class _NavItem extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm,
+            vertical: AppSpacing.xs,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 4),
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 3),
               Text(
                 label,
                 style: TextStyle(
                   color: color,
                   fontSize: 11,
+                  height: 1.1,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               SizedBox(
                 width: 4,
                 height: 4,

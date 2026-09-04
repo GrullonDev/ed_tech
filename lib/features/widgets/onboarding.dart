@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/theme/app_theme.dart';
+
 class Onboarding extends StatelessWidget {
   const Onboarding({
     super.key,
@@ -12,42 +14,59 @@ class Onboarding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl2),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Bienvenido a CírculoDiario',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Text('🌱', style: TextStyle(fontSize: 28)),
               ),
-              const SizedBox(height: 12),
-              const Text(
+              const SizedBox(height: AppSpacing.xl2),
+              Text(
+                'Bienvenido a\nCírculoDiario',
+                style: textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.02,
+                  height: 1.15,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
                 'Crea círculos de hábitos con tus amigos, haz check-in diario '
                 'y mantén tu racha viva junto a los demás miembros del grupo.',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
+                style: textTheme.bodyLarge?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                  height: 1.6,
+                ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xl3),
               TextField(
                 controller: usernameController,
+                style: textTheme.bodyLarge,
                 decoration: const InputDecoration(
                   labelText: 'Tu apodo de usuario',
-                  border: OutlineInputBorder(),
                 ),
                 onSubmitted: (_) => onContinue(),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: onContinue,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Text('Continuar'),
-                  ),
+                  child: const Text('Continuar'),
                 ),
               ),
             ],

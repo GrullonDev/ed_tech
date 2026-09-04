@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/circle_card.dart';
 
 class Dashboard extends StatelessWidget {
@@ -19,30 +20,42 @@ class Dashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('Hola, $username 👋'),
         actions: [
           IconButton(
             onPressed: onCreateCircle,
-            icon: const Icon(Icons.add_circle_outline),
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.surfaceContainer,
+              foregroundColor: AppColors.primary,
+            ),
+            icon: const Icon(Icons.add_rounded),
             tooltip: 'Crear nuevo círculo',
           ),
+          const SizedBox(width: AppSpacing.lg),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Mis Círculos de Hábitos',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.md),
             Expanded(
-              child: ListView.builder(
+              child: ListView.separated(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xl2),
                 itemCount: circles.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.lg),
                 itemBuilder: (context, index) {
                   final circle = circles[index];
                   return CircleCard(

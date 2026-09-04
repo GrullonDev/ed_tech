@@ -31,6 +31,11 @@ abstract final class AppColors {
 
   static const streakGlow = Color(0x59F97316);
   static const completedGlow = Color(0x3310B981);
+
+  static const lavenderContainer = Color(0xFFEAECFB);
+  static const warningContainer = Color(0xFFFFF1E6);
+  static const celebrationStart = Color(0xFFE3F9EE);
+  static const celebrationEnd = Color(0xFFD3F3E4);
 }
 
 abstract final class AppRadius {

@@ -92,10 +92,14 @@ class HomeLogic extends ChangeNotifier {
   }
 
   void createNewCircle() {
+    createCircle(name: 'Nuevo círculo ${_circles.length + 1}', category: 'Recién creado');
+  }
+
+  void createCircle({required String name, required String category}) {
     _circles.add(
       HabitCircle(
-        name: 'Nuevo círculo ${_circles.length + 1}',
-        category: 'Recién creado',
+        name: name,
+        category: category,
         streakDays: 0,
         members: ['Yo'],
         totalMembers: 1,

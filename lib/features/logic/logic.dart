@@ -1,58 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/model/app_user.dart';
+import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
 
-/// Datos de ejemplo usados solo la primera vez que se abre la app (cuando
-/// Hive todavía no tiene nada guardado localmente).
-List<TodayHabit> _seedTodayHabits() => [
-  TodayHabit(label: 'Lectura 20p', done: true),
-  TodayHabit(label: 'Madrugar', done: true),
-  TodayHabit(label: 'Caminata 7k', done: false),
-];
-
-List<HabitCircle> _seedCircles() => [
-  HabitCircle(
-    name: 'Club Lectura 20 Páginas',
-    category: 'Enfoque Vespertino',
-    streakDays: 24,
-    members: ['A', 'B', 'C', 'D', 'E'],
-    totalMembers: 8,
-    completedMembers: 6,
-    checkedInToday: true,
-  ),
-  HabitCircle(
-    name: 'Madrugadores 6:30 AM',
-    category: 'Ritmo Matutino',
-    streakDays: 12,
-    members: ['F', 'G', 'H'],
-    totalMembers: 6,
-    completedMembers: 5,
-    checkedInToday: true,
-    pendingMemberName: 'Mateo',
-  ),
-  HabitCircle(
-    name: 'Caminata 7k Pasos',
-    category: 'Círculo Perfecto',
-    streakDays: 9,
-    members: ['I', 'J', 'K', 'L'],
-    totalMembers: 7,
-    completedMembers: 7,
-    checkedInToday: true,
-  ),
-];
-
 /// Estado y reglas de negocio del dashboard de hábitos.
 ///
 /// Las pantallas (`page/home.dart` y los widgets en `features/widgets/`)
-/// solo leen este estado y disparan estos métodos; no contienen lógica propia.
-///
-/// El estado se persiste en local (Hive, vía [LocalStorageService]) para que
-/// el alias de usuario, los círculos y los check-ins del día sobrevivan a un
-/// reinicio de la app mientras no exista backend. Al integrar Supabase, este
-/// es el único lugar que necesita cambiar: la UI no conoce el origen de los
-/// datos.
+/// solo leen este estado y disparan estos métodos; no contienen lógica ni
+/// datos propios. Todo el estado se persiste en local (Hive, vía
+/// [LocalStorageService]): usuario, círculos y hábitos del día sobreviven a
+/// un reinicio de la app, y no hay datos de ejemplo quemados — una
+/// instalación nueva arranca completamente vacía hasta que el usuario crea
+/// sus propios círculos y hábitos. Al integrar Supabase, este es el único
+/// lugar que necesita cambiar: la UI no conoce el origen de los datos.
 class HomeLogic extends ChangeNotifier {
   HomeLogic() {
     _loadFromStorage();
@@ -73,21 +36,6 @@ class HomeLogic extends ChangeNotifier {
   /// ícono de racha: la UI observa este valor (no su magnitud) y reproduce
   /// la animación cada vez que cambia.
   int _streakPulseTick = 0;
-
-  void _loadFromStorage() {
-    final savedUsername = LocalStorageService.readUsername();
-    final savedCircles = LocalStorageService.readCircles();
-    final savedTodayHabits = LocalStorageService.readTodayHabits();
-
-    _hasUsername = savedUsername != null && savedUsername.isNotEmpty;
-    _username = savedUsername ?? '';
-    usernameController.text = _username;
-    _circles = savedCircles.isNotEmpty ? savedCircles : _seedCircles();
-    _todayHabits = savedTodayHabits.isNotEmpty
-        ? savedTodayHabits
-        : _seedTodayHabits();
-    notifyListeners();
-  }
 
   bool get hasUsername => _hasUsername;
   String get username => _username;
@@ -110,12 +58,52 @@ class HomeLogic extends ChangeNotifier {
       ? 0
       : _circles.map((c) => c.streakDays).reduce((a, b) => a > b ? a : b);
 
+  void _loadFromStorage() {
+    final savedUser = LocalStorageService.readUser();
+    _circles = LocalStorageService.readCircles();
+    _todayHabits = LocalStorageService.readTodayHabits();
+
+    _hasUsername = savedUser != null;
+    _username = savedUser?.username ?? '';
+    usernameController.text = _username;
+
+    _applyDailyResetIfNeeded();
+    notifyListeners();
+  }
+
+  /// Los hábitos de "hoy" son diarios: si cambió el día calendario desde la
+  /// última vez que se abrió la app, se desmarcan para que reflejen el
+  /// progreso real del nuevo día en vez de arrastrar el de ayer.
+  void _applyDailyResetIfNeeded() {
+    final today = CheckIn.today();
+    final lastActive = LocalStorageService.readLastActiveDate();
+    if (lastActive == today) return;
+
+    if (lastActive != null && _todayHabits.isNotEmpty) {
+      for (final habit in _todayHabits) {
+        habit.done = false;
+      }
+      LocalStorageService.saveTodayHabits(_todayHabits);
+    }
+    LocalStorageService.saveLastActiveDate(today);
+  }
+
   void completeOnboarding() {
     final name = usernameController.text.trim();
     if (name.isEmpty) return;
     _username = name;
     _hasUsername = true;
-    LocalStorageService.saveUsername(name);
+    LocalStorageService.saveUser(
+      AppUser(username: name, memberSince: DateTime.now()),
+    );
+    notifyListeners();
+  }
+
+  void addTodayHabit(String label) {
+    final trimmed = label.trim();
+    if (trimmed.isEmpty) return;
+    _todayHabits.add(TodayHabit(label: trimmed, done: false));
+    LocalStorageService.saveTodayHabits(_todayHabits);
     notifyListeners();
   }
 
@@ -129,36 +117,18 @@ class HomeLogic extends ChangeNotifier {
 
   void toggleCheckIn(HabitCircle circle) {
     final wasCheckedIn = circle.checkedInToday;
-    circle.checkedInToday = !circle.checkedInToday;
-    circle.completedMembers =
-        (circle.completedMembers + (circle.checkedInToday ? 1 : -1)).clamp(
-          0,
-          circle.totalMembers,
-        );
-    if (!wasCheckedIn && circle.checkedInToday) _streakPulseTick++;
+    if (wasCheckedIn) {
+      circle.removeCheckInToday();
+    } else {
+      circle.addCheckInToday();
+      _streakPulseTick++;
+    }
     LocalStorageService.saveCircles(_circles);
     notifyListeners();
   }
 
-  void createNewCircle() {
-    createCircle(
-      name: 'Nuevo círculo ${_circles.length + 1}',
-      category: 'Recién creado',
-    );
-  }
-
   void createCircle({required String name, required String category}) {
-    _circles.add(
-      HabitCircle(
-        name: name,
-        category: category,
-        streakDays: 0,
-        members: ['Yo'],
-        totalMembers: 1,
-        completedMembers: 0,
-        checkedInToday: false,
-      ),
-    );
+    _circles.add(HabitCircle(name: name, category: category));
     LocalStorageService.saveCircles(_circles);
     notifyListeners();
   }

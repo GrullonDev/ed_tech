@@ -56,6 +56,27 @@ abstract final class AppSpacing {
   static const xl3 = 32.0;
 }
 
+/// Envuelve contenido con un ancho máximo y lo centra, para que las
+/// pantallas no se estiren en exceso en móviles grandes/tablets en modo
+/// retrato, manteniendo la app responsiva en todos los tamaños de teléfono.
+class AppMaxWidth extends StatelessWidget {
+  const AppMaxWidth({super.key, required this.child, this.maxWidth = 480});
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: child,
+      ),
+    );
+  }
+}
+
 abstract final class AppShadows {
   static const card = [
     BoxShadow(

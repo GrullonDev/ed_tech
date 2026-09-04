@@ -23,6 +23,7 @@ class HomeLogic extends ChangeNotifier {
 
   bool _hasUsername = false;
   String _username = '';
+  DateTime? _memberSince;
 
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController habitNameController = TextEditingController();
@@ -39,6 +40,7 @@ class HomeLogic extends ChangeNotifier {
 
   bool get hasUsername => _hasUsername;
   String get username => _username;
+  DateTime? get memberSince => _memberSince;
   List<HabitCircle> get circles => List.unmodifiable(_circles);
   List<TodayHabit> get todayHabits => List.unmodifiable(_todayHabits);
   int get streakPulseTick => _streakPulseTick;
@@ -58,6 +60,32 @@ class HomeLogic extends ChangeNotifier {
       ? 0
       : _circles.map((c) => c.streakDays).reduce((a, b) => a > b ? a : b);
 
+  /// Racha consecutiva más larga alcanzada alguna vez en cualquier círculo
+  /// (récord histórico), no solo la que sigue activa hoy.
+  int get recordStreakDays => _circles.isEmpty
+      ? 0
+      : _circles
+            .map((c) => c.longestStreakDays)
+            .reduce((a, b) => a > b ? a : b);
+
+  /// Fracción de días transcurridos en el mes actual (desde el día 1 hasta
+  /// hoy) en los que hubo al menos un check-in en algún círculo.
+  double get monthlyComplianceRate {
+    final today = CheckIn.today();
+    final startOfMonth = DateTime(today.year, today.month, 1);
+    final elapsedDays = today.difference(startOfMonth).inDays + 1;
+    if (elapsedDays <= 0 || _circles.isEmpty) return 0;
+    var daysWithActivity = 0;
+    for (var i = 0; i < elapsedDays; i++) {
+      final day = startOfMonth.add(Duration(days: i));
+      final hasActivity = _circles.any(
+        (c) => c.checkIns.any((ci) => ci.date == day),
+      );
+      if (hasActivity) daysWithActivity++;
+    }
+    return daysWithActivity / elapsedDays;
+  }
+
   void _loadFromStorage() {
     final savedUser = LocalStorageService.readUser();
     _circles = LocalStorageService.readCircles();
@@ -65,6 +93,7 @@ class HomeLogic extends ChangeNotifier {
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
+    _memberSince = savedUser?.memberSince;
     usernameController.text = _username;
 
     _applyDailyResetIfNeeded();

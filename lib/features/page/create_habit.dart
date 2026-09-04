@@ -1,38 +1,20 @@
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/logic/logic.dart';
 
-/// Formulario para crear un nuevo círculo de hábito. Es dueño únicamente
-/// del estado de sus campos de texto; la creación real se delega al
-/// callback [onCreate], que vive en `HomeLogic`.
-class CreateHabitPage extends StatefulWidget {
-  const CreateHabitPage({super.key, required this.onCreate});
+/// Formulario para crear un nuevo círculo de hábito. No mantiene estado
+/// propio: los campos y la creación viven en `HomeLogic`, esta pantalla
+/// solo los muestra.
+class CreateHabitPage extends StatelessWidget {
+  const CreateHabitPage({super.key, required this.logic});
 
-  final void Function(String name, String category) onCreate;
+  final HomeLogic logic;
 
-  @override
-  State<CreateHabitPage> createState() => _CreateHabitPageState();
-}
-
-class _CreateHabitPageState extends State<CreateHabitPage> {
-  final _nameController = TextEditingController();
-  final _categoryController = TextEditingController();
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _categoryController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) return;
-    final category = _categoryController.text.trim().isEmpty
-        ? 'General'
-        : _categoryController.text.trim();
-    widget.onCreate(name, category);
-    Navigator.of(context).pop();
+  void _submit(BuildContext context) {
+    if (logic.submitNewCircle()) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -59,21 +41,21 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
             ),
             const SizedBox(height: AppSpacing.xl2),
             TextField(
-              controller: _nameController,
+              controller: logic.habitNameController,
               decoration: const InputDecoration(labelText: 'Nombre del hábito'),
-              onSubmitted: (_) => _submit(),
+              onSubmitted: (_) => _submit(context),
             ),
             const SizedBox(height: AppSpacing.lg),
             TextField(
-              controller: _categoryController,
+              controller: logic.habitCategoryController,
               decoration: const InputDecoration(labelText: 'Categoría (opcional)'),
-              onSubmitted: (_) => _submit(),
+              onSubmitted: (_) => _submit(context),
             ),
             const SizedBox(height: AppSpacing.xl2),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _submit,
+                onPressed: () => _submit(context),
                 child: const Text('Crear círculo'),
               ),
             ),

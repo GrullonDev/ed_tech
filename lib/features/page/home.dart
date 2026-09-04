@@ -71,10 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _openCreateHabit() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => CreateHabitPage(
-          onCreate: (name, category) =>
-              _logic.createCircle(name: name, category: category),
-        ),
+        builder: (context) => CreateHabitPage(logic: _logic),
       ),
     );
   }

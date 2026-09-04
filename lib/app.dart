@@ -10,7 +10,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Ed Tech',
       theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: SafeArea(top: false, bottom: true, child: const MyHomePage()),
+      home: const SafeArea(top: false, bottom: true, child: MyHomePage()),
     );
   }
 }

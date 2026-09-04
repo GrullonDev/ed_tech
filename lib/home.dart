@@ -8,15 +8,15 @@ class MyHomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       body: PageView.builder(
-        scrollDirection: Axis.vertical,
+        scrollDirection: .vertical,
         itemCount: 16,
         pageSnapping: true,
         allowImplicitScrolling: false,
-        clipBehavior: Clip.antiAliasWithSaveLayer,
+        clipBehavior: .antiAliasWithSaveLayer,
         physics: const AlwaysScrollableScrollPhysics(),
         itemBuilder: (context, index) {
           return Stack(
-            fit: StackFit.expand,
+            fit: .expand,
             children: [
               // Capa 1: Fondo (simulando el reproductor de video por ahora)
               Container(
@@ -34,7 +34,7 @@ class MyHomePage extends StatelessWidget {
                 right: 16,
                 bottom: 80,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: .min,
                   children: [
                     const CircleAvatar(
                       radius: 24,
@@ -75,14 +75,14 @@ class MyHomePage extends StatelessWidget {
               ),
 
               // Capa 3: Información de la lección (Inferior izquierda)
-              Positioned(
+              const Positioned(
                 left: 16,
                 bottom: 40,
                 right: 80,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  crossAxisAlignment: .start,
+                  mainAxisSize: .min,
+                  children: [
                     Text(
                       '@profesor_flutter',
                       style: TextStyle(

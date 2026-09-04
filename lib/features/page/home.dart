@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
+import 'package:edtech_tiktok/features/page/circle_detail.dart';
+import 'package:edtech_tiktok/features/page/create_habit.dart';
+import 'package:edtech_tiktok/features/page/profile.dart';
 import 'package:edtech_tiktok/features/widgets/dashboard.dart';
 import 'package:edtech_tiktok/features/widgets/onboarding.dart';
 
@@ -40,11 +44,53 @@ class _MyHomePageState extends State<MyHomePage> {
           todayProgress: _logic.todayProgress,
           nextPendingHabit: _logic.nextPendingHabit,
           overallStreakDays: _logic.overallStreakDays,
-          onCreateCircle: _logic.createNewCircle,
+          onCreateCircle: _openCreateHabit,
           onCheckIn: _logic.toggleCheckIn,
           onToggleTodayHabit: _logic.toggleTodayHabit,
+          onOpenCircle: _openCircleDetail,
+          onOpenProfile: _openProfile,
         );
       },
+    );
+  }
+
+  void _openCircleDetail(HabitCircle circle) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ListenableBuilder(
+          listenable: _logic,
+          builder: (context, _) => CircleDetailPage(
+            circle: circle,
+            onCheckIn: () => _logic.toggleCheckIn(circle),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openCreateHabit() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CreateHabitPage(
+          onCreate: (name, category) =>
+              _logic.createCircle(name: name, category: category),
+        ),
+      ),
+    );
+  }
+
+  void _openProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ListenableBuilder(
+          listenable: _logic,
+          builder: (context, _) => ProfilePage(
+            username: _logic.username,
+            overallStreakDays: _logic.overallStreakDays,
+            circles: _logic.circles,
+          ),
+        ),
+      ),
     );
   }
 }

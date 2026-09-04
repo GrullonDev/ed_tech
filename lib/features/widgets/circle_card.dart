@@ -5,18 +5,31 @@ import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
 class CircleCard extends StatelessWidget {
-  const CircleCard({super.key, required this.circle, required this.onCheckIn});
+  const CircleCard({
+    super.key,
+    required this.circle,
+    required this.onCheckIn,
+    required this.onTap,
+  });
 
   final HabitCircle circle;
   final VoidCallback onCheckIn;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     if (circle.isPerfect) {
-      return _PerfectCircleCard(circle: circle);
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        child: _PerfectCircleCard(circle: circle),
+      );
     }
     final textTheme = Theme.of(context).textTheme;
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      child: Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -123,6 +136,7 @@ class CircleCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

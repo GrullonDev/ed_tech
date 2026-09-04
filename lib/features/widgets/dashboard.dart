@@ -21,6 +21,8 @@ class Dashboard extends StatelessWidget {
     required this.onCreateCircle,
     required this.onCheckIn,
     required this.onToggleTodayHabit,
+    required this.onOpenCircle,
+    required this.onOpenProfile,
   });
 
   final String username;
@@ -34,6 +36,8 @@ class Dashboard extends StatelessWidget {
   final VoidCallback onCreateCircle;
   final ValueChanged<HabitCircle> onCheckIn;
   final ValueChanged<TodayHabit> onToggleTodayHabit;
+  final ValueChanged<HabitCircle> onOpenCircle;
+  final VoidCallback onOpenProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +52,10 @@ class Dashboard extends StatelessWidget {
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
       ),
-      bottomNavigationBar: AppBottomNav(onCreateCircle: onCreateCircle),
+      bottomNavigationBar: AppBottomNav(
+        onCreateCircle: onCreateCircle,
+        onOpenProfile: onOpenProfile,
+      ),
       body: SafeArea(
         bottom: false,
         child: ListView(
@@ -116,7 +123,11 @@ class Dashboard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             for (final circle in circles) ...[
-              CircleCard(circle: circle, onCheckIn: () => onCheckIn(circle)),
+              CircleCard(
+                circle: circle,
+                onCheckIn: () => onCheckIn(circle),
+                onTap: () => onOpenCircle(circle),
+              ),
               const SizedBox(height: AppSpacing.lg),
             ],
             const _InviteBanner(),

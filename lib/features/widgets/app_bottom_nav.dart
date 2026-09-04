@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
-/// Barra de navegación inferior con FAB central, puramente visual por ahora:
-/// solo la pestaña "Círculos" tiene contenido implementado.
+/// Barra de navegación inferior con FAB central. La pestaña "Círculos" es
+/// la pantalla actual; "Perfil" navega a [ProfilePage] vía [onOpenProfile].
+/// "Rachas" queda como marcador visual hasta que exista esa pantalla.
 class AppBottomNav extends StatelessWidget {
-  const AppBottomNav({super.key, required this.onCreateCircle});
+  const AppBottomNav({
+    super.key,
+    required this.onCreateCircle,
+    required this.onOpenProfile,
+  });
 
   final VoidCallback onCreateCircle;
+  final VoidCallback onOpenProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +37,11 @@ class AppBottomNav extends StatelessWidget {
               label: 'Rachas',
             ),
             const SizedBox(width: 56),
-            const _NavItem(icon: Icons.emoji_events_rounded, label: 'Perfil'),
+            _NavItem(
+              icon: Icons.emoji_events_rounded,
+              label: 'Perfil',
+              onTap: onOpenProfile,
+            ),
           ],
         ),
       ),
@@ -40,29 +50,42 @@ class AppBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, this.selected = false});
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    this.selected = false,
+    this.onTap,
+  });
 
   final IconData icon;
   final String label;
   final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.primary : AppColors.outline;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 11,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

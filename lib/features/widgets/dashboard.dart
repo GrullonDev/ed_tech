@@ -51,80 +51,85 @@ class Dashboard extends StatelessWidget {
       ),
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
-              .copyWith(bottom: AppSpacing.xl2),
-          children: [
-            const SizedBox(height: AppSpacing.sm),
-            _TopBar(streakDays: overallStreakDays),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              '¡Buen día, $username! 👋',
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Tu tribu te espera. La constancia compartida pesa la mitad.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _TodayCard(
-              habits: todayHabits,
-              completed: todayCompletedCount,
-              total: todayTotalCount,
-              progress: todayProgress,
-              onToggle: onToggleTodayHabit,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            if (nextPendingHabit != null)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => onToggleTodayHabit(nextPendingHabit!),
-                  icon: const Icon(Icons.playlist_add_check_rounded),
-                  label: Text(
-                    'Registrar hábito pendiente (${nextPendingHabit!.label})',
-                    textAlign: TextAlign.center,
-                  ),
+        child: AppMaxWidth(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
+                .copyWith(bottom: AppSpacing.xl2),
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              _TopBar(streakDays: overallStreakDays),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                '¡Buen día, $username! 👋',
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            const SizedBox(height: AppSpacing.xl2),
-            Row(
-              children: [
-                Text(
-                  'Tus Círculos Activos',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Tu tribu te espera. La constancia compartida pesa la mitad.',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                  height: 1.5,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                _CountPill(count: circles.length),
-                const Spacer(),
-                Text(
-                  'Gestionar',
-                  style: textTheme.labelLarge?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            for (final circle in circles) ...[
-              CircleCard(
-                circle: circle,
-                onCheckIn: () => onCheckIn(circle),
-                onTap: () => onOpenCircle(circle),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              _TodayCard(
+                habits: todayHabits,
+                completed: todayCompletedCount,
+                total: todayTotalCount,
+                progress: todayProgress,
+                onToggle: onToggleTodayHabit,
               ),
               const SizedBox(height: AppSpacing.lg),
+              if (nextPendingHabit != null)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => onToggleTodayHabit(nextPendingHabit!),
+                    icon: const Icon(Icons.playlist_add_check_rounded),
+                    label: Text(
+                      'Registrar hábito pendiente (${nextPendingHabit!.label})',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.xl2),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      'Tus Círculos Activos',
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _CountPill(count: circles.length),
+                  const Spacer(),
+                  Text(
+                    'Gestionar',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              for (final circle in circles) ...[
+                CircleCard(
+                  circle: circle,
+                  onCheckIn: () => onCheckIn(circle),
+                  onTap: () => onOpenCircle(circle),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+              const _InviteBanner(),
             ],
-            const _InviteBanner(),
-          ],
+          ),
         ),
       ),
     );
@@ -143,11 +148,14 @@ class _TopBar extends StatelessWidget {
       children: [
         Image.asset(AppAssets.logo, width: 28, height: 28),
         const SizedBox(width: AppSpacing.sm),
-        Text(
-          'CírculoDiario',
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: AppColors.primary,
+        Flexible(
+          child: Text(
+            'CírculoDiario',
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
           ),
         ),
         const Spacer(),
@@ -212,9 +220,8 @@ class _CountPill extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
+        style: Theme.of(context).textTheme.labelMedium
+            ?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -353,7 +360,10 @@ class _InviteBanner extends StatelessWidget {
           const CircleAvatar(
             radius: 18,
             backgroundColor: AppColors.surface,
-            child: Icon(Icons.person_add_alt_1_rounded, color: AppColors.primary),
+            child: Icon(
+              Icons.person_add_alt_1_rounded,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

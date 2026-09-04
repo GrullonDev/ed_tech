@@ -23,73 +23,79 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Perfil')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          Center(
-            child: Column(
+      body: AppMaxWidth(
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  const CircleAvatar(
+                    radius: 44,
+                    backgroundColor: AppColors.surfaceContainer,
+                    backgroundImage: AssetImage(AppAssets.avatarSample),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    username,
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    'Miembro de CírculoDiario',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl2),
+            Row(
               children: [
-                const CircleAvatar(
-                  radius: 44,
-                  backgroundColor: AppColors.surfaceContainer,
-                  backgroundImage: AssetImage(AppAssets.avatarSample),
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.local_fire_department_rounded,
+                    color: AppColors.secondary,
+                    value: '$overallStreakDays',
+                    label: 'Racha máxima',
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  username,
-                  style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.group_rounded,
+                    color: AppColors.primary,
+                    value: '${circles.length}',
+                    label: 'Círculos activos',
+                  ),
                 ),
-                Text(
-                  'Miembro de CírculoDiario',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _StatCard(
+                    icon: Icons.emoji_events_rounded,
+                    color: AppColors.primary,
+                    value: '$perfectCount',
+                    label: 'Perfectos',
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl2),
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.local_fire_department_rounded,
-                  color: AppColors.secondary,
-                  value: '$overallStreakDays',
-                  label: 'Racha máxima',
-                ),
+            const SizedBox(height: AppSpacing.xl2),
+            Text(
+              'Tus círculos',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.group_rounded,
-                  color: AppColors.primary,
-                  value: '${circles.length}',
-                  label: 'Círculos activos',
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: _StatCard(
-                  icon: Icons.emoji_events_rounded,
-                  color: AppColors.primary,
-                  value: '$perfectCount',
-                  label: 'Perfectos',
-                ),
-              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            for (final circle in circles) ...[
+              _CircleRow(circle: circle),
+              const SizedBox(height: AppSpacing.sm),
             ],
-          ),
-          const SizedBox(height: AppSpacing.xl2),
-          Text(
-            'Tus círculos',
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          for (final circle in circles) ...[
-            _CircleRow(circle: circle),
-            const SizedBox(height: AppSpacing.sm),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -132,6 +138,8 @@ class _StatCard extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: textTheme.bodySmall?.copyWith(
               color: AppColors.onSurfaceVariant,
             ),
@@ -165,7 +173,9 @@ class _CircleRow extends StatelessWidget {
           Expanded(
             child: Text(
               circle.name,
-              style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),

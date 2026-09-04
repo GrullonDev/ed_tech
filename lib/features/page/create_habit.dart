@@ -23,14 +23,15 @@ class CreateHabitPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Crear círculo')),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: AppMaxWidth(
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
             Text(
               'Dale nombre a tu nuevo círculo de hábito',
-              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -48,7 +49,9 @@ class CreateHabitPage extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             TextField(
               controller: logic.habitCategoryController,
-              decoration: const InputDecoration(labelText: 'Categoría (opcional)'),
+              decoration: const InputDecoration(
+                labelText: 'Categoría (opcional)',
+              ),
               onSubmitted: (_) => _submit(context),
             ),
             const SizedBox(height: AppSpacing.xl2),

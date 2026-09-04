@@ -22,6 +22,7 @@ class Dashboard extends StatelessWidget {
     required this.onCreateCircle,
     required this.onCheckIn,
     required this.onToggleTodayHabit,
+    required this.onAddTodayHabit,
     required this.onOpenCircle,
     required this.onOpenProfile,
   });
@@ -38,6 +39,7 @@ class Dashboard extends StatelessWidget {
   final VoidCallback onCreateCircle;
   final ValueChanged<HabitCircle> onCheckIn;
   final ValueChanged<TodayHabit> onToggleTodayHabit;
+  final ValueChanged<String> onAddTodayHabit;
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onOpenProfile;
 
@@ -85,6 +87,7 @@ class Dashboard extends StatelessWidget {
                 total: todayTotalCount,
                 progress: todayProgress,
                 onToggle: onToggleTodayHabit,
+                onAdd: onAddTodayHabit,
               ),
               const SizedBox(height: AppSpacing.lg),
               if (nextPendingHabit != null)
@@ -124,15 +127,19 @@ class Dashboard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              for (final circle in circles) ...[
-                CircleCard(
-                  circle: circle,
-                  onCheckIn: () => onCheckIn(circle),
-                  onTap: () => onOpenCircle(circle),
-                ),
-                const SizedBox(height: AppSpacing.lg),
+              if (circles.isEmpty)
+                _EmptyCirclesCard(onCreateCircle: onCreateCircle)
+              else ...[
+                for (final circle in circles) ...[
+                  CircleCard(
+                    circle: circle,
+                    onCheckIn: () => onCheckIn(circle),
+                    onTap: () => onOpenCircle(circle),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                const _InviteBanner(),
               ],
-              const _InviteBanner(),
             ],
           ),
         ),
@@ -265,6 +272,7 @@ class _TodayCard extends StatelessWidget {
     required this.total,
     required this.progress,
     required this.onToggle,
+    required this.onAdd,
   });
 
   final List<TodayHabit> habits;
@@ -272,6 +280,15 @@ class _TodayCard extends StatelessWidget {
   final int total;
   final double progress;
   final ValueChanged<TodayHabit> onToggle;
+  final ValueChanged<String> onAdd;
+
+  Future<void> _promptAddHabit(BuildContext context) async {
+    final label = await showDialog<String>(
+      context: context,
+      builder: (context) => const _AddHabitDialog(),
+    );
+    if (label != null && label.trim().isNotEmpty) onAdd(label);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -336,6 +353,13 @@ class _TodayCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
+          if (habits.isEmpty)
+            Text(
+              'Aún no tienes hábitos diarios. Agrega el primero.',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           Wrap(
             spacing: AppSpacing.md,
             runSpacing: AppSpacing.xs,
@@ -366,7 +390,117 @@ class _TodayCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              InkWell(
+                onTap: () => _promptAddHabit(context),
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.add_circle_outline_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Agregar hábito',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Diálogo para crear un hábito diario nuevo. Es un [StatefulWidget] para
+/// que el `TextEditingController` viva y se destruya junto con el propio
+/// diálogo (incluida su animación de cierre) en vez de ser desechado a mano
+/// justo después del `await showDialog`, lo que puede correr una carrera
+/// contra la transición de salida y usar el controller ya destruido.
+class _AddHabitDialog extends StatefulWidget {
+  const _AddHabitDialog();
+
+  @override
+  State<_AddHabitDialog> createState() => _AddHabitDialogState();
+}
+
+class _AddHabitDialogState extends State<_AddHabitDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.of(context).pop(_controller.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Nuevo hábito diario'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(labelText: 'Ej. Beber 2L de agua'),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Agregar')),
+      ],
+    );
+  }
+}
+
+class _EmptyCirclesCard extends StatelessWidget {
+  const _EmptyCirclesCard({required this.onCreateCircle});
+
+  final VoidCallback onCreateCircle;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.outlineWhisper),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Aún no tienes círculos',
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Crea tu primer círculo de hábito para empezar a acumular racha.',
+            style: textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onCreateCircle,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Crear círculo'),
+            ),
           ),
         ],
       ),

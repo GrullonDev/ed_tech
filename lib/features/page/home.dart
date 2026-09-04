@@ -48,6 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onCreateCircle: _openCreateHabit,
           onCheckIn: _logic.toggleCheckIn,
           onToggleTodayHabit: _logic.toggleTodayHabit,
+          onAddTodayHabit: _logic.addTodayHabit,
           onOpenCircle: _openCircleDetail,
           onOpenProfile: _openProfile,
         );

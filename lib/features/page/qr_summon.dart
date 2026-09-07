@@ -147,6 +147,18 @@ class _ScanTabState extends State<_ScanTab> {
     super.dispose();
   }
 
+  String _describeCameraError(MobileScannerException error) {
+    switch (error.errorCode) {
+      case MobileScannerErrorCode.permissionDenied:
+        return 'Permiso de cámara denegado. Actívalo en Ajustes > Apps > '
+            'Racha Tribu > Permisos.';
+      case MobileScannerErrorCode.unsupported:
+        return 'Este dispositivo no tiene una cámara disponible para escanear.';
+      default:
+        return 'No se pudo abrir la cámara.\n${error.errorDetails?.message ?? error.errorCode.name}';
+    }
+  }
+
   void _handleDetect(BarcodeCapture capture) {
     if (_resultMessage != null) return;
     if (capture.barcodes.isEmpty) return;
@@ -166,7 +178,27 @@ class _ScanTabState extends State<_ScanTab> {
     final textTheme = Theme.of(context).textTheme;
     return Stack(
       children: [
-        MobileScanner(controller: _controller, onDetect: _handleDetect),
+        MobileScanner(
+          controller: _controller,
+          onDetect: _handleDetect,
+          errorBuilder: (context, error, child) => Container(
+            color: Colors.black,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.videocam_off_rounded, color: Colors.white, size: 48),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  _describeCameraError(error),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
         Positioned(
           left: AppSpacing.lg,
           right: AppSpacing.lg,

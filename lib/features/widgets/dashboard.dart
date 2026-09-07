@@ -21,6 +21,7 @@ class Dashboard extends StatelessWidget {
     required this.overallStreakDays,
     required this.streakPulseTick,
     required this.constancyDrops,
+    required this.userLevel,
     required this.onCreateCircle,
     required this.onCheckIn,
     required this.onToggleTodayHabit,
@@ -41,6 +42,7 @@ class Dashboard extends StatelessWidget {
   final int overallStreakDays;
   final int streakPulseTick;
   final int constancyDrops;
+  final int userLevel;
   final VoidCallback onCreateCircle;
   final ValueChanged<HabitCircle> onCheckIn;
   final ValueChanged<TodayHabit> onToggleTodayHabit;
@@ -78,6 +80,7 @@ class Dashboard extends StatelessWidget {
                 streakDays: overallStreakDays,
                 pulseTick: streakPulseTick,
                 constancyDrops: constancyDrops,
+                userLevel: userLevel,
               ),
               const SizedBox(height: AppSpacing.xl),
               Text(
@@ -236,11 +239,13 @@ class _TopBar extends StatelessWidget {
     required this.streakDays,
     required this.pulseTick,
     required this.constancyDrops,
+    required this.userLevel,
   });
 
   final int streakDays;
   final int pulseTick;
   final int constancyDrops;
+  final int userLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +280,7 @@ class _TopBar extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
-            _LevelPill(streakDays: streakDays),
+            _LevelPill(level: userLevel),
             const SizedBox(width: AppSpacing.sm),
             ConstancyDropsPill(drops: constancyDrops),
           ],
@@ -348,13 +353,12 @@ class _StreakFirePulse extends StatelessWidget {
 /// suma un nivel. Es puramente decorativo (sin backend) pero refuerza la
 /// sensación de progreso tipo juego.
 class _LevelPill extends StatelessWidget {
-  const _LevelPill({required this.streakDays});
+  const _LevelPill({required this.level});
 
-  final int streakDays;
+  final int level;
 
   @override
   Widget build(BuildContext context) {
-    final level = (streakDays ~/ 7) + 1;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,

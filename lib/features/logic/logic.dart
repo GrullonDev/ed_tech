@@ -68,6 +68,11 @@ class HomeLogic extends ChangeNotifier {
             .map((c) => c.longestStreakDays)
             .reduce((a, b) => a > b ? a : b);
 
+  /// Nivel de perfil: sube automáticamente un nivel por cada bloque completo
+  /// de 7 días de racha acumulada (racha global actual), empezando siempre
+  /// en el Nivel 1 aunque el usuario no tenga racha todavía.
+  int get userLevel => (overallStreakDays ~/ 7) + 1;
+
   /// "Gotas de Constancia": moneda blanda del juego. Se derivan por completo
   /// de datos reales (10 gotas por cada check-in histórico en cualquier
   /// círculo, más un bono de 50 por cada hito de racha ya alcanzado), nunca

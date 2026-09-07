@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
@@ -24,13 +27,17 @@ class HomeLogic extends ChangeNotifier {
   bool _hasUsername = false;
   String _username = '';
   DateTime? _memberSince;
+  String _playerId = '';
 
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController habitNameController = TextEditingController();
   final TextEditingController habitCategoryController = TextEditingController();
+  final TextEditingController allyUsernameController = TextEditingController();
 
   List<TodayHabit> _todayHabits = [];
   List<HabitCircle> _circles = [];
+  List<AllyRequest> _pendingAllyRequests = [];
+  List<String> _allies = [];
 
   /// Contador que se incrementa cada vez que se completa un hábito o
   /// check-in. Sirve como trigger para la micro-animación de pulso en el
@@ -38,12 +45,29 @@ class HomeLogic extends ChangeNotifier {
   /// la animación cada vez que cambia.
   int _streakPulseTick = 0;
 
+  /// Contador que se incrementa cada vez que un círculo compartido cambia
+  /// (check-in de un miembro, nuevo aliado agregado a la tribu). Sirve para
+  /// que las "hogueras tribales" del Ágora reproduzcan su animación de
+  /// reignición al instante, como señal visual de que la base de datos
+  /// local ya quedó sincronizada sin depender de un servidor externo.
+  int _circlesUpdatedTick = 0;
+
   bool get hasUsername => _hasUsername;
   String get username => _username;
   DateTime? get memberSince => _memberSince;
+  String get playerId => _playerId;
   List<HabitCircle> get circles => List.unmodifiable(_circles);
   List<TodayHabit> get todayHabits => List.unmodifiable(_todayHabits);
   int get streakPulseTick => _streakPulseTick;
+  int get circlesUpdatedTick => _circlesUpdatedTick;
+  List<AllyRequest> get pendingAllyRequests =>
+      List.unmodifiable(_pendingAllyRequests);
+  List<String> get allies => List.unmodifiable(_allies);
+
+  /// Contenido del código QR de "Invocar por QR": el ID de jugador local más
+  /// el nombre de usuario, separados por ':'. Al escanearlo, el otro
+  /// dispositivo separa ambos campos para agregar al aliado al instante.
+  String get qrPayload => 'RACHATRIBU:$_playerId:$_username';
 
   int get todayCompletedCount => _todayHabits.where((h) => h.done).length;
   int get todayTotalCount => _todayHabits.length;
@@ -112,10 +136,13 @@ class HomeLogic extends ChangeNotifier {
     final savedUser = LocalStorageService.readUser();
     _circles = LocalStorageService.readCircles();
     _todayHabits = LocalStorageService.readTodayHabits();
+    _pendingAllyRequests = LocalStorageService.readAllyRequests();
+    _allies = LocalStorageService.readAllies();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
     _memberSince = savedUser?.memberSince;
+    _playerId = savedUser?.playerId ?? '';
     usernameController.text = _username;
 
     _applyDailyResetIfNeeded();
@@ -144,14 +171,25 @@ class HomeLogic extends ChangeNotifier {
     if (name.isEmpty) return;
     _username = name;
     _hasUsername = true;
+    _playerId = _generatePlayerId();
     // Se espera a que el usuario quede escrito en disco antes de avisar a la
     // UI: así, si el sistema mata la app justo después de continuar, el
     // apodo ya quedó persistido y no se volverá a pedir en el siguiente
     // arranque.
     await LocalStorageService.saveUser(
-      AppUser(username: name, memberSince: DateTime.now()),
+      AppUser(username: name, memberSince: DateTime.now(), playerId: _playerId),
     );
     notifyListeners();
+  }
+
+  /// Genera un ID de jugador local corto (marca de tiempo + sufijo
+  /// aleatorio en base 36) que identifica a este dispositivo dentro del
+  /// código QR de "Invocar por QR". No requiere red: solo debe ser distinto
+  /// entre dispositivos con probabilidad razonablemente alta.
+  static String _generatePlayerId() {
+    final timestamp = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final randomSuffix = Random().nextInt(46656).toRadixString(36);
+    return '$timestamp$randomSuffix';
   }
 
   void addTodayHabit(String label) {
@@ -178,6 +216,7 @@ class HomeLogic extends ChangeNotifier {
       circle.addCheckInToday();
       _streakPulseTick++;
     }
+    _circlesUpdatedTick++;
     LocalStorageService.saveCircles(_circles);
     notifyListeners();
   }
@@ -190,6 +229,7 @@ class HomeLogic extends ChangeNotifier {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
     circle.addMember(trimmed);
+    _circlesUpdatedTick++;
     LocalStorageService.saveCircles(_circles);
     notifyListeners();
   }
@@ -215,11 +255,72 @@ class HomeLogic extends ChangeNotifier {
     return true;
   }
 
+  /// Envía una "misiva" de solicitud de aliado a partir de
+  /// [allyUsernameController] (ej. "@usuario"). Sin backend real no hay forma
+  /// de que llegue a otro dispositivo, así que se simula que ya llegó
+  /// registrándola de inmediato como pendiente, lista para ser aceptada o
+  /// rechazada desde el perfil sin conexión a internet. Retorna `false` sin
+  /// hacer nada si el campo está vacío o si ya existe una solicitud o
+  /// aliado con ese nombre.
+  bool sendAllyRequest() {
+    final trimmed = allyUsernameController.text.trim().replaceFirst('@', '');
+    if (trimmed.isEmpty) return false;
+    if (_pendingAllyRequests.any((r) => r.fromUsername == trimmed) ||
+        _allies.contains(trimmed)) {
+      return false;
+    }
+    _pendingAllyRequests.add(
+      AllyRequest(fromUsername: trimmed, sentAt: DateTime.now()),
+    );
+    LocalStorageService.saveAllyRequests(_pendingAllyRequests);
+    allyUsernameController.clear();
+    notifyListeners();
+    return true;
+  }
+
+  void acceptAllyRequest(AllyRequest request) {
+    _pendingAllyRequests.remove(request);
+    if (!_allies.contains(request.fromUsername)) {
+      _allies.add(request.fromUsername);
+    }
+    LocalStorageService.saveAllyRequests(_pendingAllyRequests);
+    LocalStorageService.saveAllies(_allies);
+    notifyListeners();
+  }
+
+  /// Procesa el contenido de un QR escaneado con "Invocar por QR"
+  /// (formato `RACHATRIBU:<playerId>:<username>`, ver [qrPayload]) y agrega
+  /// al instante a ese username como aliado — sin pasar por el flujo de
+  /// solicitud pendiente, ya que el escaneo presencial ya es la prueba de
+  /// confianza. Retorna el username agregado, o `null` si el código no es
+  /// válido, es el propio jugador, o ya era aliado.
+  String? addAllyFromScannedCode(String code) {
+    final parts = code.split(':');
+    if (parts.length < 3 || parts[0] != 'RACHATRIBU') return null;
+    final scannedPlayerId = parts[1];
+    final scannedUsername = parts.sublist(2).join(':').trim();
+    if (scannedUsername.isEmpty) return null;
+    if (scannedPlayerId == _playerId || _allies.contains(scannedUsername)) {
+      return null;
+    }
+    _allies.add(scannedUsername);
+    LocalStorageService.saveAllies(_allies);
+    notifyListeners();
+    return scannedUsername;
+  }
+
+  void rejectAllyRequest(AllyRequest request) {
+    _pendingAllyRequests.remove(request);
+    LocalStorageService.saveAllyRequests(_pendingAllyRequests);
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     usernameController.dispose();
     habitNameController.dispose();
     habitCategoryController.dispose();
+    allyUsernameController.dispose();
     super.dispose();
   }
 }

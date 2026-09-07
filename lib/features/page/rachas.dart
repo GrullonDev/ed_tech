@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
-
-/// Hitos de racha global (en días) contra los que se mide el progreso.
-/// Son umbrales fijos de producto, no datos del usuario: el *progreso* hacia
-/// cada uno sí se calcula a partir de [RachasPage.overallStreakDays] real.
-const List<int> _kMilestones = [7, 21, 30, 50, 100];
+import 'package:edtech_tiktok/features/widgets/game_ui.dart';
+import 'package:edtech_tiktok/features/widgets/ritual_path.dart';
 
 /// Pantalla "Rachas": muestra la racha global y por círculo, la semana en
 /// curso y los próximos hitos, todo derivado de los check-ins reales
@@ -22,6 +20,7 @@ class RachasPage extends StatelessWidget {
     required this.onOpenCircle,
     required this.onCreateCircle,
     required this.onOpenProfile,
+    required this.onOpenAgora,
   });
 
   final List<HabitCircle> circles;
@@ -30,17 +29,18 @@ class RachasPage extends StatelessWidget {
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onCreateCircle;
   final VoidCallback onOpenProfile;
+  final VoidCallback onOpenAgora;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final nextMilestone = _kMilestones.firstWhere(
-      (m) => m > overallStreakDays,
-      orElse: () => _kMilestones.last,
+    final milestones = Milestone.evaluate(overallStreakDays);
+    final currentQuest = milestones.firstWhere(
+      (m) => !m.unlocked,
+      orElse: () => milestones.last,
     );
-    final milestoneProgress = nextMilestone == 0
-        ? 0.0
-        : (overallStreakDays / nextMilestone).clamp(0, 1).toDouble();
+    final nextMilestone = currentQuest.requiredDays;
+    final milestoneProgress = currentQuest.progress;
     final daysToGo = (nextMilestone - overallStreakDays).clamp(
       0,
       nextMilestone,
@@ -92,6 +92,8 @@ class RachasPage extends StatelessWidget {
                   height: 1.5,
                 ),
               ),
+              const SizedBox(height: AppSpacing.md),
+              _AgoraEntryBanner(onTap: onOpenAgora),
               const SizedBox(height: AppSpacing.xl),
               _StreakHeroCard(
                 overallStreakDays: overallStreakDays,
@@ -140,20 +142,21 @@ class RachasPage extends StatelessWidget {
                 ],
               const SizedBox(height: AppSpacing.xl),
               Text(
-                'Próximos Hitos',
+                'El Libro de los Ritos',
                 style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              for (final milestone in _kMilestones) ...[
-                _MilestoneRow(
-                  days: milestone,
-                  overallStreakDays: overallStreakDays,
-                  isCurrentQuest: milestone == nextMilestone,
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Cada hito ilumina un nuevo nodo del camino. Tu meta actual '
+                'brilla con fuego propio.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              RitualPath(milestones: milestones),
               const SizedBox(height: AppSpacing.md),
               const _GoldenRuleCard(),
             ],
@@ -559,12 +562,13 @@ class _CircleStreakRow extends StatelessWidget {
               curve: Curves.elasticOut,
               builder: (context, scale, child) =>
                   Transform.scale(scale: scale, child: child),
-              child: IconButton(
-                onPressed: onCheckIn,
-                icon: Icon(
+              child: GamePressable(
+                onTap: onCheckIn,
+                child: Icon(
                   circle.checkedInToday
                       ? Icons.check_circle_rounded
                       : Icons.radio_button_unchecked_rounded,
+                  size: 28,
                   color: circle.checkedInToday
                       ? AppColors.primary
                       : AppColors.outline,
@@ -578,115 +582,53 @@ class _CircleStreakRow extends StatelessWidget {
   }
 }
 
-class _MilestoneRow extends StatelessWidget {
-  const _MilestoneRow({
-    required this.days,
-    required this.overallStreakDays,
-    this.isCurrentQuest = false,
-  });
+/// Banner que invita a entrar al Ágora Tribal (leaderboard/social) desde
+/// Rachas, ya que hoy no hay una pestaña dedicada en la nav inferior.
+class _AgoraEntryBanner extends StatelessWidget {
+  const _AgoraEntryBanner({required this.onTap});
 
-  final int days;
-  final int overallStreakDays;
-  final bool isCurrentQuest;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final reached = overallStreakDays >= days;
-    final progress = (overallStreakDays / days).clamp(0, 1).toDouble();
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: isCurrentQuest && !reached
-              ? AppColors.secondary
-              : AppColors.outlineWhisper,
-          width: isCurrentQuest && !reached ? 1.5 : 1,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.celebrationStart, AppColors.celebrationEnd],
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
         ),
-        boxShadow: isCurrentQuest && !reached
-            ? [
-                BoxShadow(
-                  color: AppColors.secondary.withValues(alpha: 0.18),
-                  blurRadius: 12,
-                  spreadRadius: -2,
-                ),
-              ]
-            : null,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            reached ? Icons.emoji_events_rounded : Icons.emoji_events_outlined,
-            color: reached ? AppColors.secondary : AppColors.outline,
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Pacto de $days Días',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+        child: Row(
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 22)),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'El Gran Ágora Tribal',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
-                    if (isCurrentQuest && !reached) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xs,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.warningContainer,
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Text(
-                          'META ACTUAL',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: AppColors.secondary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 9,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: progress),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) =>
-                        LinearProgressIndicator(
-                          value: value,
-                          minHeight: 6,
-                          backgroundColor: AppColors.surfaceContainer,
-                          color: reached
-                              ? AppColors.primary
-                              : AppColors.secondary,
-                        ),
                   ),
-                ),
-              ],
+                  Text(
+                    'Mira la hoguera de cada círculo y quién lidera la tribu.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            '${overallStreakDays > days ? days : overallStreakDays}/$days',
-            style: textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.onSurfaceVariant,
-            ),
-          ),
-        ],
+            const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+          ],
+        ),
       ),
     );
   }

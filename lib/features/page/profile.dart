@@ -36,6 +36,7 @@ class ProfilePage extends StatelessWidget {
     required this.recordStreakDays,
     required this.monthlyComplianceRate,
     required this.constancyDrops,
+    required this.userLevel,
     required this.circles,
     required this.onOpenCircle,
     required this.onOpenRachas,
@@ -48,6 +49,7 @@ class ProfilePage extends StatelessWidget {
   final int recordStreakDays;
   final double monthlyComplianceRate;
   final int constancyDrops;
+  final int userLevel;
   final List<HabitCircle> circles;
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onOpenRachas;
@@ -105,7 +107,7 @@ class ProfilePage extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _ProfileLevelPill(streakDays: overallStreakDays),
+                        _ProfileLevelPill(level: userLevel),
                         const SizedBox(width: AppSpacing.sm),
                         ConstancyDropsPill(drops: constancyDrops),
                       ],
@@ -283,13 +285,12 @@ class ProfilePage extends StatelessWidget {
 /// el dashboard (cada 7 días de racha suma un nivel), para reforzar la
 /// sensación de progresión tipo juego también en el perfil.
 class _ProfileLevelPill extends StatelessWidget {
-  const _ProfileLevelPill({required this.streakDays});
+  const _ProfileLevelPill({required this.level});
 
-  final int streakDays;
+  final int level;
 
   @override
   Widget build(BuildContext context) {
-    final level = (streakDays ~/ 7) + 1;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,

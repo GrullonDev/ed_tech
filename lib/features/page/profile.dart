@@ -98,6 +98,8 @@ class ProfilePage extends StatelessWidget {
                         color: AppColors.onSurfaceVariant,
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _ProfileLevelPill(streakDays: overallStreakDays),
                   ],
                 ),
               ),
@@ -257,6 +259,50 @@ class ProfilePage extends StatelessWidget {
   }
 
   static String _currentMonthName() => _kMonthNames[DateTime.now().month - 1];
+}
+
+/// Insignia de "nivel" derivada de la racha general, igual criterio que en
+/// el dashboard (cada 7 días de racha suma un nivel), para reforzar la
+/// sensación de progresión tipo juego también en el perfil.
+class _ProfileLevelPill extends StatelessWidget {
+  const _ProfileLevelPill({required this.streakDays});
+
+  final int streakDays;
+
+  @override
+  Widget build(BuildContext context) {
+    final level = (streakDays ~/ 7) + 1;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryContainer],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.military_tech_rounded,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Nivel $level',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatTile extends StatelessWidget {
@@ -423,12 +469,16 @@ class _PresenceCell extends StatelessWidget {
       AppColors.primary,
       fraction,
     )!;
+    final isToday = day == today;
     return AspectRatio(
       aspectRatio: 1,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(4),
+          border: isToday
+              ? Border.all(color: AppColors.secondary, width: 1.5)
+              : null,
         ),
       ),
     );
@@ -516,17 +566,36 @@ class _Badge extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: AppShadows.card,
+        border: unlocked
+            ? Border.all(color: AppColors.secondary.withValues(alpha: 0.35))
+            : null,
+        boxShadow: unlocked
+            ? [
+                BoxShadow(
+                  color: AppColors.secondary.withValues(alpha: 0.2),
+                  blurRadius: 14,
+                  spreadRadius: -4,
+                ),
+              ]
+            : AppShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: unlocked
-                ? AppColors.warningContainer
-                : AppColors.surfaceContainer,
-            child: Icon(icon, color: tint, size: 20),
+          TweenAnimationBuilder<double>(
+            key: ValueKey('badge-$title-$unlocked'),
+            tween: Tween(begin: unlocked ? 0.4 : 1.0, end: 1.0),
+            duration: const Duration(milliseconds: 450),
+            curve: Curves.elasticOut,
+            builder: (context, scale, child) =>
+                Transform.scale(scale: scale, child: child),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: unlocked
+                  ? AppColors.warningContainer
+                  : AppColors.surfaceContainer,
+              child: Icon(icon, color: tint, size: 20),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(

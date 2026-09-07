@@ -150,6 +150,7 @@ class RachasPage extends StatelessWidget {
                 _MilestoneRow(
                   days: milestone,
                   overallStreakDays: overallStreakDays,
+                  isCurrentQuest: milestone == nextMilestone,
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ],
@@ -301,11 +302,16 @@ class _StreakHeroCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: AppColors.surface,
-              color: AppColors.secondary,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) => LinearProgressIndicator(
+                value: value,
+                minHeight: 8,
+                backgroundColor: AppColors.surface,
+                color: AppColors.secondary,
+              ),
             ),
           ),
         ],
@@ -420,12 +426,31 @@ class _DayCell extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(color: background, shape: BoxShape.circle),
-          child: icon,
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: isToday ? 1.35 : 1.0, end: 1.0),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: background,
+              shape: BoxShape.circle,
+              boxShadow: isToday
+                  ? [
+                      BoxShadow(
+                        color: AppColors.secondary.withValues(alpha: 0.4),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: icon,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -524,15 +549,26 @@ class _CircleStreakRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            IconButton(
-              onPressed: onCheckIn,
-              icon: Icon(
-                circle.checkedInToday
-                    ? Icons.check_circle_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color: circle.checkedInToday
-                    ? AppColors.primary
-                    : AppColors.outline,
+            TweenAnimationBuilder<double>(
+              key: ValueKey('checkin-${circle.name}-${circle.checkedInToday}'),
+              tween: Tween(
+                begin: circle.checkedInToday ? 1.4 : 1.0,
+                end: 1.0,
+              ),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.elasticOut,
+              builder: (context, scale, child) =>
+                  Transform.scale(scale: scale, child: child),
+              child: IconButton(
+                onPressed: onCheckIn,
+                icon: Icon(
+                  circle.checkedInToday
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: circle.checkedInToday
+                      ? AppColors.primary
+                      : AppColors.outline,
+                ),
               ),
             ),
           ],
@@ -543,10 +579,15 @@ class _CircleStreakRow extends StatelessWidget {
 }
 
 class _MilestoneRow extends StatelessWidget {
-  const _MilestoneRow({required this.days, required this.overallStreakDays});
+  const _MilestoneRow({
+    required this.days,
+    required this.overallStreakDays,
+    this.isCurrentQuest = false,
+  });
 
   final int days;
   final int overallStreakDays;
+  final bool isCurrentQuest;
 
   @override
   Widget build(BuildContext context) {
@@ -558,7 +599,21 @@ class _MilestoneRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.outlineWhisper),
+        border: Border.all(
+          color: isCurrentQuest && !reached
+              ? AppColors.secondary
+              : AppColors.outlineWhisper,
+          width: isCurrentQuest && !reached ? 1.5 : 1,
+        ),
+        boxShadow: isCurrentQuest && !reached
+            ? [
+                BoxShadow(
+                  color: AppColors.secondary.withValues(alpha: 0.18),
+                  blurRadius: 12,
+                  spreadRadius: -2,
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
@@ -571,20 +626,53 @@ class _MilestoneRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Pacto de $days Días',
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Pacto de $days Días',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (isCurrentQuest && !reached) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xs,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningContainer,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text(
+                          'META ACTUAL',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: AppColors.secondary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 6,
-                    backgroundColor: AppColors.surfaceContainer,
-                    color: reached ? AppColors.primary : AppColors.secondary,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: progress),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) =>
+                        LinearProgressIndicator(
+                          value: value,
+                          minHeight: 6,
+                          backgroundColor: AppColors.surfaceContainer,
+                          color: reached
+                              ? AppColors.primary
+                              : AppColors.secondary,
+                        ),
                   ),
                 ),
               ],

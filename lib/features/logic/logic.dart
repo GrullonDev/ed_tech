@@ -68,6 +68,23 @@ class HomeLogic extends ChangeNotifier {
             .map((c) => c.longestStreakDays)
             .reduce((a, b) => a > b ? a : b);
 
+  /// "Gotas de Constancia": moneda blanda del juego. Se derivan por completo
+  /// de datos reales (10 gotas por cada check-in histórico en cualquier
+  /// círculo, más un bono de 50 por cada hito de racha ya alcanzado), nunca
+  /// de un contador guardado aparte, para que no se pueda desincronizar de
+  /// los check-ins reales del usuario.
+  int get constancyDrops {
+    final totalCheckIns = _circles.fold<int>(
+      0,
+      (sum, c) => sum + c.checkIns.length,
+    );
+    const milestoneBonuses = [7, 21, 30, 50, 100];
+    final milestonesReached = milestoneBonuses
+        .where((m) => recordStreakDays >= m)
+        .length;
+    return totalCheckIns * 10 + milestonesReached * 50;
+  }
+
   /// Fracción de días transcurridos en el mes actual (desde el día 1 hasta
   /// hoy) en los que hubo al menos un check-in en algún círculo.
   double get monthlyComplianceRate {

@@ -6,6 +6,7 @@ import 'package:edtech_tiktok/features/page/agora.dart';
 import 'package:edtech_tiktok/features/page/circle_detail.dart';
 import 'package:edtech_tiktok/features/page/create_habit.dart';
 import 'package:edtech_tiktok/features/page/profile.dart';
+import 'package:edtech_tiktok/features/page/qr_summon.dart';
 import 'package:edtech_tiktok/features/page/rachas.dart';
 import 'package:edtech_tiktok/features/widgets/dashboard.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
@@ -104,7 +105,12 @@ class _MyHomePageState extends State<MyHomePage> {
       GamePageRoute(
         builder: (context) => ListenableBuilder(
           listenable: _logic,
-          builder: (context, _) => AgoraPage(circles: _logic.circles),
+          builder: (context, _) => AgoraPage(
+            circles: _logic.circles,
+            circlesUpdatedTick: _logic.circlesUpdatedTick,
+            allyUsernameController: _logic.allyUsernameController,
+            onSendAllyRequest: _logic.sendAllyRequest,
+          ),
         ),
       ),
     );
@@ -131,10 +137,26 @@ class _MyHomePageState extends State<MyHomePage> {
             constancyDrops: _logic.constancyDrops,
             userLevel: _logic.userLevel,
             circles: _logic.circles,
+            pendingAllyRequests: _logic.pendingAllyRequests,
+            onAcceptAllyRequest: _logic.acceptAllyRequest,
+            onRejectAllyRequest: _logic.rejectAllyRequest,
             onOpenCircle: _openCircleDetail,
             onOpenRachas: _openRachas,
             onCreateCircle: _openCreateHabit,
+            onOpenQrSummon: _openQrSummon,
           ),
+        ),
+      ),
+    );
+  }
+
+  void _openQrSummon() {
+    Navigator.of(context).push(
+      GamePageRoute(
+        builder: (context) => QrSummonPage(
+          username: _logic.username,
+          qrPayload: _logic.qrPayload,
+          onScanned: _logic.addAllyFromScannedCode,
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
@@ -38,9 +39,13 @@ class ProfilePage extends StatelessWidget {
     required this.constancyDrops,
     required this.userLevel,
     required this.circles,
+    required this.pendingAllyRequests,
+    required this.onAcceptAllyRequest,
+    required this.onRejectAllyRequest,
     required this.onOpenCircle,
     required this.onOpenRachas,
     required this.onCreateCircle,
+    required this.onOpenQrSummon,
   });
 
   final String username;
@@ -51,9 +56,13 @@ class ProfilePage extends StatelessWidget {
   final int constancyDrops;
   final int userLevel;
   final List<HabitCircle> circles;
+  final List<AllyRequest> pendingAllyRequests;
+  final ValueChanged<AllyRequest> onAcceptAllyRequest;
+  final ValueChanged<AllyRequest> onRejectAllyRequest;
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onOpenRachas;
   final VoidCallback onCreateCircle;
+  final VoidCallback onOpenQrSummon;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +82,9 @@ class ProfilePage extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: AppMaxWidth(
-          child: ListView(
+          child: Stack(
+            children: [
+              ListView(
             padding: const EdgeInsets.all(AppSpacing.lg)
                 .copyWith(
                   bottom: AppSpacing.xl2 +
@@ -111,6 +122,44 @@ class ProfilePage extends StatelessWidget {
                         const SizedBox(width: AppSpacing.sm),
                         ConstancyDropsPill(drops: constancyDrops),
                       ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    GamePressable(
+                      onTap: onOpenQrSummon,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppColors.lavenderContainer,
+                              AppColors.surface,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                          border: Border.all(color: AppColors.primaryContainer),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              'Invocar por QR',
+                              style: textTheme.labelMedium?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -265,6 +314,18 @@ class ProfilePage extends StatelessWidget {
                   _CircleRow(circle: circle, onTap: () => onOpenCircle(circle)),
                   const SizedBox(height: AppSpacing.sm),
                 ],
+                ],
+              ),
+              if (pendingAllyRequests.isNotEmpty)
+                Positioned(
+                  top: AppSpacing.sm,
+                  right: AppSpacing.sm,
+                  child: _AllyRequestsBadge(
+                    pendingAllyRequests: pendingAllyRequests,
+                    onAccept: onAcceptAllyRequest,
+                    onReject: onRejectAllyRequest,
+                  ),
+                ),
             ],
           ),
         ),
@@ -319,6 +380,174 @@ class _ProfileLevelPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Distintivo flotante con icono de fuego que avisa de solicitudes de
+/// aliado pendientes (simuladas localmente, sin conexión a internet). Al
+/// tocarlo abre una hoja inferior donde se puede aceptar o rechazar cada
+/// solicitud.
+class _AllyRequestsBadge extends StatelessWidget {
+  const _AllyRequestsBadge({
+    required this.pendingAllyRequests,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  final List<AllyRequest> pendingAllyRequests;
+  final ValueChanged<AllyRequest> onAccept;
+  final ValueChanged<AllyRequest> onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    return GamePressable(
+      onTap: () => _openSheet(context),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.8, end: 1),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.elasticOut,
+        builder: (context, scale, child) =>
+            Transform.scale(scale: scale, child: child),
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: [AppColors.secondaryContainer, AppColors.secondary],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.secondary.withValues(alpha: 0.5),
+                blurRadius: 14,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              const Text('🔥', style: TextStyle(fontSize: 20)),
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${pendingAllyRequests.length}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
+      builder: (sheetContext) => _AllyRequestsSheet(
+        pendingAllyRequests: pendingAllyRequests,
+        onAccept: onAccept,
+        onReject: onReject,
+      ),
+    );
+  }
+}
+
+class _AllyRequestsSheet extends StatelessWidget {
+  const _AllyRequestsSheet({
+    required this.pendingAllyRequests,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  final List<AllyRequest> pendingAllyRequests;
+  final ValueChanged<AllyRequest> onAccept;
+  final ValueChanged<AllyRequest> onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Solicitudes de Aliados',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (pendingAllyRequests.isEmpty)
+              Text(
+                'No hay solicitudes pendientes.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              )
+            else
+              for (final request in pendingAllyRequests) ...[
+                Row(
+                  children: [
+                    const Text('🔥', style: TextStyle(fontSize: 18)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        '@${request.fromUsername}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                      onPressed: () {
+                        onReject(request);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.primary,
+                      ),
+                      onPressed: () {
+                        onAccept(request);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+              ],
+          ],
+        ),
       ),
     );
   }

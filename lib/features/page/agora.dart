@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 
 /// "El Gran Ágora Tribal": reemplaza las notificaciones de texto simples
 /// ("¡Círculo Perfecto!") por un mapa de juego social. Cada círculo se ve
@@ -10,9 +11,22 @@ import 'package:edtech_tiktok/core/theme/app_theme.dart';
 /// maestros ordena los círculos por racha. Sin backend social, los datos se
 /// derivan por completo de [HabitCircle] (miembros y check-ins reales).
 class AgoraPage extends StatelessWidget {
-  const AgoraPage({super.key, required this.circles});
+  const AgoraPage({
+    super.key,
+    required this.circles,
+    required this.circlesUpdatedTick,
+    required this.allyUsernameController,
+    required this.onSendAllyRequest,
+  });
 
   final List<HabitCircle> circles;
+  /// Se incrementa cada vez que un check-in o un nuevo miembro actualiza
+  /// algún círculo; se usa como parte de la key de cada hoguera para que
+  /// reproduzca su animación de reignición al instante, como señal visual
+  /// de sincronización local sin servidor.
+  final int circlesUpdatedTick;
+  final TextEditingController allyUsernameController;
+  final bool Function() onSendAllyRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -29,38 +43,195 @@ class AgoraPage extends StatelessWidget {
       ),
       body: SafeArea(
         child: AppMaxWidth(
-          child: circles.isEmpty
-              ? _EmptyAgora(textTheme: textTheme)
-              : ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                  ).copyWith(bottom: AppSpacing.xl2),
-                  children: [
-                    Text(
-                      'Alrededor de cada hoguera se reúne tu tribu. Cuanto '
-                      'más fuerte la racha colectiva, más brilla el fuego.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    for (final circle in ranked) ...[
-                      _TribalBonfireCard(circle: circle),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'Lista de Maestros de la Tribu',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _LeaderboardCard(ranked: ranked),
-                  ],
+          child: ListView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+            ).copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
+            children: [
+              _AddAllySection(
+                usernameController: allyUsernameController,
+                onSend: onSendAllyRequest,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              if (circles.isEmpty)
+                _EmptyAgora(textTheme: textTheme)
+              else ...[
+                Text(
+                  'Alrededor de cada hoguera se reúne tu tribu. Cuanto '
+                  'más fuerte la racha colectiva, más brilla el fuego.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                    height: 1.5,
+                  ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+                for (final circle in ranked) ...[
+                  _TribalBonfireCard(
+                    key: ValueKey('${circle.name}-$circlesUpdatedTick'),
+                    circle: circle,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Lista de Maestros de la Tribu',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _LeaderboardCard(ranked: ranked),
+              ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// "Añadir Aliado": campo para ingresar un @usuario exacto y enviar una
+/// misiva de solicitud. Sin backend real no existe búsqueda de usuarios de
+/// verdad, así que solo valida que el campo no esté vacío y delega el envío
+/// (y su simulación local de "ya llegó al receptor") a [onSend]. Al enviarse
+/// con éxito, muestra una breve animación de misiva enviada como refuerzo
+/// tipo juego.
+class _AddAllySection extends StatefulWidget {
+  const _AddAllySection({required this.usernameController, required this.onSend});
+
+  final TextEditingController usernameController;
+  final bool Function() onSend;
+
+  @override
+  State<_AddAllySection> createState() => _AddAllySectionState();
+}
+
+class _AddAllySectionState extends State<_AddAllySection> {
+  bool _justSent = false;
+
+  Future<void> _handleSend() async {
+    final sent = widget.onSend();
+    if (!sent) return;
+    setState(() => _justSent = true);
+    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    if (mounted) setState(() => _justSent = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.person_add_alt_1_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'Añadir Aliado',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Envía una misiva a un aliado por su @usuario exacto.',
+            style: textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: widget.usernameController,
+                  decoration: InputDecoration(
+                    hintText: '@usuario',
+                    filled: true,
+                    fillColor: AppColors.surfaceContainer,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) => _handleSend(),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              GamePressable(
+                onTap: _handleSend,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryContainer],
+                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: const Text(
+                    'Enviar Solicitud',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: !_justSent
+                ? const SizedBox(width: double.infinity)
+                : TweenAnimationBuilder<double>(
+                    key: const ValueKey('ally-sent'),
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 450),
+                    curve: Curves.elasticOut,
+                    builder: (context, value, child) =>
+                        Transform.scale(scale: value, child: child),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.md),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🕊️✨', style: TextStyle(fontSize: 18)),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            '¡Misiva enviada al entorno local!',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -107,7 +278,7 @@ class _EmptyAgora extends StatelessWidget {
 /// Tarjeta de una hoguera tribal: crece, cambia de color e intensifica su
 /// brillo según la racha del círculo (0 = apagada, 30+ = fuego intenso).
 class _TribalBonfireCard extends StatelessWidget {
-  const _TribalBonfireCard({required this.circle});
+  const _TribalBonfireCard({super.key, required this.circle});
 
   final HabitCircle circle;
 

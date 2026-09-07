@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
+import 'package:edtech_tiktok/features/page/agora.dart';
 import 'package:edtech_tiktok/features/page/circle_detail.dart';
 import 'package:edtech_tiktok/features/page/create_habit.dart';
 import 'package:edtech_tiktok/features/page/profile.dart';
 import 'package:edtech_tiktok/features/page/rachas.dart';
 import 'package:edtech_tiktok/features/widgets/dashboard.dart';
+import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 import 'package:edtech_tiktok/features/widgets/onboarding.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -46,6 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
           nextPendingHabit: _logic.nextPendingHabit,
           overallStreakDays: _logic.overallStreakDays,
           streakPulseTick: _logic.streakPulseTick,
+          constancyDrops: _logic.constancyDrops,
           onCreateCircle: _openCreateHabit,
           onCheckIn: _logic.toggleCheckIn,
           onToggleTodayHabit: _logic.toggleTodayHabit,
@@ -61,7 +64,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _openCircleDetail(HabitCircle circle) {
     Navigator.of(context).push(
-      MaterialPageRoute(
+      GamePageRoute(
         builder: (context) => ListenableBuilder(
           listenable: _logic,
           builder: (context, _) => CircleDetailPage(
@@ -78,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _openRachas() {
     Navigator.of(context).popUntil((route) => route.isFirst);
     Navigator.of(context).push(
-      MaterialPageRoute(
+      GamePageRoute(
         builder: (context) => ListenableBuilder(
           listenable: _logic,
           builder: (context, _) => RachasPage(
@@ -88,7 +91,19 @@ class _MyHomePageState extends State<MyHomePage> {
             onOpenCircle: _openCircleDetail,
             onCreateCircle: _openCreateHabit,
             onOpenProfile: _openProfile,
+            onOpenAgora: _openAgora,
           ),
+        ),
+      ),
+    );
+  }
+
+  void _openAgora() {
+    Navigator.of(context).push(
+      GamePageRoute(
+        builder: (context) => ListenableBuilder(
+          listenable: _logic,
+          builder: (context, _) => AgoraPage(circles: _logic.circles),
         ),
       ),
     );
@@ -96,14 +111,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _openCreateHabit() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => CreateHabitPage(logic: _logic)),
+      GamePageRoute(builder: (context) => CreateHabitPage(logic: _logic)),
     );
   }
 
   void _openProfile() {
     Navigator.of(context).popUntil((route) => route.isFirst);
     Navigator.of(context).push(
-      MaterialPageRoute(
+      GamePageRoute(
         builder: (context) => ListenableBuilder(
           listenable: _logic,
           builder: (context, _) => ProfilePage(
@@ -112,6 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
             overallStreakDays: _logic.overallStreakDays,
             recordStreakDays: _logic.recordStreakDays,
             monthlyComplianceRate: _logic.monthlyComplianceRate,
+            constancyDrops: _logic.constancyDrops,
             circles: _logic.circles,
             onOpenCircle: _openCircleDetail,
             onOpenRachas: _openRachas,

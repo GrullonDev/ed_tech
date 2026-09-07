@@ -83,30 +83,33 @@ class _AddButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 48,
-          height: 48,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primaryContainer, AppColors.primary],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
           ),
-          child: const Icon(
-            Icons.add_rounded,
-            color: AppColors.onPrimary,
-            size: 26,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.add_circle_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
+              SizedBox(height: 3),
+              Text(
+                'Crear',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 11,
+                  height: 1.1,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 2),
+              SizedBox(width: 4, height: 4),
+            ],
           ),
         ),
       ),

@@ -5,7 +5,8 @@ import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
-import 'package:edtech_tiktok/features/widgets/circle_card.dart';
+import 'package:edtech_tiktok/features/widgets/game_ui.dart';
+import 'package:edtech_tiktok/features/widgets/territory_map.dart';
 
 class Dashboard extends StatelessWidget {
   const Dashboard({
@@ -19,6 +20,7 @@ class Dashboard extends StatelessWidget {
     required this.nextPendingHabit,
     required this.overallStreakDays,
     required this.streakPulseTick,
+    required this.constancyDrops,
     required this.onCreateCircle,
     required this.onCheckIn,
     required this.onToggleTodayHabit,
@@ -38,6 +40,7 @@ class Dashboard extends StatelessWidget {
   final TodayHabit? nextPendingHabit;
   final int overallStreakDays;
   final int streakPulseTick;
+  final int constancyDrops;
   final VoidCallback onCreateCircle;
   final ValueChanged<HabitCircle> onCheckIn;
   final ValueChanged<TodayHabit> onToggleTodayHabit;
@@ -74,6 +77,7 @@ class Dashboard extends StatelessWidget {
               _TopBar(
                 streakDays: overallStreakDays,
                 pulseTick: streakPulseTick,
+                constancyDrops: constancyDrops,
               ),
               const SizedBox(height: AppSpacing.xl),
               Text(
@@ -105,14 +109,17 @@ class Dashboard extends StatelessWidget {
               ],
               const SizedBox(height: AppSpacing.lg),
               if (nextPendingHabit != null)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => onToggleTodayHabit(nextPendingHabit!),
-                    icon: const Icon(Icons.playlist_add_check_rounded),
-                    label: Text(
-                      'Registrar hábito pendiente (${nextPendingHabit!.label})',
-                      textAlign: TextAlign.center,
+                GamePressable(
+                  onTap: () => onToggleTodayHabit(nextPendingHabit!),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => onToggleTodayHabit(nextPendingHabit!),
+                      icon: const Icon(Icons.playlist_add_check_rounded),
+                      label: Text(
+                        'Registrar hábito pendiente (${nextPendingHabit!.label})',
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ),
@@ -144,14 +151,12 @@ class Dashboard extends StatelessWidget {
               if (circles.isEmpty)
                 _EmptyCirclesCard(onCreateCircle: onCreateCircle)
               else ...[
-                for (final circle in circles) ...[
-                  CircleCard(
-                    circle: circle,
-                    onCheckIn: () => onCheckIn(circle),
-                    onTap: () => onOpenCircle(circle),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
+                TerritoryMap(
+                  circles: circles,
+                  onCheckIn: onCheckIn,
+                  onTap: onOpenCircle,
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 _InviteBanner(
                   onInvite: (name) =>
                       onInviteMember(_circleWithRoom(circles), name),
@@ -227,37 +232,53 @@ class _InviteMemberDialogState extends State<_InviteMemberDialog> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.streakDays, required this.pulseTick});
+  const _TopBar({
+    required this.streakDays,
+    required this.pulseTick,
+    required this.constancyDrops,
+  });
 
   final int streakDays;
   final int pulseTick;
+  final int constancyDrops;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Image.asset(AppAssets.logo, width: 28, height: 28),
-        const SizedBox(width: AppSpacing.sm),
-        Flexible(
-          child: Text(
-            'Racha Tribu',
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
+        Row(
+          children: [
+            Image.asset(AppAssets.logo, width: 28, height: 28),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Text(
+                'Racha Tribu',
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
             ),
-          ),
+            const Spacer(),
+            _StreakPill(days: streakDays, pulseTick: pulseTick),
+            const SizedBox(width: AppSpacing.md),
+            const CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.surfaceContainer,
+              backgroundImage: AssetImage(AppAssets.avatarSample),
+            ),
+          ],
         ),
-        const Spacer(),
-        _LevelPill(streakDays: streakDays),
-        const SizedBox(width: AppSpacing.sm),
-        _StreakPill(days: streakDays, pulseTick: pulseTick),
-        const SizedBox(width: AppSpacing.md),
-        const CircleAvatar(
-          radius: 18,
-          backgroundColor: AppColors.surfaceContainer,
-          backgroundImage: AssetImage(AppAssets.avatarSample),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            _LevelPill(streakDays: streakDays),
+            const SizedBox(width: AppSpacing.sm),
+            ConstancyDropsPill(drops: constancyDrops),
+          ],
         ),
       ],
     );

@@ -5,6 +5,7 @@ import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
+import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 
 const List<String> _kMonthNames = [
   'enero',
@@ -34,6 +35,7 @@ class ProfilePage extends StatelessWidget {
     required this.overallStreakDays,
     required this.recordStreakDays,
     required this.monthlyComplianceRate,
+    required this.constancyDrops,
     required this.circles,
     required this.onOpenCircle,
     required this.onOpenRachas,
@@ -45,6 +47,7 @@ class ProfilePage extends StatelessWidget {
   final int overallStreakDays;
   final int recordStreakDays;
   final double monthlyComplianceRate;
+  final int constancyDrops;
   final List<HabitCircle> circles;
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onOpenRachas;
@@ -99,7 +102,14 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    _ProfileLevelPill(streakDays: overallStreakDays),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _ProfileLevelPill(streakDays: overallStreakDays),
+                        const SizedBox(width: AppSpacing.sm),
+                        ConstancyDropsPill(drops: constancyDrops),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -211,7 +221,7 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
-                      'Insignias de Esfuerzo',
+                      'Tótems de Maestría',
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -219,8 +229,16 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Desliza tu vitrina de tótems coleccionables. Cada uno se '
+                'esculpe al alcanzar su rito.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
               const SizedBox(height: AppSpacing.md),
-              _BadgeGrid(
+              _TotemShowcase(
                 overallStreakDays: overallStreakDays,
                 recordStreakDays: recordStreakDays,
                 hasPerfectCircle: perfectCount > 0,
@@ -487,9 +505,10 @@ class _PresenceCell extends StatelessWidget {
 
 /// Logros calculados a partir de la racha activa, el récord histórico y si
 /// algún círculo llegó al 100% hoy — todo derivable de los datos reales del
-/// usuario, sin contadores sociales inventados.
-class _BadgeGrid extends StatelessWidget {
-  const _BadgeGrid({
+/// usuario, sin contadores sociales inventados. Se muestran como una vitrina
+/// interactiva de tótems 3D en vez de una grilla plana de insignias.
+class _TotemShowcase extends StatefulWidget {
+  const _TotemShowcase({
     required this.overallStreakDays,
     required this.recordStreakDays,
     required this.hasPerfectCircle,
@@ -500,51 +519,92 @@ class _BadgeGrid extends StatelessWidget {
   final bool hasPerfectCircle;
 
   @override
+  State<_TotemShowcase> createState() => _TotemShowcaseState();
+}
+
+class _TotemShowcaseState extends State<_TotemShowcase> {
+  late final PageController _controller = PageController(viewportFraction: 0.42);
+  double _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      setState(() => _page = _controller.page ?? 0);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final badges = [
-      _Badge(
+    final totems = [
+      _TotemData(
         icon: Icons.shield_moon_rounded,
+        colors: const [AppColors.secondaryContainer, AppColors.secondary],
         title: 'Semana Imbatible',
         subtitle: '7 días seguidos sin fallar',
-        unlocked: overallStreakDays >= 7,
+        unlocked: widget.overallStreakDays >= 7,
       ),
-      _Badge(
+      _TotemData(
         icon: Icons.spa_rounded,
+        colors: const [AppColors.primaryContainer, AppColors.primary],
         title: 'Hábito Consolidado',
         subtitle: '21 días de racha histórica',
-        unlocked: recordStreakDays >= 21,
+        unlocked: widget.recordStreakDays >= 21,
       ),
-      _Badge(
+      _TotemData(
         icon: Icons.celebration_rounded,
+        colors: const [AppColors.lavenderContainer, AppColors.secondary],
         title: 'Círculo Perfecto',
         subtitle: '100% completado en un día',
-        unlocked: hasPerfectCircle,
+        unlocked: widget.hasPerfectCircle,
       ),
-      _Badge(
+      _TotemData(
         icon: Icons.workspace_premium_rounded,
+        colors: const [AppColors.warningContainer, AppColors.secondary],
         title: 'Pacto de 30 Días',
-        subtitle: '${recordStreakDays.clamp(0, 30)}/30 días',
-        unlocked: recordStreakDays >= 30,
-        progress: (recordStreakDays / 30).clamp(0, 1).toDouble(),
+        subtitle: '${widget.recordStreakDays.clamp(0, 30)}/30 días',
+        unlocked: widget.recordStreakDays >= 30,
+        progress: (widget.recordStreakDays / 30).clamp(0, 1).toDouble(),
       ),
     ];
-    final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = width >= 600 ? 3 : 2;
-    return GridView.count(
-      crossAxisCount: crossAxisCount,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.md,
-      crossAxisSpacing: AppSpacing.md,
-      childAspectRatio: 0.92,
-      children: badges,
+
+    return SizedBox(
+      height: 190,
+      child: PageView.builder(
+        controller: _controller,
+        itemCount: totems.length,
+        padEnds: true,
+        itemBuilder: (context, index) {
+          final delta = (index - _page).abs().clamp(0.0, 1.0);
+          final scale = 1 - delta * 0.22;
+          final rotation = (index - _page).clamp(-1.0, 1.0) * 0.12;
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0015)
+              ..rotateY(rotation)
+              ..scaleByDouble(scale, scale, scale, 1),
+            child: Opacity(
+              opacity: 1 - delta * 0.35,
+              child: _MasteryTotem(data: totems[index]),
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({
+class _TotemData {
+  const _TotemData({
     required this.icon,
+    required this.colors,
     required this.title,
     required this.subtitle,
     required this.unlocked,
@@ -552,77 +612,97 @@ class _Badge extends StatelessWidget {
   });
 
   final IconData icon;
+  final List<Color> colors;
   final String title;
   final String subtitle;
   final bool unlocked;
   final double? progress;
+}
+
+/// Un tótem coleccionable individual: un bloque con profundidad 3D
+/// (ver [Iso3DIcon]) que se "esculpe" (aparece con rebote) al desbloquearse,
+/// o se ve en piedra gris mientras sigue bloqueado.
+class _MasteryTotem extends StatelessWidget {
+  const _MasteryTotem({required this.data});
+
+  final _TotemData data;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final tint = unlocked ? AppColors.secondary : AppColors.outline;
+    final unlocked = data.unlocked;
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         border: unlocked
             ? Border.all(color: AppColors.secondary.withValues(alpha: 0.35))
-            : null,
+            : Border.all(color: AppColors.outlineWhisper),
         boxShadow: unlocked
             ? [
                 BoxShadow(
-                  color: AppColors.secondary.withValues(alpha: 0.2),
-                  blurRadius: 14,
+                  color: AppColors.secondary.withValues(alpha: 0.25),
+                  blurRadius: 16,
                   spreadRadius: -4,
                 ),
               ]
             : AppShadows.card,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           TweenAnimationBuilder<double>(
-            key: ValueKey('badge-$title-$unlocked'),
-            tween: Tween(begin: unlocked ? 0.4 : 1.0, end: 1.0),
-            duration: const Duration(milliseconds: 450),
+            key: ValueKey('totem-${data.title}-$unlocked'),
+            tween: Tween(begin: unlocked ? 0.3 : 1.0, end: 1.0),
+            duration: const Duration(milliseconds: 500),
             curve: Curves.elasticOut,
             builder: (context, scale, child) =>
                 Transform.scale(scale: scale, child: child),
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: unlocked
-                  ? AppColors.warningContainer
-                  : AppColors.surfaceContainer,
-              child: Icon(icon, color: tint, size: 20),
+            child: Iso3DIcon(
+              icon: data.icon,
+              size: 52,
+              colors: unlocked
+                  ? data.colors
+                  : [AppColors.surfaceContainer, AppColors.outline],
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            title,
-            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            data.title,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 2),
           Text(
-            subtitle,
-            style: textTheme.bodySmall?.copyWith(
+            data.subtitle,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelSmall?.copyWith(
               color: AppColors.onSurfaceVariant,
             ),
           ),
-          const Spacer(),
-          if (progress != null && !unlocked)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 5,
-                backgroundColor: AppColors.surfaceContainer,
-                color: AppColors.secondary,
+          const SizedBox(height: 4),
+          if (data.progress != null && !unlocked)
+            SizedBox(
+              width: 60,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                child: LinearProgressIndicator(
+                  value: data.progress,
+                  minHeight: 4,
+                  backgroundColor: AppColors.surfaceContainer,
+                  color: AppColors.secondary,
+                ),
               ),
             )
           else
             Text(
-              unlocked ? 'Desbloqueado' : 'Bloqueado',
+              unlocked ? 'Esculpido' : 'En bruto',
               style: textTheme.labelSmall?.copyWith(
                 color: unlocked ? AppColors.primary : AppColors.outline,
                 fontWeight: FontWeight.w800,

@@ -61,7 +61,12 @@ class RachasPage extends StatelessWidget {
         child: AppMaxWidth(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
-                .copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
+                .copyWith(
+                  top: AppSpacing.lg,
+                  bottom: AppSpacing.xl2 +
+                      AppBottomNav.reservedHeight +
+                      MediaQuery.paddingOf(context).bottom,
+                ),
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,7 +671,7 @@ class _GoldenRuleCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Regla de Oro de CírculoDiario',
+                  'Regla de Oro de Racha Tribu',
                   style: textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),

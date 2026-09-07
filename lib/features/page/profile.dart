@@ -70,7 +70,11 @@ class ProfilePage extends StatelessWidget {
         child: AppMaxWidth(
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg)
-                .copyWith(bottom: AppSpacing.xl2),
+                .copyWith(
+                  bottom: AppSpacing.xl2 +
+                      AppBottomNav.reservedHeight +
+                      MediaQuery.paddingOf(context).bottom,
+                ),
             children: [
               Center(
                 child: Column(
@@ -247,7 +251,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   static String _memberSinceLabel(DateTime? memberSince) {
-    if (memberSince == null) return 'Miembro de CírculoDiario';
+    if (memberSince == null) return 'Miembro de Racha Tribu';
     return 'Miembro desde ${_kMonthNames[memberSince.month - 1]} de '
         '${memberSince.year}';
   }
@@ -474,8 +478,10 @@ class _BadgeGrid extends StatelessWidget {
         progress: (recordStreakDays / 30).clamp(0, 1).toDouble(),
       ),
     ];
+    final width = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = width >= 600 ? 3 : 2;
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: crossAxisCount,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: AppSpacing.md,

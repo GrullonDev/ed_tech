@@ -9,7 +9,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CírculoDiario',
+      title: 'Racha Tribu',
       theme: AppTheme.light(),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);

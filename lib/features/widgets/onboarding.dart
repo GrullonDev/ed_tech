@@ -36,7 +36,7 @@ class Onboarding extends StatelessWidget {
                   Image.asset(AppAssets.logo, width: 72, height: 72),
                   const SizedBox(height: AppSpacing.xl2),
                   Text(
-                    'Bienvenido a\nCírculoDiario',
+                    'Bienvenido a\nRacha Tribu',
                     style: textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.02,

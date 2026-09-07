@@ -73,6 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _openRachas() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ListenableBuilder(
@@ -97,6 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _openProfile() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ListenableBuilder(

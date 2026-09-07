@@ -52,7 +52,8 @@ class RachasPage extends StatelessWidget {
       bottomNavigationBar: AppBottomNav(
         currentTab: AppTab.rachas,
         onCreateCircle: onCreateCircle,
-        onOpenCircles: () => Navigator.of(context).pop(),
+        onOpenCircles: () =>
+            Navigator.of(context).popUntil((route) => route.isFirst),
         onOpenProfile: onOpenProfile,
       ),
       body: SafeArea(

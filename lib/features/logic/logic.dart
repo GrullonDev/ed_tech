@@ -117,12 +117,16 @@ class HomeLogic extends ChangeNotifier {
     LocalStorageService.saveLastActiveDate(today);
   }
 
-  void completeOnboarding() {
+  Future<void> completeOnboarding() async {
     final name = usernameController.text.trim();
     if (name.isEmpty) return;
     _username = name;
     _hasUsername = true;
-    LocalStorageService.saveUser(
+    // Se espera a que el usuario quede escrito en disco antes de avisar a la
+    // UI: así, si el sistema mata la app justo después de continuar, el
+    // apodo ya quedó persistido y no se volverá a pedir en el siguiente
+    // arranque.
+    await LocalStorageService.saveUser(
       AppUser(username: name, memberSince: DateTime.now()),
     );
     notifyListeners();
@@ -152,6 +156,18 @@ class HomeLogic extends ChangeNotifier {
       circle.addCheckInToday();
       _streakPulseTick++;
     }
+    LocalStorageService.saveCircles(_circles);
+    notifyListeners();
+  }
+
+  /// Agrega un miembro simulado a [circle]. Sin backend real, "invitar" solo
+  /// añade un nombre local a la lista de miembros del círculo (no envía nada
+  /// a nadie); sirve para que el usuario simule su tribu mientras no exista
+  /// un sistema de invitaciones real.
+  void addMemberToCircle(HabitCircle circle, String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    circle.addMember(trimmed);
     LocalStorageService.saveCircles(_circles);
     notifyListeners();
   }

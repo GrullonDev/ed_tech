@@ -79,6 +79,11 @@ class HabitCircle {
     checkIns.removeWhere((c) => c.date == CheckIn.today());
   }
 
+  void addMember(String name) {
+    if (members.contains(name)) return;
+    members.add(name);
+  }
+
   Map<String, dynamic> toMap() => {
     'name': name,
     'category': category,

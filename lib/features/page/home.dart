@@ -53,6 +53,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onOpenCircle: _openCircleDetail,
           onOpenRachas: _openRachas,
           onOpenProfile: _openProfile,
+          onInviteMember: _logic.addMemberToCircle,
         );
       },
     );
@@ -66,6 +67,8 @@ class _MyHomePageState extends State<MyHomePage> {
           builder: (context, _) => CircleDetailPage(
             circle: circle,
             onCheckIn: () => _logic.toggleCheckIn(circle),
+            onInviteMember: (name) =>
+                _logic.addMemberToCircle(circle, name),
           ),
         ),
       ),

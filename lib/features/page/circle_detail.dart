@@ -12,10 +12,12 @@ class CircleDetailPage extends StatelessWidget {
     super.key,
     required this.circle,
     required this.onCheckIn,
+    required this.onInviteMember,
   });
 
   final HabitCircle circle;
   final VoidCallback onCheckIn;
+  final ValueChanged<String> onInviteMember;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +119,15 @@ class CircleDetailPage extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
             ],
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _showInviteMemberDialog(context, onInviteMember),
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: const Text('Invitar a un amigo'),
+              ),
+            ),
             const SizedBox(height: AppSpacing.xl),
             SizedBox(
               width: double.infinity,
@@ -137,6 +148,63 @@ class CircleDetailPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Diálogo para agregar un miembro simulado al círculo. Sin backend, no hay
+/// envío real de invitación: solo se guarda el nombre localmente.
+Future<void> _showInviteMemberDialog(
+  BuildContext context,
+  ValueChanged<String> onInviteMember,
+) async {
+  final name = await showDialog<String>(
+    context: context,
+    builder: (context) => const _InviteMemberDialog(),
+  );
+  if (name != null && name.trim().isNotEmpty) onInviteMember(name.trim());
+}
+
+/// El controller debe vivir y morir junto al State del diálogo: si se
+/// dispone justo después de `showDialog`, la animación de salida (que aún
+/// referencia el TextField) puede intentar usarlo ya destruido.
+class _InviteMemberDialog extends StatefulWidget {
+  const _InviteMemberDialog();
+
+  @override
+  State<_InviteMemberDialog> createState() => _InviteMemberDialogState();
+}
+
+class _InviteMemberDialogState extends State<_InviteMemberDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Invitar a un amigo'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(hintText: 'Nombre del amigo'),
+        onSubmitted: (value) => Navigator.of(context).pop(value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('Invitar'),
+        ),
+      ],
     );
   }
 }

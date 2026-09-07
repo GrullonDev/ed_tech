@@ -26,6 +26,7 @@ class Dashboard extends StatelessWidget {
     required this.onOpenCircle,
     required this.onOpenRachas,
     required this.onOpenProfile,
+    required this.onInviteMember,
   });
 
   final String username;
@@ -44,6 +45,7 @@ class Dashboard extends StatelessWidget {
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onOpenRachas;
   final VoidCallback onOpenProfile;
+  final void Function(HabitCircle circle, String name) onInviteMember;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +64,11 @@ class Dashboard extends StatelessWidget {
         child: AppMaxWidth(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
-                .copyWith(bottom: AppSpacing.xl2),
+                .copyWith(
+                  bottom: AppSpacing.xl2 +
+                      AppBottomNav.reservedHeight +
+                      MediaQuery.paddingOf(context).bottom,
+                ),
             children: [
               const SizedBox(height: AppSpacing.sm),
               _TopBar(
@@ -142,12 +148,76 @@ class Dashboard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                 ],
-                const _InviteBanner(),
+                _InviteBanner(
+                  onInvite: (name) =>
+                      onInviteMember(_circleWithRoom(circles), name),
+                ),
               ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// El círculo con menos miembros es el más "urgente" para invitar a alguien.
+HabitCircle _circleWithRoom(List<HabitCircle> circles) =>
+    circles.reduce((a, b) => a.totalMembers <= b.totalMembers ? a : b);
+
+/// Diálogo para agregar un miembro simulado a un círculo. Sin backend, no
+/// hay envío real de invitación: solo se guarda el nombre localmente.
+Future<void> _showInviteDialog(
+  BuildContext context,
+  ValueChanged<String> onInvite,
+) async {
+  final name = await showDialog<String>(
+    context: context,
+    builder: (context) => const _InviteMemberDialog(),
+  );
+  if (name != null && name.trim().isNotEmpty) onInvite(name.trim());
+}
+
+/// El controller debe vivir y morir junto al State del diálogo: si se
+/// dispone justo después de `showDialog`, la animación de salida (que aún
+/// referencia el TextField) puede intentar usarlo ya destruido.
+class _InviteMemberDialog extends StatefulWidget {
+  const _InviteMemberDialog();
+
+  @override
+  State<_InviteMemberDialog> createState() => _InviteMemberDialogState();
+}
+
+class _InviteMemberDialogState extends State<_InviteMemberDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Invitar a un amigo'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(hintText: 'Nombre del amigo'),
+        onSubmitted: (value) => Navigator.of(context).pop(value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('Invitar'),
+        ),
+      ],
     );
   }
 }
@@ -167,7 +237,7 @@ class _TopBar extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Flexible(
           child: Text(
-            'CírculoDiario',
+            'Racha Tribu',
             overflow: TextOverflow.ellipsis,
             style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
@@ -513,7 +583,9 @@ class _EmptyCirclesCard extends StatelessWidget {
 }
 
 class _InviteBanner extends StatelessWidget {
-  const _InviteBanner();
+  const _InviteBanner({required this.onInvite});
+
+  final ValueChanged<String> onInvite;
 
   @override
   Widget build(BuildContext context) {
@@ -560,7 +632,7 @@ class _InviteBanner extends StatelessWidget {
               foregroundColor: AppColors.primary,
               shape: const StadiumBorder(),
             ),
-            onPressed: () {},
+            onPressed: () => _showInviteDialog(context, onInvite),
             child: const Text('Invitar'),
           ),
         ],

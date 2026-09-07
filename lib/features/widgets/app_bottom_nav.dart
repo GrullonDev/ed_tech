@@ -25,6 +25,21 @@ class AppBottomNav extends StatelessWidget {
   final VoidCallback? onOpenRachas;
   final VoidCallback? onOpenProfile;
 
+  /// Alto de la píldora de navegación en sí (sin contar el margen inferior
+  /// ni el inset de la barra de sistema).
+  static const double barHeight = 68;
+
+  /// Margen que [SafeArea] agrega debajo de la píldora.
+  static const double bottomMargin = AppSpacing.lg;
+
+  /// Espacio total que la barra flotante ocupa desde el borde inferior de la
+  /// pantalla (píldora + margen), sin contar el inset de la barra de
+  /// sistema. Con `extendBody: true` el body pasa por detrás de esta barra,
+  /// así que cualquier `ListView`/`ScrollView` de una pantalla con esta nav
+  /// debe agregar al menos esto como padding inferior para que el contenido
+  /// no quede oculto detrás de ella.
+  static const double reservedHeight = barHeight + bottomMargin;
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -33,10 +48,10 @@ class AppBottomNav extends StatelessWidget {
         AppSpacing.lg,
         0,
         AppSpacing.lg,
-        AppSpacing.lg,
+        bottomMargin,
       ),
       child: Container(
-        height: 68,
+        height: barHeight,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         decoration: BoxDecoration(
           color: AppColors.surface,

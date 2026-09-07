@@ -99,6 +99,10 @@ class Dashboard extends StatelessWidget {
                 onToggle: onToggleTodayHabit,
                 onAdd: onAddTodayHabit,
               ),
+              if (todayTotalCount > 0 && todayProgress >= 1.0) ...[
+                const SizedBox(height: AppSpacing.md),
+                const _AllDoneBanner(),
+              ],
               const SizedBox(height: AppSpacing.lg),
               if (nextPendingHabit != null)
                 SizedBox(
@@ -246,6 +250,8 @@ class _TopBar extends StatelessWidget {
           ),
         ),
         const Spacer(),
+        _LevelPill(streakDays: streakDays),
+        const SizedBox(width: AppSpacing.sm),
         _StreakPill(days: streakDays, pulseTick: pulseTick),
         const SizedBox(width: AppSpacing.md),
         const CircleAvatar(
@@ -313,6 +319,92 @@ class _StreakFirePulse extends StatelessWidget {
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
       child: child,
+    );
+  }
+}
+
+/// Insignia de "nivel" derivada de la racha general: cada 7 días de racha
+/// suma un nivel. Es puramente decorativo (sin backend) pero refuerza la
+/// sensación de progreso tipo juego.
+class _LevelPill extends StatelessWidget {
+  const _LevelPill({required this.streakDays});
+
+  final int streakDays;
+
+  @override
+  Widget build(BuildContext context) {
+    final level = (streakDays ~/ 7) + 1;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryContainer],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.military_tech_rounded, size: 14, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            'Nv. $level',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Celebración que aparece al completar el 100% del check-in diario, para
+/// dar una recompensa visual inmediata (refuerzo tipo juego).
+class _AllDoneBanner extends StatelessWidget {
+  const _AllDoneBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) =>
+          Transform.scale(scale: value, child: child),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.celebrationStart, AppColors.celebrationEnd],
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        child: Row(
+          children: [
+            const Text('🎉', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                '¡Día completo! Tu tribu sigue avanzando contigo.',
+                style: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -419,11 +511,16 @@ class _TodayCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: AppColors.surface,
-              color: AppColors.primary,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) => LinearProgressIndicator(
+                value: value,
+                minHeight: 8,
+                backgroundColor: AppColors.surface,
+                color: AppColors.primary,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -442,26 +539,37 @@ class _TodayCard extends StatelessWidget {
                 InkWell(
                   onTap: () => onToggle(habit),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        habit.done
-                            ? Icons.check_circle_rounded
-                            : Icons.radio_button_unchecked_rounded,
-                        size: 16,
-                        color: habit.done
-                            ? AppColors.primary
-                            : AppColors.outline,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        habit.label,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: AppColors.onSurface,
+                  child: TweenAnimationBuilder<double>(
+                    key: ValueKey('${habit.label}-${habit.done}'),
+                    tween: Tween(
+                      begin: habit.done ? 1.3 : 1.0,
+                      end: 1.0,
+                    ),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.elasticOut,
+                    builder: (context, scale, child) =>
+                        Transform.scale(scale: scale, child: child),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          habit.done
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          size: 16,
+                          color: habit.done
+                              ? AppColors.primary
+                              : AppColors.outline,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          habit.label,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               InkWell(

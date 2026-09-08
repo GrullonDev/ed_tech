@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "315811589668",
+    "project_id": "rachatribu",
+    "storage_bucket": "rachatribu.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315811589668:android:0fa5a262942581e48a72b1",
+        "android_client_info": {
+          "package_name": "com.grullondev.rachatribu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0ZhEOmxzPL8AeQSXuBlh-COUrvoq2btA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

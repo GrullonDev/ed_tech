@@ -181,7 +181,7 @@ class _ScanTabState extends State<_ScanTab> {
         MobileScanner(
           controller: _controller,
           onDetect: _handleDetect,
-          errorBuilder: (context, error, child) => Container(
+          errorBuilder: (context, error) => Container(
             color: Colors.black,
             alignment: Alignment.center,
             padding: const EdgeInsets.all(AppSpacing.xl),

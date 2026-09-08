@@ -143,8 +143,22 @@ Lo único que sigue haciendo falta del lado de la app:
    onboarding si la escritura falla). `HomeLogic` sigue usando
    `LocalHabitRepository`/Hive para círculos, check-ins, aliados y el feed
    de actividad — eso es la Fase 2 en adelante.
-3. **Fase 2**: migrar círculos + check-ins a `FirebaseHabitRepository`
-   (`circles`, `members`, `checkIns`, `memberStats`).
+3. **Fase 2 (en progreso — solo escritura)**: `HabitCircle` ya tiene un
+   `id` estable (antes no existía ningún identificador persistente; se
+   generó y se agregó a `toMap`/`fromMap` con el mismo patrón de fallback
+   que `AppUser.playerId`). `createCircle()` y `toggleCheckIn()` ya
+   espejan el círculo y el check-in del día hacia Firestore
+   (`circles/{id}`, `circles/{id}/members/{uid}` como dueño,
+   `circles/{id}/checkIns/{uid}_{fecha}`) de forma fire-and-forget: si
+   falla (sin red, reglas desactualizadas), el círculo sigue funcionando
+   100% local en Hive sin que el usuario note nada. **Todavía no se lee de
+   vuelta desde Firestore** — `streakDays`/`drops`/etc. se siguen
+   calculando en Dart sobre los datos locales, no sobre `memberStats` (que
+   requeriría además desplegar las Cloud Functions de `functions/src/`).
+   Pendiente de esta fase: suscribirse a `circles/{id}/checkIns` con
+   `snapshots()` para fusionar check-ins de otros miembros reales, y
+   decidir si se despliegan las Cloud Functions (plan Blaze) o se sigue
+   calculando todo en el cliente (ver sección 0).
 4. **Fase 3**: migrar aliados/invitaciones reales (`allyRequests`, canje
    de `inviteCode` vía `redeemInviteCode`).
 5. **Fase 4**: migrar el feed de actividad a `activityEvents` +

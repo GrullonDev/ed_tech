@@ -1,24 +1,35 @@
+import 'dart:math';
+
 import 'package:edtech_tiktok/core/model/check_in.dart';
 
 /// Círculo de hábito. Sin backend, cada círculo solo tiene un miembro real
 /// (el usuario del dispositivo): `totalMembers`, `completedMembers`,
 /// `checkedInToday` y `streakDays` se derivan de [checkIns], no de números
 /// fijos. `members`/`pendingMemberName` quedan listos para cuando existan
-/// otros miembros reales vía Supabase.
+/// otros miembros reales vía Firebase.
 class HabitCircle {
   HabitCircle({
     required this.name,
     required this.category,
+    String? id,
     List<String>? members,
     List<CheckIn>? checkIns,
     this.pendingMemberName,
     this.freezesAvailable = 0,
     List<DateTime>? freezeUsedDates,
     List<int>? claimedFreezeMilestones,
-  }) : members = members ?? ['Yo'],
+  }) : id = id ?? _generateId(),
+       members = members ?? ['Yo'],
        checkIns = checkIns ?? [],
        freezeUsedDates = freezeUsedDates ?? [],
        claimedFreezeMilestones = claimedFreezeMilestones ?? [];
+
+  /// Identificador estable del círculo: se usa como ID de documento en
+  /// Firestore (`circles/{id}`, ver firebase/FIRESTORE_SCHEMA.md), así que
+  /// una vez asignado no debe cambiar. Los círculos guardados en Hive antes
+  /// de que existiera este campo reciben uno nuevo la primera vez que se
+  /// leen (ver [fromMap]) — mismo patrón que `AppUser._fallbackPlayerId`.
+  final String id;
 
   final String name;
   final String category;
@@ -164,7 +175,17 @@ class HabitCircle {
     return true;
   }
 
+  /// Id local corto (marca de tiempo + sufijo aleatorio en base 36), mismo
+  /// esquema que `HomeLogic._generatePlayerId()`. No requiere red: solo
+  /// debe ser distinto entre círculos con probabilidad razonablemente alta.
+  static String _generateId() {
+    final timestamp = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final randomSuffix = Random().nextInt(46656).toRadixString(36);
+    return '$timestamp$randomSuffix';
+  }
+
   Map<String, dynamic> toMap() => {
+    'id': id,
     'name': name,
     'category': category,
     'members': members,
@@ -176,6 +197,7 @@ class HabitCircle {
   };
 
   factory HabitCircle.fromMap(Map<dynamic, dynamic> map) => HabitCircle(
+    id: map['id'] as String?,
     name: map['name'] as String,
     category: map['category'] as String,
     members: List<String>.from(map['members'] as List),

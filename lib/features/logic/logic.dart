@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -157,6 +159,12 @@ class HomeLogic extends ChangeNotifier {
     _playerId = savedUser?.playerId ?? '';
     usernameController.text = _username;
 
+    // Círculos guardados antes de que HabitCircle tuviera `id` reciben uno
+    // nuevo al leerse (ver HabitCircle.fromMap); se persiste de una vez
+    // para que ese id quede fijo entre reinicios y sirva de ID de
+    // documento estable al espejar el círculo en Firestore.
+    if (_circles.isNotEmpty) LocalStorageService.saveCircles(_circles);
+
     _applyDailyResetIfNeeded();
     _applyPendingStreakFreezes();
     notifyListeners();
@@ -222,6 +230,10 @@ class HomeLogic extends ChangeNotifier {
             '${circle.name} alcanzó $days días de racha — ¡ganaste un '
             'Escudo de Racha! 🛡️',
       );
+      _logAnalyticsEvent('milestone_reached', {
+        'milestone_days': days,
+        'circle_category': circle.category,
+      });
     }
   }
 
@@ -253,6 +265,7 @@ class HomeLogic extends ChangeNotifier {
     await LocalStorageService.saveUser(
       AppUser(username: name, memberSince: DateTime.now(), playerId: _playerId),
     );
+    _logAnalyticsEvent('onboarding_complete');
     notifyListeners();
   }
 
@@ -309,6 +322,94 @@ class HomeLogic extends ChangeNotifier {
     }
   }
 
+  /// Registra un evento de Firebase Analytics de forma "fire-and-forget":
+  /// nunca debe bloquear ni romper el flujo que lo dispara. Si Firebase no
+  /// está inicializado (ver lib/firebase_options.dart), acceder a
+  /// `FirebaseAnalytics.instance` lanza de inmediato — se captura aquí para
+  /// que llamar a este método sea siempre seguro, con o sin Firebase.
+  void _logAnalyticsEvent(String name, [Map<String, Object>? parameters]) {
+    try {
+      unawaited(
+        FirebaseAnalytics.instance
+            .logEvent(name: name, parameters: parameters)
+            .catchError((_) {}),
+      );
+    } catch (_) {
+      // Firebase no inicializado todavía: se ignora, igual que el resto de
+      // las llamadas a Firebase en HomeLogic.
+    }
+  }
+
+  /// `uid` de Firebase si el Auth anónimo de [completeOnboarding] tuvo
+  /// éxito, o `null` si la app sigue en modo 100% local. Se usa como
+  /// guardia para no intentar escribir en Firestore cuando no hay sesión.
+  String? get _firebaseUid => FirebaseAuth.instance.currentUser?.uid;
+
+  /// Espeja la creación de [circle] en Firestore (`circles/{id}` +
+  /// `circles/{id}/members/{uid}` como dueño), ver
+  /// firebase/FIRESTORE_SCHEMA.md. Fire-and-forget: si falla (sin red, sin
+  /// Firebase configurado, reglas desactualizadas), el círculo sigue
+  /// funcionando 100% local en Hive — este PR todavía no lee de vuelta
+  /// desde Firestore, solo escribe (ver Fase 2 en
+  /// firebase/MIGRATION_PLAN.md).
+  Future<void> _mirrorCircleCreation(HabitCircle circle) async {
+    final uid = _firebaseUid;
+    if (uid == null) return;
+    try {
+      final circleRef = FirebaseFirestore.instance.collection('circles').doc(circle.id);
+      final batch = FirebaseFirestore.instance.batch()
+        ..set(circleRef, {
+          'name': circle.name,
+          'category': circle.category,
+          'ownerId': uid,
+          'inviteCode': circle.id.substring(0, circle.id.length.clamp(0, 8)),
+          'createdAt': FieldValue.serverTimestamp(),
+        })
+        ..set(circleRef.collection('members').doc(uid), {
+          'role': 'owner',
+          'joinedAt': FieldValue.serverTimestamp(),
+        });
+      await batch.commit();
+    } catch (_) {
+      // Se ignora a propósito: ver doc-comment del método.
+    }
+  }
+
+  /// Espeja el check-in/deshacer de hoy en [circle] hacia
+  /// `circles/{id}/checkIns/{uid}_{fecha}` (ID de documento = unicidad,
+  /// ver firestore.rules). Mismo criterio fire-and-forget que
+  /// [_mirrorCircleCreation].
+  Future<void> _mirrorCheckIn(HabitCircle circle) async {
+    final uid = _firebaseUid;
+    if (uid == null) return;
+    try {
+      final dateKey = _dateKey(CheckIn.today());
+      final checkInRef = FirebaseFirestore.instance
+          .collection('circles')
+          .doc(circle.id)
+          .collection('checkIns')
+          .doc('${uid}_$dateKey');
+      if (circle.checkedInToday) {
+        await checkInRef.set({
+          'userId': uid,
+          'date': dateKey,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await checkInRef.delete();
+      }
+    } catch (_) {
+      // Se ignora a propósito: ver doc-comment del método.
+    }
+  }
+
+  /// Formatea [date] como "yyyy-mm-dd", igual que el `date` string que
+  /// esperan las Cloud Functions en functions/src/streakLogic.ts.
+  static String _dateKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
   /// Genera un ID de jugador local corto (marca de tiempo + sufijo
   /// aleatorio en base 36) que identifica a este dispositivo dentro del
   /// código QR de "Invocar por QR". No requiere red: solo debe ser distinto
@@ -351,16 +452,22 @@ class HomeLogic extends ChangeNotifier {
             '$_username completó "${circle.name}" — racha de '
             '${circle.streakDays} días.',
       );
+      _logAnalyticsEvent('check_in', {
+        'circle_category': circle.category,
+        'streak_days': circle.streakDays,
+      });
       _grantFreezeIfMilestoneReached(circle);
       if (!wasPerfect && circle.isPerfect && circle.totalMembers > 1) {
         _pushActivityEvent(
           emoji: '✨',
           message: '¡"${circle.name}" logró el Círculo Perfecto de hoy!',
         );
+        _logAnalyticsEvent('perfect_circle', {'circle_category': circle.category});
       }
     }
     _circlesUpdatedTick++;
     LocalStorageService.saveCircles(_circles);
+    unawaited(_mirrorCheckIn(circle));
     notifyListeners();
   }
 
@@ -382,8 +489,11 @@ class HomeLogic extends ChangeNotifier {
   }
 
   void createCircle({required String name, required String category}) {
-    _circles.add(HabitCircle(name: name, category: category));
+    final circle = HabitCircle(name: name, category: category);
+    _circles.add(circle);
     LocalStorageService.saveCircles(_circles);
+    _logAnalyticsEvent('circle_created', {'circle_category': category});
+    unawaited(_mirrorCircleCreation(circle));
     notifyListeners();
   }
 
@@ -421,6 +531,7 @@ class HomeLogic extends ChangeNotifier {
     );
     LocalStorageService.saveAllyRequests(_pendingAllyRequests);
     allyUsernameController.clear();
+    _logAnalyticsEvent('ally_request_sent');
     notifyListeners();
     return true;
   }
@@ -436,6 +547,7 @@ class HomeLogic extends ChangeNotifier {
       emoji: '🕊️',
       message: 'Ahora eres aliado de ${request.fromUsername}.',
     );
+    _logAnalyticsEvent('ally_request_accepted');
     notifyListeners();
   }
 

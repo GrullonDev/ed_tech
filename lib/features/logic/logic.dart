@@ -54,6 +54,17 @@ class HomeLogic extends ChangeNotifier {
   /// check-in. Sirve como trigger para la micro-animación de pulso en el
   /// ícono de racha: la UI observa este valor (no su magnitud) y reproduce
   /// la animación cada vez que cambia.
+  /// Suscripciones activas a `circles/{id}/checkIns` (check-ins de hoy) por
+  /// círculo, ver [_watchCircleCheckIns]. Se cancelan en [dispose].
+  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+  _checkInSubscriptions = {};
+
+  /// IDs de círculo que ya recibieron su primer snapshot de
+  /// `circles/{id}/checkIns`, para distinguir "check-ins que ya estaban
+  /// hechos antes de abrir la app" (se anuncian una sola vez al conectar) de
+  /// "check-in nuevo en vivo de otro dispositivo" en [_watchCircleCheckIns].
+  final Set<String> _circlesWithInitialSnapshot = {};
+
   int _streakPulseTick = 0;
 
   /// Contador que se incrementa cada vez que un círculo compartido cambia
@@ -167,6 +178,9 @@ class HomeLogic extends ChangeNotifier {
 
     _applyDailyResetIfNeeded();
     _applyPendingStreakFreezes();
+    for (final circle in _circles) {
+      _watchCircleCheckIns(circle);
+    }
     notifyListeners();
   }
 
@@ -403,6 +417,65 @@ class HomeLogic extends ChangeNotifier {
     }
   }
 
+  /// Se suscribe a los check-ins de **hoy** de [circle] en Firestore
+  /// (`circles/{id}/checkIns`) para enterarse cuando un miembro real de la
+  /// tribu (otro `uid`, desde otro dispositivo) marca su hábito — hasta
+  /// ahora "la tribu" en el feed de actividad solo mostraba miembros
+  /// simulados (ver [addMemberToCircle]). Primer paso de lectura real de la
+  /// Fase 2 de firebase/MIGRATION_PLAN.md (antes el círculo solo escribía
+  /// hacia Firestore, nunca leía de vuelta).
+  ///
+  /// A propósito **no** toca `streakDays`/`constancyDropsEarned`/`isPerfect`
+  /// (siguen calculándose 100% en local sobre los check-ins propios, ver
+  /// doc-comment de [HabitCircle]): esto solo alimenta el feed de actividad,
+  /// para no arriesgar la racha/gotas del usuario a un dato remoto que
+  /// podría llegar tarde o fallar. Si no hay sesión de Firebase, no hace
+  /// nada (la app sigue 100% local). La consulta queda fija al día en que se
+  /// abrió la app: si la app sigue abierta al cruzar la medianoche, deja de
+  /// recibir check-ins nuevos hasta el próximo reinicio — limitación
+  /// aceptada por ahora, igual que [_applyDailyResetIfNeeded] con los
+  /// hábitos de hoy.
+  void _watchCircleCheckIns(HabitCircle circle) {
+    final uid = _firebaseUid;
+    if (uid == null || _checkInSubscriptions.containsKey(circle.id)) return;
+    final dateKey = _dateKey(CheckIn.today());
+    final query = FirebaseFirestore.instance
+        .collection('circles')
+        .doc(circle.id)
+        .collection('checkIns')
+        .where('date', isEqualTo: dateKey);
+    try {
+      _checkInSubscriptions[circle.id] = query.snapshots().listen((snapshot) {
+        final isInitialSnapshot = !_circlesWithInitialSnapshot.contains(
+          circle.id,
+        );
+        _circlesWithInitialSnapshot.add(circle.id);
+        var sawRemoteCheckIn = false;
+        for (final change in snapshot.docChanges) {
+          if (change.type != DocumentChangeType.added) continue;
+          final remoteUid = change.doc.data()?['userId'] as String?;
+          if (remoteUid == null || remoteUid == uid) continue;
+          sawRemoteCheckIn = true;
+          _pushActivityEvent(
+            emoji: '🔥',
+            message: isInitialSnapshot
+                ? 'Un miembro de "${circle.name}" ya había completado su '
+                      'hábito hoy.'
+                : 'Un miembro de "${circle.name}" completó su hábito hoy.',
+          );
+        }
+        if (sawRemoteCheckIn) {
+          _circlesUpdatedTick++;
+          notifyListeners();
+        }
+      }, onError: (_) {});
+    } catch (_) {
+      // Se ignora a propósito: sin Firebase configurado, la app sigue
+      // funcionando 100% local con el feed de actividad generado en el
+      // dispositivo (ver [_pushActivityEvent]).
+    }
+  }
+
   /// Formatea [date] como "yyyy-mm-dd", igual que el `date` string que
   /// esperan las Cloud Functions en functions/src/streakLogic.ts.
   static String _dateKey(DateTime date) =>
@@ -494,6 +567,7 @@ class HomeLogic extends ChangeNotifier {
     LocalStorageService.saveCircles(_circles);
     _logAnalyticsEvent('circle_created', {'circle_category': category});
     unawaited(_mirrorCircleCreation(circle));
+    _watchCircleCheckIns(circle);
     notifyListeners();
   }
 
@@ -584,6 +658,9 @@ class HomeLogic extends ChangeNotifier {
 
   @override
   void dispose() {
+    for (final subscription in _checkInSubscriptions.values) {
+      unawaited(subscription.cancel());
+    }
     usernameController.dispose();
     habitNameController.dispose();
     habitCategoryController.dispose();

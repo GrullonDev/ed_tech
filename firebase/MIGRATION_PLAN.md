@@ -143,22 +143,35 @@ Lo único que sigue haciendo falta del lado de la app:
    onboarding si la escritura falla). `HomeLogic` sigue usando
    `LocalHabitRepository`/Hive para círculos, check-ins, aliados y el feed
    de actividad — eso es la Fase 2 en adelante.
-3. **Fase 2 (en progreso — solo escritura)**: `HabitCircle` ya tiene un
-   `id` estable (antes no existía ningún identificador persistente; se
-   generó y se agregó a `toMap`/`fromMap` con el mismo patrón de fallback
-   que `AppUser.playerId`). `createCircle()` y `toggleCheckIn()` ya
-   espejan el círculo y el check-in del día hacia Firestore
-   (`circles/{id}`, `circles/{id}/members/{uid}` como dueño,
+3. **Fase 2 (en progreso — escritura + primera lectura)**: `HabitCircle`
+   ya tiene un `id` estable (antes no existía ningún identificador
+   persistente; se generó y se agregó a `toMap`/`fromMap` con el mismo
+   patrón de fallback que `AppUser.playerId`). `createCircle()` y
+   `toggleCheckIn()` ya espejan el círculo y el check-in del día hacia
+   Firestore (`circles/{id}`, `circles/{id}/members/{uid}` como dueño,
    `circles/{id}/checkIns/{uid}_{fecha}`) de forma fire-and-forget: si
    falla (sin red, reglas desactualizadas), el círculo sigue funcionando
-   100% local en Hive sin que el usuario note nada. **Todavía no se lee de
-   vuelta desde Firestore** — `streakDays`/`drops`/etc. se siguen
-   calculando en Dart sobre los datos locales, no sobre `memberStats` (que
-   requeriría además desplegar las Cloud Functions de `functions/src/`).
-   Pendiente de esta fase: suscribirse a `circles/{id}/checkIns` con
-   `snapshots()` para fusionar check-ins de otros miembros reales, y
-   decidir si se despliegan las Cloud Functions (plan Blaze) o se sigue
-   calculando todo en el cliente (ver sección 0).
+   100% local en Hive sin que el usuario note nada.
+
+   Ya hay una primera lectura real: `HomeLogic._watchCircleCheckIns()` se
+   suscribe con `snapshots()` a los check-ins de **hoy** de cada círculo
+   (`circles/{id}/checkIns`, filtrado por `date`) y, cuando detecta un
+   documento con un `userId` distinto al propio, empuja un evento al feed
+   de actividad ("Un miembro de X completó su hábito hoy") — así la tribu
+   deja de ser 100% simulada en el feed. A propósito **no** toca
+   `streakDays`/`constancyDropsEarned`/`isPerfect`: esos siguen
+   calculándose 100% en el cliente sobre los check-ins propios en Hive, no
+   sobre `memberStats` (que requeriría además desplegar las Cloud
+   Functions de `functions/src/`) — mezclar check-ins remotos de otros
+   `uid` directamente en `HabitCircle.checkIns` (que hoy representa solo
+   los check-ins del usuario del dispositivo) rompería esos cálculos, así
+   que esa unificación queda para cuando se desplieguen las Cloud
+   Functions y `memberStats` sea la fuente de verdad compartida.
+
+   Pendiente de esta fase: decidir si se despliegan las Cloud Functions
+   (plan Blaze) o se sigue calculando todo en el cliente (ver sección 0);
+   si se despliegan, migrar `completedMembers`/`isPerfect`/progreso del
+   día a leer de `memberStats` en vez de simular miembros locales.
 4. **Fase 3**: migrar aliados/invitaciones reales (`allyRequests`, canje
    de `inviteCode` vía `redeemInviteCode`).
 5. **Fase 4**: migrar el feed de actividad a `activityEvents` +

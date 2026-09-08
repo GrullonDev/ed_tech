@@ -10,10 +10,10 @@ reemplazo de `LocalStorageService`.
 Al crear el proyecto en Supabase, usar **`racha_tribu`** como nombre del
 proyecto (Supabase no permite renombrar la base de datos Postgres en sí
 —siempre se llama `postgres`— pero sí el proyecto, que es lo que aparece
-en el dashboard, en la URL del API y como prefijo natural en backups o
-entornos separados como `racha_tribu-staging` / `racha_tribu-prod`). Las
-migraciones de este PR no dependen de ningún nombre en particular, así
-que aplican igual sin importar cómo se llame el proyecto.
+en el dashboard y en la URL del API). Un solo proyecto/entorno alcanza
+por ahora — nada en este PR asume `staging`/`prod` separados ni depende
+de ningún nombre en particular, así que las migraciones aplican igual
+sin importar cómo se llame el proyecto.
 
 ## Mapeo modelo Dart → tabla Postgres
 

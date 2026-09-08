@@ -1,0 +1,117 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para Racha Tribu (proyecto Firebase
+// "rachatribu"). Equivalente a las políticas RLS que se habían diseñado
+// para Postgres/Supabase (ver commit histórico de feature/supabase-schema):
+// mismo criterio de "solo miembros del círculo ven/escriben sus datos",
+// adaptado a la forma de documentos/subcolecciones de Firestore.
+//
+// Igual que en el diseño de Supabase: los ledgers derivados
+// (streakShieldGrants/Uses, memberStats) y el feed de actividad
+// (activityEvents) son de SOLO LECTURA para el cliente — se escriben
+// únicamente desde Cloud Functions con el Admin SDK, que ignora estas
+// reglas. Así el feed y los escudos no se pueden falsear desde el cliente.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isCircleMember(circleId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/circles/$(circleId)/members/$(request.auth.uid));
+    }
+
+    // ------------------------------------------------------------------
+    // users/{uid}: perfil público (equivalente a "profiles"). Los
+    // usernames no son sensibles (viajan hoy en el QR y el leaderboard),
+    // así que cualquier usuario autenticado puede leerlos.
+    // ------------------------------------------------------------------
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSelf(uid);
+      allow update: if isSelf(uid);
+
+      // Feed personal (eventos sin círculo, ej. "ally_accepted").
+      match /activityEvents/{eventId} {
+        allow read: if isSelf(uid);
+        allow write: if false; // solo Cloud Functions
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // circles/{circleId}: equivalente a "circles" + "circle_members" +
+    // "check_ins" + los ledgers de escudos, como subcolecciones.
+    // ------------------------------------------------------------------
+    match /circles/{circleId} {
+      allow read: if isCircleMember(circleId);
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      match /members/{uid} {
+        allow read: if isCircleMember(circleId);
+        // El propio usuario se inscribe a sí mismo. El canje de
+        // invite_code se valida antes en la Cloud Function callable
+        // `redeemInviteCode` (ver functions/src/index.ts); esta regla
+        // solo garantiza que nadie pueda inscribir a otra persona.
+        allow create: if isSelf(uid);
+        allow delete: if isSelf(uid) ||
+          (isSignedIn() &&
+            get(/databases/$(database)/documents/circles/$(circleId)).data.ownerId == request.auth.uid);
+      }
+
+      match /checkIns/{checkInId} {
+        allow read: if isCircleMember(circleId);
+        // checkInId es siempre "{uid}_{yyyy-mm-dd}": el propio ID actúa
+        // como constraint de unicidad (no se puede duplicar el check-in
+        // de un día) sin necesitar una consulta extra.
+        allow create: if isSignedIn() && isCircleMember(circleId) &&
+          request.resource.data.userId == request.auth.uid &&
+          checkInId == request.auth.uid + '_' + request.resource.data.date;
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      }
+
+      // Derivados: solo Cloud Functions escribe aquí.
+      match /streakShieldGrants/{grantId} {
+        allow read: if isCircleMember(circleId);
+        allow write: if false;
+      }
+
+      match /streakShieldUses/{useId} {
+        allow read: if isCircleMember(circleId);
+        allow write: if false;
+      }
+
+      match /memberStats/{uid} {
+        allow read: if isCircleMember(circleId);
+        allow write: if false;
+      }
+
+      match /activityEvents/{eventId} {
+        allow read: if isCircleMember(circleId);
+        allow write: if false;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // allyRequests/{requestId}: requestId es siempre "{fromUid}_{toUid}".
+    // ------------------------------------------------------------------
+    match /allyRequests/{requestId} {
+      allow read: if isSignedIn() &&
+        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        request.resource.data.toUserId != request.auth.uid &&
+        requestId == request.resource.data.fromUserId + '_' + request.resource.data.toUserId;
+      // Solo el receptor puede aceptar/rechazar; el remitente no puede
+      // autoaprobar su propia solicitud.
+      allow update: if isSignedIn() &&
+        resource.data.toUserId == request.auth.uid &&
+        request.resource.data.status in ['accepted', 'rejected'];
+    }
+  }
+}

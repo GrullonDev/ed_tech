@@ -5,6 +5,16 @@ Este documento mapea los modelos Dart actuales (`lib/core/model/*`,
 explica las decisiones de diseño. Ver `MIGRATION_PLAN.md` para el plan de
 reemplazo de `LocalStorageService`.
 
+## Nombre del proyecto/base de datos
+
+Al crear el proyecto en Supabase, usar **`racha_tribu`** como nombre del
+proyecto (Supabase no permite renombrar la base de datos Postgres en sí
+—siempre se llama `postgres`— pero sí el proyecto, que es lo que aparece
+en el dashboard, en la URL del API y como prefijo natural en backups o
+entornos separados como `racha_tribu-staging` / `racha_tribu-prod`). Las
+migraciones de este PR no dependen de ningún nombre en particular, así
+que aplican igual sin importar cómo se llame el proyecto.
+
 ## Mapeo modelo Dart → tabla Postgres
 
 | Modelo Dart | Tabla/vista Postgres | Notas |

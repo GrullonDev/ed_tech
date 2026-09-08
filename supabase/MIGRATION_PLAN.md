@@ -95,7 +95,50 @@ Hoy no existe — el "playerId" cumple ese rol de forma local. Se necesita:
 Esto cierra el ítem pendiente del README: *"Modo offline mejorado con
 sync cuando haya conexión"*.
 
-## 5. Fases sugeridas (para no romper la app en un solo PR)
+## 5. Cola de sincronización offline (outbox)
+
+Pregunta abierta del equipo: si el usuario agrega un aliado (u otra
+acción social) sin internet, ¿se deja "mapeado" localmente y se le avisa
+al otro usuario aparte cuando vuelva la conexión, o hace falta algo más?
+
+**Propuesta: patrón outbox, sin mecanismo aparte de notificación.**
+
+1. **Cola local (`outbox_box` en Hive)**: cada acción que necesita
+   escribir en Supabase (`sendAllyRequest`, `toggleCheckIn`,
+   `addMemberToCircle`, etc.) primero se aplica de forma optimista al
+   estado en memoria de `HomeLogic` (la UI responde al instante, como
+   hoy) y, si no hay conexión, además encola un registro:
+   `{id, type: 'send_ally_request', payload: {...}, createdAt}`.
+2. **Detección de conexión**: `connectivity_plus` (o el propio cliente
+   de Supabase, que ya expone reconexión de Realtime) dispara
+   `_flushOutbox()` en `HomeLogic` en cuanto vuelve la red.
+3. **Flush**: `_flushOutbox()` reproduce la cola en orden contra
+   `SupabaseHabitRepository` (mismo método que se habría llamado online).
+   Si una entrada falla por conflicto real (ej. el círculo ya no existe),
+   se descarta y se registra en el feed local; si falla por red, se
+   reintenta en el siguiente flush.
+4. **Notificación al otro usuario — no hace falta nada aparte**: en
+   cuanto la solicitud de aliado se inserta en `ally_requests` (paso 3),
+   el mismo mecanismo que ya cubre este PR entra a jugar solo — el
+   receptor ve la fila nueva vía su propia suscripción Realtime a
+   `ally_requests`/`activity_events`, sin importar si el remitente la
+   creó online o la trae encolada de hace tres días sin señal. **No se
+   necesita un segundo camino de "mapeado local + aviso aparte"**: el
+   outbox ya resuelve el "mapeado local", y Realtime + los triggers de
+   `20250101000003_activity_triggers.sql` ya resuelven el aviso — construir
+   algo adicional sería duplicar lógica que el esquema de este PR ya cubre.
+5. **UI**: mientras una acción sigue en el outbox sin confirmar, se marca
+   con un badge sutil ("pendiente de sincronizar") reutilizando el patrón
+   visual que ya existe para "Pendiente" en `circle_detail.dart`
+   (`_MemberTile.isPending`).
+
+Este diseño evita dos problemas del enfoque "solo dejarlo mapeado": (a)
+que la invitación se pierda si se cierra la app antes de sincronizar
+manualmente, y (b) tener que inventar un canal de notificación paralelo
+al que ya generan los triggers — el outbox solo decide *cuándo* se hace
+el `insert` real, no *cómo* se entera el otro usuario.
+
+## 6. Fases sugeridas (para no romper la app en un solo PR)
 
 1. **Fase 0 (ya hecho en este PR)**: esquema Postgres + RLS + funciones +
    triggers, sin tocar Dart todavía. Se puede aplicar a un proyecto
@@ -117,11 +160,14 @@ sync cuando haya conexión"*.
    retirar `_pushActivityEvent` de Dart.
 6. **Fase 5**: Hive pasa de ser la fuente de verdad a ser cache
    write-through; agregar reconciliación al reconectar.
+7. **Fase 6**: implementar el outbox de la sección 5 (cola local +
+   flush al reconectar) para las acciones sociales — aliados e
+   invitaciones de círculo primero, por ser las que más importan offline.
 
 Cada fase deja la app funcional y testeable de punta a punta antes de
 empezar la siguiente.
 
-## 6. Qué NO cambia
+## 7. Qué NO cambia
 
 - El contrato `HomeLogic` (ChangeNotifier) → UI no cambia: las pantallas
   siguen leyendo getters y llamando métodos, sin saber si hay red o no.

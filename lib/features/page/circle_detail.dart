@@ -188,12 +188,28 @@ class _InviteMemberDialogState extends State<_InviteMemberDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Invitar a un amigo'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.words,
-        decoration: const InputDecoration(hintText: 'Nombre del amigo'),
-        onSubmitted: (value) => Navigator.of(context).pop(value),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'Nombre del amigo'),
+            onSubmitted: (value) => Navigator.of(context).pop(value),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Se agrega solo en este teléfono, como marcador visual: tu '
+            'amigo no recibe ninguna invitación real.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(
+                alpha: 0.7,
+              ),
+            ),
+          ),
+        ],
       ),
       actions: [
         TextButton(

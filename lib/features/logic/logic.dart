@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -259,9 +260,8 @@ class HomeLogic extends ChangeNotifier {
   /// "rachatribu") y usar el `uid` resultante como playerId — a diferencia
   /// del id generado localmente, este es estable si el backend algún día
   /// necesita reconocer al mismo jugador desde otro dispositivo. Guarda el
-  /// nombre como `displayName` del usuario anónimo (todavía no hay
-  /// `cloud_firestore` en el proyecto para un documento de perfil propio,
-  /// eso llega en la siguiente fase de la migración).
+  /// nombre como `displayName` del usuario anónimo y como documento de
+  /// perfil en Firestore (`users/{uid}`, ver [_saveFirestoreProfile]).
   ///
   /// Si Firebase no está configurado todavía (ver lib/firebase_options.dart)
   /// o no hay conexión, cae de vuelta al id generado localmente: la app
@@ -272,9 +272,40 @@ class HomeLogic extends ChangeNotifier {
       final user = credential.user;
       if (user == null) return _generatePlayerId();
       await user.updateDisplayName(username);
+      await _saveFirestoreProfile(uid: user.uid, username: username);
       return user.uid;
     } catch (_) {
       return _generatePlayerId();
+    }
+  }
+
+  /// Escribe/actualiza el documento de perfil `users/{uid}` (ver
+  /// firebase/FIRESTORE_SCHEMA.md), espejo de [AppUser] del lado de
+  /// Firestore. `set(..., merge: true)` para no pisar `createdAt` si el
+  /// documento ya existía de una sesión anterior en este mismo uid.
+  ///
+  /// No se espera una excepción aquí en condiciones normales: Firestore
+  /// encola la escritura localmente y la sincroniza solo cuando vuelve la
+  /// red (persistencia offline nativa, ver sección 4 de
+  /// firebase/MIGRATION_PLAN.md), así que este método no bloquea el
+  /// onboarding sin conexión. Si de todos modos falla (ej. reglas de
+  /// seguridad desactualizadas), no debe tumbar el onboarding completo:
+  /// el usuario ya quedó autenticado y guardado localmente en Hive.
+  Future<void> _saveFirestoreProfile({
+    required String uid,
+    required String username,
+  }) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'username': username,
+        'memberSince': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // Se ignora a propósito: el perfil local (Hive) ya quedó guardado en
+      // completeOnboarding() y es la fuente de verdad mientras no exista
+      // todavía un HabitRepository que reconcilie ambos (ver Fase 5/6 de
+      // firebase/MIGRATION_PLAN.md).
     }
   }
 

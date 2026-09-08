@@ -96,6 +96,7 @@ App de micro-hábitos donde creas círculos de 6–8 personas, haces check-in di
 | `mobile_scanner` | `^7.1.3` | Escaneo de códigos QR con cámara |
 | `firebase_core` | `^3.6.0` | Inicialización del SDK de Firebase (proyecto `rachatribu`) |
 | `firebase_auth` | `^5.3.1` | Auth anónimo: el `uid` se usa como playerId cuando hay Firebase disponible |
+| `cloud_firestore` | `^5.4.4` | Perfil de usuario (`users/{uid}`) — base para círculos/check-ins reales en próximas fases |
 | `cupertino_icons` | `^1.0.8` | Iconos iOS |
 | `flutter_lints` | `^6.0.0` | Reglas de linting |
 | `flutter_launcher_icons` | `^0.14.3` | Generador de iconos (solo Android) |

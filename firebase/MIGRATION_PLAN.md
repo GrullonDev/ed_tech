@@ -133,17 +133,16 @@ Lo único que sigue haciendo falta del lado de la app:
 
 1. **Fase 0 (este PR)**: colecciones + Security Rules + Cloud Functions +
    documentación, sin tocar Dart todavía.
-2. **Fase 1 (en progreso)**: `firebase_core` y `firebase_auth` ya están en
-   `pubspec.yaml`, `main.dart` inicializa Firebase (con caída elegante a
-   modo local si falla) y `HomeLogic.completeOnboarding()` ya intenta Auth
-   anónimo, usando el `uid` como playerId y `updateDisplayName` para el
-   nombre. **Pendiente de esta fase**: correr
-   `flutterfire configure --project=rachatribu` para reemplazar el
-   placeholder en `lib/firebase_options.dart` con las claves reales, y
-   agregar `cloud_firestore` para escribir `users/{uid}` como documento de
-   perfil propio (hoy el "perfil" vive solo como `displayName` del usuario
-   anónimo, sin colección `users` todavía). `HomeLogic` sigue usando
-   `LocalHabitRepository`/Hive para todo lo demás.
+2. **Fase 1 (hecha)**: `firebase_core`, `firebase_auth` y `cloud_firestore`
+   están en `pubspec.yaml`; `lib/firebase_options.dart` ya tiene las claves
+   reales del proyecto `rachatribu` (generadas con `flutterfire configure`);
+   `main.dart` inicializa Firebase (con caída elegante a modo local si
+   falla); y `HomeLogic.completeOnboarding()` se autentica de forma anónima,
+   usa el `uid` como playerId, y escribe/actualiza el perfil en
+   `users/{uid}` (`_saveFirestoreProfile`, con `merge: true` y sin tumbar el
+   onboarding si la escritura falla). `HomeLogic` sigue usando
+   `LocalHabitRepository`/Hive para círculos, check-ins, aliados y el feed
+   de actividad — eso es la Fase 2 en adelante.
 3. **Fase 2**: migrar círculos + check-ins a `FirebaseHabitRepository`
    (`circles`, `members`, `checkIns`, `memberStats`).
 4. **Fase 3**: migrar aliados/invitaciones reales (`allyRequests`, canje

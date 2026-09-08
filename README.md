@@ -94,11 +94,17 @@ App de micro-hábitos donde creas círculos de 6–8 personas, haces check-in di
 | `cached_network_image` | `^4.0.0` | Imágenes en caché (preparado para avatares remotos) |
 | `qr_flutter` | `^4.1.0` | Generación de códigos QR |
 | `mobile_scanner` | `^7.1.3` | Escaneo de códigos QR con cámara |
+| `firebase_core` | `^3.6.0` | Inicialización del SDK de Firebase (proyecto `rachatribu`) |
+| `firebase_auth` | `^5.3.1` | Auth anónimo: el `uid` se usa como playerId cuando hay Firebase disponible |
 | `cupertino_icons` | `^1.0.8` | Iconos iOS |
 | `flutter_lints` | `^6.0.0` | Reglas de linting |
 | `flutter_launcher_icons` | `^0.14.3` | Generador de iconos (solo Android) |
 
-> **Nota:** El proyecto funciona 100% offline con Hive. No se requiere backend ni conexión a internet.
+> **Nota:** El proyecto sigue funcionando 100% offline con Hive aunque
+> Firebase no esté configurado: `firebase_options.dart` es un placeholder
+> hasta correr `flutterfire configure --project=rachatribu` (ver
+> `firebase/MIGRATION_PLAN.md`), y `HomeLogic` cae de vuelta al playerId
+> generado localmente si la inicialización de Firebase falla.
 
 ## 📁 Estructura del Proyecto
 

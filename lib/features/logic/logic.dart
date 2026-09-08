@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/activity_event.dart';
@@ -243,7 +244,7 @@ class HomeLogic extends ChangeNotifier {
     if (name.isEmpty) return;
     _username = name;
     _hasUsername = true;
-    _playerId = _generatePlayerId();
+    _playerId = await _signInAndResolvePlayerId(name);
     // Se espera a que el usuario quede escrito en disco antes de avisar a la
     // UI: así, si el sistema mata la app justo después de continuar, el
     // apodo ya quedó persistido y no se volverá a pedir en el siguiente
@@ -254,10 +255,35 @@ class HomeLogic extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Intenta autenticarse de forma anónima en Firebase (proyecto
+  /// "rachatribu") y usar el `uid` resultante como playerId — a diferencia
+  /// del id generado localmente, este es estable si el backend algún día
+  /// necesita reconocer al mismo jugador desde otro dispositivo. Guarda el
+  /// nombre como `displayName` del usuario anónimo (todavía no hay
+  /// `cloud_firestore` en el proyecto para un documento de perfil propio,
+  /// eso llega en la siguiente fase de la migración).
+  ///
+  /// Si Firebase no está configurado todavía (ver lib/firebase_options.dart)
+  /// o no hay conexión, cae de vuelta al id generado localmente: la app
+  /// sigue funcionando 100% offline como hasta ahora.
+  Future<String> _signInAndResolvePlayerId(String username) async {
+    try {
+      final credential = await FirebaseAuth.instance.signInAnonymously();
+      final user = credential.user;
+      if (user == null) return _generatePlayerId();
+      await user.updateDisplayName(username);
+      return user.uid;
+    } catch (_) {
+      return _generatePlayerId();
+    }
+  }
+
   /// Genera un ID de jugador local corto (marca de tiempo + sufijo
   /// aleatorio en base 36) que identifica a este dispositivo dentro del
   /// código QR de "Invocar por QR". No requiere red: solo debe ser distinto
-  /// entre dispositivos con probabilidad razonablemente alta.
+  /// entre dispositivos con probabilidad razonablemente alta. Sirve de
+  /// respaldo cuando Firebase no está disponible (ver
+  /// [_signInAndResolvePlayerId]).
   static String _generatePlayerId() {
     final timestamp = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
     final randomSuffix = Random().nextInt(46656).toRadixString(36);

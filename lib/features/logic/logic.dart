@@ -2,10 +2,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
 
@@ -38,6 +40,11 @@ class HomeLogic extends ChangeNotifier {
   List<HabitCircle> _circles = [];
   List<AllyRequest> _pendingAllyRequests = [];
   List<String> _allies = [];
+  List<ActivityEvent> _activityFeed = [];
+
+  /// Tope del feed de actividad: suficiente para ver la última semana de
+  /// vida de la tribu sin que la caja de Hive crezca sin límite.
+  static const int _maxActivityFeedLength = 40;
 
   /// Contador que se incrementa cada vez que se completa un hábito o
   /// check-in. Sirve como trigger para la micro-animación de pulso en el
@@ -63,6 +70,7 @@ class HomeLogic extends ChangeNotifier {
   List<AllyRequest> get pendingAllyRequests =>
       List.unmodifiable(_pendingAllyRequests);
   List<String> get allies => List.unmodifiable(_allies);
+  List<ActivityEvent> get activityFeed => List.unmodifiable(_activityFeed);
 
   /// Contenido del código QR de "Invocar por QR": el ID de jugador local más
   /// el nombre de usuario, separados por ':'. Al escanearlo, el otro
@@ -98,20 +106,21 @@ class HomeLogic extends ChangeNotifier {
   int get userLevel => (overallStreakDays ~/ 7) + 1;
 
   /// "Gotas de Constancia": moneda blanda del juego. Se derivan por completo
-  /// de datos reales (10 gotas por cada check-in histórico en cualquier
-  /// círculo, más un bono de 50 por cada hito de racha ya alcanzado), nunca
-  /// de un contador guardado aparte, para que no se pueda desincronizar de
-  /// los check-ins reales del usuario.
+  /// de datos reales (ver [HabitCircle.constancyDropsEarned]: 10 gotas por
+  /// check-in que escalan hasta x3 cuanto más larga sea la racha vigente ese
+  /// día, más un bono de 50 por cada hito de racha ya alcanzado), nunca de un
+  /// contador guardado aparte, para que no se pueda desincronizar de los
+  /// check-ins reales del usuario.
   int get constancyDrops {
-    final totalCheckIns = _circles.fold<int>(
+    final totalDrops = _circles.fold<int>(
       0,
-      (sum, c) => sum + c.checkIns.length,
+      (sum, c) => sum + c.constancyDropsEarned,
     );
     const milestoneBonuses = [7, 21, 30, 50, 100];
     final milestonesReached = milestoneBonuses
         .where((m) => recordStreakDays >= m)
         .length;
-    return totalCheckIns * 10 + milestonesReached * 50;
+    return totalDrops + milestonesReached * 50;
   }
 
   /// Fracción de días transcurridos en el mes actual (desde el día 1 hasta
@@ -138,6 +147,7 @@ class HomeLogic extends ChangeNotifier {
     _todayHabits = LocalStorageService.readTodayHabits();
     _pendingAllyRequests = LocalStorageService.readAllyRequests();
     _allies = LocalStorageService.readAllies();
+    _activityFeed = LocalStorageService.readActivityFeed();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
@@ -146,6 +156,7 @@ class HomeLogic extends ChangeNotifier {
     usernameController.text = _username;
 
     _applyDailyResetIfNeeded();
+    _applyPendingStreakFreezes();
     notifyListeners();
   }
 
@@ -164,6 +175,67 @@ class HomeLogic extends ChangeNotifier {
       LocalStorageService.saveTodayHabits(_todayHabits);
     }
     LocalStorageService.saveLastActiveDate(today);
+  }
+
+  /// Revisa si ayer se dejó pasar sin check-in un círculo que traía racha
+  /// activa y, si el círculo tiene un "Escudo de Racha" disponible, lo
+  /// consume automáticamente para que la cadena no se rompa — el mismo
+  /// mecanismo de "freeze" de apps de rachas, pensado para bajar la ansiedad
+  /// de perderlo todo por un solo día difícil. Se ejecuta al abrir la app,
+  /// así el usuario ve el resultado (racha viva + escudo gastado) apenas
+  /// entra, en vez de descubrirlo a mitad de sesión.
+  void _applyPendingStreakFreezes() {
+    final today = CheckIn.today();
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dayBeforeYesterday = yesterday.subtract(const Duration(days: 1));
+    var changed = false;
+    for (final circle in _circles) {
+      if (circle.checkIns.isEmpty) continue;
+      final hasYesterday = circle.checkIns.any((c) => c.date == yesterday);
+      if (hasYesterday || circle.freezeUsedDates.contains(yesterday)) continue;
+      final hadActiveStreak =
+          circle.checkIns.any((c) => c.date == dayBeforeYesterday) ||
+          circle.freezeUsedDates.contains(dayBeforeYesterday);
+      if (!hadActiveStreak) continue;
+      if (!circle.useFreezeFor(yesterday)) continue;
+      changed = true;
+      _pushActivityEvent(
+        emoji: '🛡️',
+        message:
+            '${circle.name} usó un Escudo de Racha para no perder la cadena.',
+      );
+    }
+    if (changed) LocalStorageService.saveCircles(_circles);
+  }
+
+  /// Otorga un escudo gratis la primera vez que [circle] cruza cada hito de
+  /// [Milestone.targets], y lo anuncia en el feed de la tribu.
+  void _grantFreezeIfMilestoneReached(HabitCircle circle) {
+    for (final days in Milestone.targets) {
+      if (circle.streakDays < days) continue;
+      if (!circle.grantFreezeForMilestone(days)) continue;
+      _pushActivityEvent(
+        emoji: '🏆',
+        message:
+            '${circle.name} alcanzó $days días de racha — ¡ganaste un '
+            'Escudo de Racha! 🛡️',
+      );
+    }
+  }
+
+  /// Agrega un evento al feed de actividad de la tribu (más reciente
+  /// primero) y lo recorta a [_maxActivityFeedLength] para no crecer sin
+  /// límite. No notifica ni persiste por sí solo: quien llama ya lo hace
+  /// junto con el resto de su cambio de estado.
+  void _pushActivityEvent({required String emoji, required String message}) {
+    _activityFeed.insert(
+      0,
+      ActivityEvent(emoji: emoji, message: message, at: DateTime.now()),
+    );
+    if (_activityFeed.length > _maxActivityFeedLength) {
+      _activityFeed = _activityFeed.sublist(0, _maxActivityFeedLength);
+    }
+    LocalStorageService.saveActivityFeed(_activityFeed);
   }
 
   Future<void> completeOnboarding() async {
@@ -210,11 +282,25 @@ class HomeLogic extends ChangeNotifier {
 
   void toggleCheckIn(HabitCircle circle) {
     final wasCheckedIn = circle.checkedInToday;
+    final wasPerfect = circle.isPerfect;
     if (wasCheckedIn) {
       circle.removeCheckInToday();
     } else {
       circle.addCheckInToday();
       _streakPulseTick++;
+      _pushActivityEvent(
+        emoji: '🔥',
+        message:
+            '$_username completó "${circle.name}" — racha de '
+            '${circle.streakDays} días.',
+      );
+      _grantFreezeIfMilestoneReached(circle);
+      if (!wasPerfect && circle.isPerfect && circle.totalMembers > 1) {
+        _pushActivityEvent(
+          emoji: '✨',
+          message: '¡"${circle.name}" logró el Círculo Perfecto de hoy!',
+        );
+      }
     }
     _circlesUpdatedTick++;
     LocalStorageService.saveCircles(_circles);
@@ -231,6 +317,10 @@ class HomeLogic extends ChangeNotifier {
     circle.addMember(trimmed);
     _circlesUpdatedTick++;
     LocalStorageService.saveCircles(_circles);
+    _pushActivityEvent(
+      emoji: '🎉',
+      message: '$trimmed se unió a "${circle.name}".',
+    );
     notifyListeners();
   }
 
@@ -285,6 +375,10 @@ class HomeLogic extends ChangeNotifier {
     }
     LocalStorageService.saveAllyRequests(_pendingAllyRequests);
     LocalStorageService.saveAllies(_allies);
+    _pushActivityEvent(
+      emoji: '🕊️',
+      message: 'Ahora eres aliado de ${request.fromUsername}.',
+    );
     notifyListeners();
   }
 
@@ -305,6 +399,10 @@ class HomeLogic extends ChangeNotifier {
     }
     _allies.add(scannedUsername);
     LocalStorageService.saveAllies(_allies);
+    _pushActivityEvent(
+      emoji: '⚡',
+      message: 'Invocaste a $scannedUsername como aliado.',
+    );
     notifyListeners();
     return scannedUsername;
   }

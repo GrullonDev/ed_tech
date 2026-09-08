@@ -42,7 +42,9 @@ App de micro-hábitos donde creas círculos de 6–8 personas, haces check-in di
 
 ### 🎮 Gamificación
 - **Nivel de usuario**: cada 7 días de racha = +1 nivel
-- **Gotas de Constancia**: 10 gotas por check-in + 50 por cada hito alcanzado
+- **Gotas de Constancia**: 10 gotas por check-in, con multiplicador según la racha vigente ese día (x1.5 desde el día 7, x2 desde el día 21, x3 desde el día 50) + 50 por cada hito alcanzado
+- **Escudos de Racha**: cada círculo gana un escudo gratis al cruzar cada hito (7/21/30/50/100 días); si se salta un día sin check-in, `HomeLogic` consume un escudo automáticamente al abrir la app para que la racha no se rompa
+- **Feed de Actividad de la Tribu**: línea de tiempo en el Ágora con check-ins, hitos, escudos usados, nuevos miembros y aliados — persistido en Hive (`activity_feed_box`)
 - **Totems coleccionables** en PageView 3D:
   - Semana Imbatible
   - Hábito Consolidado

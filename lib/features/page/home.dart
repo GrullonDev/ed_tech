@@ -111,6 +111,7 @@ class _MyHomePageState extends State<MyHomePage> {
             circlesUpdatedTick: _logic.circlesUpdatedTick,
             allyUsernameController: _logic.allyUsernameController,
             onSendAllyRequest: _logic.sendAllyRequest,
+            activityFeed: _logic.activityFeed,
           ),
         ),
       ),

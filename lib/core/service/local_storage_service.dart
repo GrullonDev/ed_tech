@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
@@ -20,6 +21,7 @@ class LocalStorageService {
   static const String _circlesBoxName = 'circles_box';
   static const String _todayHabitsBoxName = 'today_habits_box';
   static const String _allyRequestsBoxName = 'ally_requests_box';
+  static const String _activityFeedBoxName = 'activity_feed_box';
   static const String _userKey = 'user';
   static const String _lastActiveDateKey = 'lastActiveDate';
   static const String _alliesKey = 'allies';
@@ -28,6 +30,7 @@ class LocalStorageService {
   static late Box<dynamic> _circlesBox;
   static late Box<dynamic> _todayHabitsBox;
   static late Box<dynamic> _allyRequestsBox;
+  static late Box<dynamic> _activityFeedBox;
 
   /// Inicializa Hive y abre las cajas necesarias. Debe llamarse una vez en
   /// `main()` antes de `runApp`.
@@ -37,6 +40,7 @@ class LocalStorageService {
     _circlesBox = await Hive.openBox<dynamic>(_circlesBoxName);
     _todayHabitsBox = await Hive.openBox<dynamic>(_todayHabitsBoxName);
     _allyRequestsBox = await Hive.openBox<dynamic>(_allyRequestsBoxName);
+    _activityFeedBox = await Hive.openBox<dynamic>(_activityFeedBoxName);
   }
 
   // ---- Usuario ----
@@ -105,11 +109,23 @@ class LocalStorageService {
   static Future<void> saveAllies(List<String> allies) =>
       _settingsBox.put(_alliesKey, allies);
 
+  // ---- Feed de actividad de la tribu ----
+
+  static List<ActivityEvent> readActivityFeed() => _activityFeedBox.values
+      .map((e) => ActivityEvent.fromMap(e as Map<dynamic, dynamic>))
+      .toList();
+
+  static Future<void> saveActivityFeed(List<ActivityEvent> events) async {
+    await _activityFeedBox.clear();
+    await _activityFeedBox.addAll(events.map((e) => e.toMap()));
+  }
+
   /// Borra todo el estado local (útil para pruebas o "cerrar sesión" local).
   static Future<void> clearAll() async {
     await _settingsBox.clear();
     await _circlesBox.clear();
     await _todayHabitsBox.clear();
     await _allyRequestsBox.clear();
+    await _activityFeedBox.clear();
   }
 }

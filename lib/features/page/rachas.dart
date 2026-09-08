@@ -534,6 +534,16 @@ class _CircleStreakRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
+            if (circle.freezesAvailable > 0) ...[
+              Text(
+                '🛡️${circle.freezesAvailable}',
+                style: textTheme.labelSmall?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+            ],
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,

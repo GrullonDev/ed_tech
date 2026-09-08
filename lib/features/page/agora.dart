@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
@@ -17,6 +18,7 @@ class AgoraPage extends StatelessWidget {
     required this.circlesUpdatedTick,
     required this.allyUsernameController,
     required this.onSendAllyRequest,
+    required this.activityFeed,
   });
 
   final List<HabitCircle> circles;
@@ -27,6 +29,10 @@ class AgoraPage extends StatelessWidget {
   final int circlesUpdatedTick;
   final TextEditingController allyUsernameController;
   final bool Function() onSendAllyRequest;
+
+  /// Feed de actividad de la tribu (check-ins, hitos, escudos usados, nuevos
+  /// miembros, aliados), más reciente primero.
+  final List<ActivityEvent> activityFeed;
 
   @override
   Widget build(BuildContext context) {
@@ -81,12 +87,103 @@ class AgoraPage extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _LeaderboardCard(ranked: ranked),
+                const SizedBox(height: AppSpacing.xl2),
+                Text(
+                  'Actividad de la Tribu',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _ActivityFeedCard(events: activityFeed),
               ],
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+/// Feed de actividad de la tribu: cada línea es un evento real generado por
+/// una acción del usuario en este dispositivo (check-in, hito, escudo
+/// usado, nuevo miembro, aliado). Refuerza la sensación de vida social del
+/// Ágora incluso antes de tener sync remoto entre dispositivos.
+class _ActivityFeedCard extends StatelessWidget {
+  const _ActivityFeedCard({required this.events});
+
+  final List<ActivityEvent> events;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    if (events.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          border: Border.all(color: AppColors.outlineWhisper),
+        ),
+        child: Text(
+          'Todavía no hay actividad. Haz tu primer check-in para encender '
+          'el feed de la tribu.',
+          style: textTheme.bodySmall?.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < events.length; i++) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(events[i].emoji, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      events[i].message,
+                      style: textTheme.bodySmall?.copyWith(height: 1.4),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    _relativeTime(events[i].at),
+                    style: textTheme.labelSmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (i < events.length - 1)
+              const Divider(height: 1, color: AppColors.outlineWhisper),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _relativeTime(DateTime at) {
+    final diff = DateTime.now().difference(at);
+    if (diff.inMinutes < 1) return 'ahora';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min';
+    if (diff.inHours < 24) return '${diff.inHours} h';
+    return '${diff.inDays} d';
   }
 }
 

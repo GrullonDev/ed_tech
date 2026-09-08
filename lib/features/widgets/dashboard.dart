@@ -30,10 +30,12 @@ class Dashboard extends StatelessWidget {
     required this.onOpenRachas,
     required this.onOpenProfile,
     required this.onInviteMember,
+    required this.allies,
   });
 
   final String username;
   final List<HabitCircle> circles;
+  final List<String> allies;
   final List<TodayHabit> todayHabits;
   final int todayCompletedCount;
   final int todayTotalCount;
@@ -141,11 +143,31 @@ class Dashboard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   _CountPill(count: circles.length),
                   const Spacer(),
-                  Text(
-                    'Gestionar',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
+                  InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    onTap: circles.isEmpty
+                        ? null
+                        : () => _showManageCirclesSheet(
+                              context,
+                              circles: circles,
+                              allies: allies,
+                              onOpenCircle: onOpenCircle,
+                              onInviteMember: onInviteMember,
+                            ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                        vertical: AppSpacing.xs,
+                      ),
+                      child: Text(
+                        'Gestionar',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: circles.isEmpty
+                              ? AppColors.onSurfaceVariant
+                              : AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -176,6 +198,212 @@ class Dashboard extends StatelessWidget {
 /// El círculo con menos miembros es el más "urgente" para invitar a alguien.
 HabitCircle _circleWithRoom(List<HabitCircle> circles) =>
     circles.reduce((a, b) => a.totalMembers <= b.totalMembers ? a : b);
+
+/// Hoja de "Gestionar": lista los círculos del jugador (para abrir su
+/// detalle) y sus aliados (agregados por QR o solicitud) listos para sumar
+/// a un círculo con un toque, sin tener que volver a escribir el nombre.
+void _showManageCirclesSheet(
+  BuildContext context, {
+  required List<HabitCircle> circles,
+  required List<String> allies,
+  required ValueChanged<HabitCircle> onOpenCircle,
+  required void Function(HabitCircle circle, String name) onInviteMember,
+}) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+    ),
+    builder: (sheetContext) => _ManageCirclesSheet(
+      circles: circles,
+      allies: allies,
+      onOpenCircle: (circle) {
+        Navigator.of(sheetContext).pop();
+        onOpenCircle(circle);
+      },
+      onInviteMember: onInviteMember,
+    ),
+  );
+}
+
+class _ManageCirclesSheet extends StatelessWidget {
+  const _ManageCirclesSheet({
+    required this.circles,
+    required this.allies,
+    required this.onOpenCircle,
+    required this.onInviteMember,
+  });
+
+  final List<HabitCircle> circles;
+  final List<String> allies;
+  final ValueChanged<HabitCircle> onOpenCircle;
+  final void Function(HabitCircle circle, String name) onInviteMember;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.lg,
+          top: AppSpacing.lg,
+          bottom: AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tus círculos',
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            for (final circle in circles)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: GamePressable(
+                  onTap: () => onOpenCircle(circle),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            circle.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${circle.totalMembers} miembros',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Tus aliados',
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Solo se guardan en este dispositivo: "Agregar" no invita a nadie '
+              'de verdad ni avisa al otro teléfono.',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (allies.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Text(
+                  'Aún no tienes aliados. Ve a "Invocar por QR" para agregar '
+                  'a alguien cara a cara.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else
+              for (final ally in allies)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.surfaceContainer,
+                        child: Text(
+                          ally.isNotEmpty ? ally[0].toUpperCase() : '?',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          '@$ally',
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodyMedium,
+                        ),
+                      ),
+                      if (circles.isNotEmpty)
+                        if (circles.every((c) => c.members.contains(ally)))
+                          Text(
+                            'Ya en el círculo',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          )
+                        else
+                          TextButton(
+                            onPressed: () => _promptAddAllyToCircle(
+                              context,
+                              circles,
+                              ally,
+                              onInviteMember,
+                            ),
+                            child: const Text('Agregar'),
+                          ),
+                    ],
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Si hay un solo círculo lo agrega directo; con varios, pide elegir cuál.
+Future<void> _promptAddAllyToCircle(
+  BuildContext context,
+  List<HabitCircle> circles,
+  String allyUsername,
+  void Function(HabitCircle circle, String name) onInviteMember,
+) async {
+  final available =
+      circles.where((c) => !c.members.contains(allyUsername)).toList();
+  if (available.isEmpty) return;
+  if (available.length == 1) {
+    onInviteMember(available.first, allyUsername);
+    return;
+  }
+  final chosen = await showDialog<HabitCircle>(
+    context: context,
+    builder: (dialogContext) => SimpleDialog(
+      title: const Text('¿A qué círculo?'),
+      children: [
+        for (final circle in available)
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(dialogContext).pop(circle),
+            child: Text(circle.name),
+          ),
+      ],
+    ),
+  );
+  if (chosen != null) onInviteMember(chosen, allyUsername);
+}
 
 /// Diálogo para agregar un miembro simulado a un círculo. Sin backend, no
 /// hay envío real de invitación: solo se guarda el nombre localmente.
@@ -213,12 +441,28 @@ class _InviteMemberDialogState extends State<_InviteMemberDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Invitar a un amigo'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.words,
-        decoration: const InputDecoration(hintText: 'Nombre del amigo'),
-        onSubmitted: (value) => Navigator.of(context).pop(value),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'Nombre del amigo'),
+            onSubmitted: (value) => Navigator.of(context).pop(value),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Se agrega solo en este teléfono, como marcador visual: tu '
+            'amigo no recibe ninguna invitación real.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(
+                alpha: 0.7,
+              ),
+            ),
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -587,10 +831,17 @@ class _TodayCard extends StatelessWidget {
                               : AppColors.outline,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          habit.label,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurface,
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.sizeOf(context).width * 0.6,
+                          ),
+                          child: Text(
+                            habit.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurface,
+                            ),
                           ),
                         ),
                       ],

@@ -59,6 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onOpenRachas: _openRachas,
           onOpenProfile: _openProfile,
           onInviteMember: _logic.addMemberToCircle,
+          allies: _logic.allies,
         );
       },
     );

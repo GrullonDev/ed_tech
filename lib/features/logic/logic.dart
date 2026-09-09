@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
@@ -381,9 +382,16 @@ class HomeLogic extends ChangeNotifier {
   /// funcionando 100% local en Hive — este PR todavía no lee de vuelta
   /// desde Firestore, solo escribe (ver Fase 2 en
   /// firebase/MIGRATION_PLAN.md).
+  ///
+  /// Envuelto en un trace manual de Performance Monitoring (`circle_creation`,
+  /// ver `firebase/PRODUCTS_PLAN.md` sección 2) para medir cuánto tarda este
+  /// batch en la consola — el trace también se detiene si falla, así que no
+  /// se queda "colgado" cuando no hay red.
   Future<void> _mirrorCircleCreation(HabitCircle circle) async {
     final uid = _firebaseUid;
     if (uid == null) return;
+    final trace = FirebasePerformance.instance.newTrace('circle_creation');
+    await trace.start();
     try {
       final circleRef = FirebaseFirestore.instance
           .collection('circles')
@@ -403,6 +411,8 @@ class HomeLogic extends ChangeNotifier {
       await batch.commit();
     } catch (_) {
       // Se ignora a propósito: ver doc-comment del método.
+    } finally {
+      await trace.stop();
     }
   }
 

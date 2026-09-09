@@ -182,10 +182,15 @@ importe no perder su cuenta.
 
 - **App Distribution**: es una herramienta de distribución de builds
   entre testers (equivalente a TestFlight), no algo que la app "use" en
-  runtime — no requiere código, solo configurar `firebase appdistribution:distribute`
-  en el pipeline de build si se quiere automatizar el reparto de APKs.
-  Fuera del alcance de este documento (es proceso de equipo, no
-  arquitectura de la app).
+  runtime — sigue fuera del alcance de este documento (es proceso de
+  equipo, no arquitectura de la app). Sí se armó el camino para generar
+  y subir builds de prueba (necesario para probar Crashlytics/Performance
+  Monitoring en dispositivo real, secciones 1-2): Android está
+  automatizado vía GitHub Actions
+  (`.github/workflows/app-distribution-android.yml`) y iOS queda manual
+  en una Mac por ahora (requiere certificados de Apple Developer que
+  este entorno no puede generar) — ver `firebase/APP_DISTRIBUTION.md`
+  para la guía completa de ambos.
 - **Cloud Messaging (push notifications)**: no estaba entre los accesos
   directos mostrados, pero es la integración natural si más adelante se
   quiere avisar "tu aliado hizo check-in" o recordatorios de racha en

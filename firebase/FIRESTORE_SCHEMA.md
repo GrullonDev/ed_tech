@@ -62,8 +62,8 @@ circles/{circleId}
     checkedInToday: boolean
     updatedAt: Timestamp
 
-  circles/{circleId}/activityEvents/{eventId}  -- escrito directo por el cliente (Fase 4, ruta Spark)
-    actorId, emoji, message, createdAt
+  circles/{circleId}/activityEvents/{eventId}  -- solo Cloud Functions escribe (Fase 6, plan Blaze)
+    actorId, type, emoji, message, payload, createdAt
 
 allyRequests/{fromUid_toUid}     -- escrito directo por el cliente (Fase 3), sin Cloud Function
   fromUserId, toUserId: string
@@ -85,30 +85,27 @@ allyRequests/{fromUid_toUid}     -- escrito directo por el cliente (Fase 3), sin
 | `HabitCircle.claimedFreezeMilestones` | `circles/{circleId}/streakShieldGrants` | |
 | `HabitCircle.streakDays` / `.longestStreakDays` / `.constancyDropsEarned` | `memberStats.*` | Calculados por `functions/src/streakLogic.ts`, mismo algoritmo que el getter Dart. |
 | `AllyRequest` + lista local `allies` | `allyRequests/{fromUid_toUid}` | El estado `accepted`/`rejected` reemplaza el flujo simulado. Los "aliados" son las solicitudes con `status == 'accepted'` (consulta directa, no hace falta colección aparte). |
-| `ActivityEvent` (círculo) | `circles/{circleId}/activityEvents` | Fase 4: lo escribe directo el cliente que hizo la acción (`HomeLogic._mirrorActivityEvent`), no una Cloud Function — ver más abajo. |
+| `ActivityEvent` (círculo) | `circles/{circleId}/activityEvents` | Fase 6: lo escribe la Cloud Function correspondiente (trigger de `checkIns`/`members`/escudos), nunca el cliente — ver más abajo. |
 | `ActivityEvent` (aliados, miembros simulados) | Solo local (Hive), sin colección Firestore | No son eventos de un círculo compartido; cada dispositivo ya se entera por su propio listener de `allyRequests` (Fase 3) o no representan un usuario real (`addMemberToCircle`). |
 
-## Por qué el feed y los escudos viven en Cloud Functions (excepto el feed de círculo, ver Fase 4)
+## Por qué el feed y los escudos viven en Cloud Functions
 
 Mismo motivo que en el diseño de Supabase: con múltiples dispositivos
 compartiendo un círculo, el evento tiene que existir para todos los
-miembros sin importar quién hizo la acción, y en el diseño ideal ningún
-cliente debería poder insertar un evento o escudo falso. Las Firestore
-Security Rules (`firestore.rules`) no permiten `write` directo del cliente
-en `streakShieldGrants` ni `streakShieldUses` — solo el Admin SDK (que usan
-las Cloud Functions, aún no desplegadas) puede, porque ignora las reglas.
+miembros sin importar quién hizo la acción, y ningún cliente debe poder
+insertar un evento o escudo falso. Las Firestore Security Rules
+(`firestore.rules`) no permiten `write` directo del cliente en
+`streakShieldGrants`, `streakShieldUses` ni `activityEvents` de círculo —
+solo el Admin SDK (que usan las Cloud Functions) puede, porque ignora las
+reglas.
 
-**Excepción — `activityEvents` de círculo (Fase 4)**: para no bloquear el
-feed de actividad detrás de la decisión de Blaze/Cloud Functions (sección
-0), esta subcolección sí acepta `create` directo del cliente (con
-`actorId == request.auth.uid`, para que nadie pueda escribir un evento a
-nombre de otro). Es un trade-off consciente: un miembro podría en teoría
-falsear el *texto* de su propio evento, pero no puede impersonar a otro ni
-tocar racha/gotas/escudos reales (esos siguen siendo 100% locales o,
-cuando se desplieguen las Cloud Functions, exclusivos de `memberStats`). Si
-más adelante se despliegan las Cloud Functions, esta regla debe volver a
-`write: if false` y los writes de `HomeLogic._mirrorActivityEvent` deben
-quitarse (los pondría el trigger `onCheckInWrite`/etc.).
+Durante las Fases 2-5 (proyecto en plan Spark, sin Cloud Functions
+desplegadas) hubo una excepción temporal: `activityEvents` de círculo
+aceptaba `create` directo del cliente (con `actorId == request.auth.uid`),
+para no bloquear el feed de actividad detrás de la decisión de Blaze. Con
+el corte a Blaze (Fase 6 de `MIGRATION_PLAN.md`) esa excepción se retiró:
+la regla volvió a `write: if false` y `HomeLogic` ya no escribe ahí — lo
+hacen los triggers de abajo.
 
 Triggers implementados en `functions/src/index.ts`:
 
@@ -132,24 +129,40 @@ Resumen — detalle completo comentado en `firestore.rules`:
 - **`circles/{circleId}` y sus subcolecciones `members`/`checkIns`**:
   visibles solo para miembros del círculo, vía la función helper
   `isCircleMember()`.
-- **`streakShieldGrants` / `streakShieldUses` / `memberStats`**: de solo
-  lectura para el cliente, `write: false` — únicamente las Cloud Functions
-  escriben ahí (aún no desplegadas, ver sección 0 de `MIGRATION_PLAN.md`).
-- **`activityEvents` de círculo**: excepción de la Fase 4 — el cliente
-  puede `create` (no `update`/`delete`) siempre que `actorId` sea el suyo
-  propio. Ver el trade-off explicado arriba.
+- **`streakShieldGrants` / `streakShieldUses` / `memberStats` /
+  `activityEvents` de círculo**: de solo lectura para el cliente,
+  `write: false` — únicamente las Cloud Functions escriben ahí (Fase 6,
+  ver sección 0 de `MIGRATION_PLAN.md`).
 - **`allyRequests`**: cada quien ve sus propias solicitudes (enviadas o
   recibidas); solo el receptor puede aceptar/rechazar.
 
-## Cómo aplicar
+## Cómo aplicar (proyecto ya en plan Blaze)
+
+Desde la raíz del repo, con el Firebase CLI instalado y logueado con la
+cuenta dueña de `rachatribu` (`firebase login` si hace falta):
 
 ```bash
 firebase use rachatribu
-firebase deploy --only firestore:rules,firestore:indexes,functions
+firebase deploy --only functions,firestore:rules,firestore:indexes
 ```
+
+`firebase.json` ya trae configurado el `predeploy` de `functions`
+(`npm --prefix functions run build`), así que ese comando compila
+TypeScript solo — no hace falta correr `npm run build` a mano antes
+(aunque no está de más para ver errores más rápido: `npm --prefix
+functions install && npm --prefix functions run build`).
+
+Orden recomendado si es la primera vez que se despliega:
+1. `functions` primero — así, en cuanto Firestore reciba el próximo
+   `checkIns`/`members`/escudo, ya hay un trigger escuchando.
+2. `firestore:rules` justo después (mergear también
+   `feature/blaze-cutover-activity-events` en el repo en ese momento) —
+   antes de este paso, el cliente todavía podía escribir
+   `activityEvents` directo (regla temporal de la Fase 4); después de
+   este paso, escribirlo desde el cliente queda bloqueado y pasa a ser
+   responsabilidad exclusiva de las Cloud Functions.
+3. `firestore:indexes` puede ir en cualquier momento (no bloquea nada).
 
 Requiere el plan **Blaze** (pago por uso) para desplegar Cloud Functions
 —el plan Spark gratuito no las permite—, aunque el uso normal de esta app
-cae dentro de la capa gratuita de Blaze. Si de momento se prefiere seguir
-100% en el plan Spark, ver la alternativa en `MIGRATION_PLAN.md` (cálculo
-de racha en el cliente en vez de Cloud Functions).
+cae dentro de la capa gratuita de Blaze.

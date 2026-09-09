@@ -91,21 +91,16 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Fase 4 de firebase/MIGRATION_PLAN.md, ruta sin Cloud Functions (plan
-      // Spark, ver sección 0 del mismo doc): el propio cliente que generó el
-      // evento lo escribe directo, ya autenticado como miembro del círculo,
-      // en vez de un trigger del servidor. Esto significa que un miembro
-      // podría en teoría falsear el texto de su propio evento (no el de
-      // otro: `actorId` debe ser el suyo) — aceptable para una app sin
-      // premios reales en juego. Si más adelante se despliegan las Cloud
-      // Functions de `functions/src/index.ts`, esta regla debe volver a
-      // `allow write: if false` y los writes de HomeLogic._mirrorActivityEvent
-      // deben quitarse (los pondría el trigger del servidor).
+      // Fase 6 (plan Blaze, ver sección 0 de firebase/MIGRATION_PLAN.md):
+      // ahora que las Cloud Functions de functions/src/index.ts están
+      // desplegadas, ellas son las únicas que escriben aquí (trigger
+      // onCheckInWrite/onMemberCreate/onShieldUseCreate), igual que
+      // streakShieldGrants/Uses/memberStats. Reemplaza la excepción
+      // temporal de la Fase 4 (ruta Spark), que permitía `create` directo
+      // del cliente mientras no había Cloud Functions.
       match /activityEvents/{eventId} {
         allow read: if isCircleMember(circleId);
-        allow create: if isCircleMember(circleId) &&
-          request.resource.data.actorId == request.auth.uid;
-        allow update, delete: if false;
+        allow write: if false;
       }
     }
 

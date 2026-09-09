@@ -195,12 +195,50 @@ Lo único que sigue haciendo falta del lado de la app:
    callable `redeemInviteCode` para unirse a un círculo por código (hoy
    `addMemberToCircle` sigue siendo 100% simulado) — depende de la
    decisión de Blaze/Cloud Functions de la sección 0.
-5. **Fase 4**: migrar el feed de actividad a `activityEvents` +
-   `snapshots()`, retirar `_pushActivityEvent` de Dart (si se usa la ruta
-   con Cloud Functions).
-6. **Fase 5**: decidir si Hive se retira del todo o se deja como fallback
-   de arranque; en cualquier caso, ya no hace falta el outbox manual
-   (sección 4).
+5. **Fase 4 (hecha — feed de actividad de círculo compartido)**: los
+   eventos de un círculo (check-in, hito, escudo usado) ya no los redacta
+   cada dispositivo por separado a partir de datos que observa (así
+   funcionaba desde la Fase 2, con el riesgo de que cada quien viera un
+   texto distinto). Ahora `HomeLogic._recordCircleActivity()` los escribe
+   una sola vez, directo desde el cliente que hizo la acción, en
+   `circles/{id}/activityEvents` (ruta sin Cloud Functions — plan Spark,
+   ver sección 0), y `_watchCircleActivityEvents()` los lee con
+   `snapshots()` para que **todos** los miembros del círculo vean el mismo
+   evento, incluido quien lo generó (el propio caché optimista de
+   Firestore se lo devuelve casi al instante). `ActivityEvent` gana un
+   `id` (= ID del documento) para no duplicar un evento que Firestore
+   reenvíe al reconectar. `firestore.rules` para `activityEvents` pasó de
+   `write: if false` a `create: if isCircleMember(...) && actorId ==
+   auth.uid` — si más adelante se despliegan las Cloud Functions de
+   `functions/src/index.ts`, hay que revertir esa regla a `write: if
+   false` y quitar estos writes de Dart (los pondría el trigger).
+
+   `_pushActivityEvent` (feed 100% local en Hive) se mantiene como
+   respaldo para cuando no hay sesión de Firebase, y para los eventos que
+   no son de un círculo (aliados, miembros simulados vía
+   `addMemberToCircle`) — esos siguen siendo locales a propósito, ver sus
+   propios doc-comments.
+6. **Fase 5 (hecha — decisión: Hive se queda como fallback)**: Hive
+   **no** se retira. Sigue siendo la fuente de verdad que arranca la app
+   al instante (incluso en la primerísima apertura sin red, antes de que
+   exista cualquier caché de Firestore) y el respaldo si Firebase no
+   está disponible — todo el código de esta migración ya está escrito
+   sobre esa premisa (ver doc-comments de `_mirrorCircleCreation`,
+   `_mirrorCheckIn`, `_mirrorActivityEvent`, `sendAllyRequest`, etc.: cada
+   escritura a Firestore es fire-and-forget, nunca bloquea ni reemplaza
+   el guardado local). Retirarlo ataría la app por completo a tener una
+   sesión de Firestore ya sincronizada, perdiendo la garantía de "100%
+   funcional offline" que tiene hoy.
+
+   El "outbox manual" que motivaba originalmente esta fase nunca llegó a
+   construirse (sección 4 ya explica por qué no hacía falta), así que no
+   queda nada que retirar ahí tampoco.
+
+   Con esto, las Fases 1–5 de este plan quedan completas. Lo único
+   pendiente de todo el documento sigue siendo la decisión de la
+   sección 0 (Blaze/Cloud Functions vs. cálculo 100% cliente) y, si se
+   opta por Blaze, migrar `completedMembers`/`isPerfect`/racha/gotas a
+   leer de `memberStats` en vez de los cálculos locales actuales.
 
 Cada fase deja la app funcional y testeable de punta a punta antes de
 empezar la siguiente.

@@ -137,23 +137,36 @@ Analytics que ya se registra desde la Fase 4 de `MIGRATION_PLAN.md`) —
 es la palanca de gamificación más directa para probar si más
 recompensa = más constancia.
 
-## 5. Analytics — qué falta más allá de lo ya integrado
+## 5. Analytics — qué falta más allá de lo ya integrado — Hecho (código); falta 1 paso en consola
 
 Ya hay eventos (`onboarding_complete`, `circle_created`, `check_in`,
 `perfect_circle`, `milestone_reached`, `ally_request_sent`,
 `ally_request_accepted`) y pantallas automáticas vía
 `FirebaseAnalyticsObserver`. Para aprovechar mejor el dashboard:
 
-- **User properties**: `FirebaseAnalytics.instance.setUserProperty(name: 'primary_category', value: ...)` 
-  con la categoría de círculo más usada por el usuario, para poder
-  segmentar el dashboard por tipo de hábito (fitness, estudio, etc.).
-- **Evento de conversión definido**: marcar `onboarding_complete` como
-  evento de conversión en la consola (Analytics → Eventos → marcar como
-  conversión) para que aparezca en reportes de embudo sin código nuevo.
-- **`ally_request_sent`/`ally_request_accepted`**: agregar el parámetro
-  `via` (`'username'` vs `'qr'`) para saber qué canal de invitación
-  funciona mejor — ya se sabe cuál fue en `sendAllyRequest`/
-  `addAllyFromScannedCode`, solo falta pasarlo al evento existente.
+- **User properties — Hecho**: `HomeLogic._updatePrimaryCategoryUserProperty()`
+  llama `FirebaseAnalytics.instance.setUserProperty(name: 'primary_category', value: ...)`
+  con la categoría de círculo más usada por el usuario (por cantidad de
+  círculos en esa categoría; empate lo gana la primera creada), para
+  poder segmentar el dashboard por tipo de hábito (fitness, estudio,
+  etc.). Se recalcula en `_loadFromStorage()` (arranque) y `createCircle()`
+  (cada círculo nuevo) — fire-and-forget, mismo criterio que el resto de
+  Analytics.
+- **`ally_request_sent`/`ally_request_accepted` — Hecho**: ambos eventos
+  ahora llevan el parámetro `via` (`'username'` vs `'qr'`).
+  `sendAllyRequest` manda `via: 'username'` (es el único flujo de
+  invitación por username); `acceptAllyRequest` (aceptar una solicitud
+  pendiente) manda `ally_request_accepted` con `via: 'username'`;
+  `addAllyFromScannedCode` (agregar de una al escanear un QR, sin pasar
+  por solicitud pendiente) ahora también manda `ally_request_accepted`,
+  con `via: 'qr'` — antes este flujo no registraba ningún evento de
+  Analytics.
+- **Evento de conversión — falta un paso manual en la consola** (no es
+  código): marcar `onboarding_complete` como evento de conversión en la
+  consola (Analytics → Eventos → marcar como conversión) para que
+  aparezca en reportes de embudo. Es además la métrica que usa el primer
+  experimento de A/B Testing sugerido en la sección 4 — hacerlo ahí
+  desbloquea las dos cosas a la vez.
 
 ## 6. Authentication — de anónimo a cuenta real (opcional, a futuro)
 

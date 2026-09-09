@@ -185,6 +185,7 @@ class HomeLogic extends ChangeNotifier {
     }
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
+    _updatePrimaryCategoryUserProperty();
     notifyListeners();
   }
 
@@ -366,6 +367,40 @@ class HomeLogic extends ChangeNotifier {
     } catch (_) {
       // Firebase no inicializado todavía: se ignora, igual que el resto de
       // las llamadas a Firebase en HomeLogic.
+    }
+  }
+
+  /// Actualiza la user property `primary_category` (Fase "Analytics" de
+  /// `firebase/PRODUCTS_PLAN.md`, sección 5) con la categoría de círculo
+  /// más usada por el usuario — así el dashboard de Analytics se puede
+  /// segmentar por tipo de hábito (fitness, estudio, etc.). Se recalcula
+  /// cada vez que cambia la lista de círculos ([_loadFromStorage],
+  /// [createCircle]); si hay empate, gana la primera categoría en orden de
+  /// creación. Mismo criterio fire-and-forget que [_logAnalyticsEvent]: no
+  /// hace nada si no hay círculos o si Firebase no está disponible.
+  void _updatePrimaryCategoryUserProperty() {
+    if (_circles.isEmpty) return;
+    final counts = <String, int>{};
+    for (final circle in _circles) {
+      counts[circle.category] = (counts[circle.category] ?? 0) + 1;
+    }
+    var primaryCategory = _circles.first.category;
+    var highestCount = 0;
+    for (final circle in _circles) {
+      final count = counts[circle.category]!;
+      if (count > highestCount) {
+        highestCount = count;
+        primaryCategory = circle.category;
+      }
+    }
+    try {
+      unawaited(
+        FirebaseAnalytics.instance
+            .setUserProperty(name: 'primary_category', value: primaryCategory)
+            .catchError((_) {}),
+      );
+    } catch (_) {
+      // Se ignora a propósito: ver doc-comment de [_logAnalyticsEvent].
     }
   }
 
@@ -610,6 +645,7 @@ class HomeLogic extends ChangeNotifier {
     _logAnalyticsEvent('circle_created', {'circle_category': category});
     unawaited(_mirrorCircleCreation(circle));
     _watchCircleActivityEvents(circle);
+    _updatePrimaryCategoryUserProperty();
     notifyListeners();
   }
 
@@ -655,7 +691,7 @@ class HomeLogic extends ChangeNotifier {
       );
       LocalStorageService.saveAllyRequests(_pendingAllyRequests);
       allyUsernameController.clear();
-      _logAnalyticsEvent('ally_request_sent');
+      _logAnalyticsEvent('ally_request_sent', {'via': 'username'});
       notifyListeners();
       return true;
     }
@@ -682,7 +718,7 @@ class HomeLogic extends ChangeNotifier {
       return false;
     }
     allyUsernameController.clear();
-    _logAnalyticsEvent('ally_request_sent');
+    _logAnalyticsEvent('ally_request_sent', {'via': 'username'});
     return true;
   }
 
@@ -697,7 +733,7 @@ class HomeLogic extends ChangeNotifier {
       emoji: '🕊️',
       message: 'Ahora eres aliado de ${request.fromUsername}.',
     );
-    _logAnalyticsEvent('ally_request_accepted');
+    _logAnalyticsEvent('ally_request_accepted', {'via': 'username'});
     unawaited(_updateAllyRequestStatus(request, 'accepted'));
     notifyListeners();
   }
@@ -728,6 +764,7 @@ class HomeLogic extends ChangeNotifier {
       emoji: '⚡',
       message: 'Invocaste a $scannedUsername como aliado.',
     );
+    _logAnalyticsEvent('ally_request_accepted', {'via': 'qr'});
     final uid = _firebaseUid;
     if (uid != null) {
       unawaited(

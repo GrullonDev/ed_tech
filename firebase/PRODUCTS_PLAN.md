@@ -31,11 +31,29 @@ best-effort, fire-and-forget, nunca bloqueante.
    y como opcional/futuro, no por prioridad técnica sino porque es el que
    más cambia la experiencia del usuario y merece decidirse aparte.
 
-## 1. Crashlytics (`firebase_crashlytics`)
+## 1. Crashlytics (`firebase_crashlytics`) — Hecho
 
 **Qué da**: reportes de crash con stack trace, agrupados por causa, con
 el la versión de build y el % de usuarios "crash-free" por release (la
 vista de "Latest Release" que se ve en la consola).
+
+**Estado**: integrado. `pubspec.yaml` agrega `firebase_crashlytics`;
+`main.dart._initCrashlytics()` conecta `FlutterError.onError` y
+`PlatformDispatcher.instance.onError`, con `setCrashlyticsCollectionEnabled(!kDebugMode)`
+para no generar ruido en desarrollo local — solo se llama tras un
+`Firebase.initializeApp()` exitoso, dentro del mismo try/catch de
+`_initFirebase()`, así que un fallo ahí sigue sin tumbar la app (modo
+100% local). Android: se agregó el plugin de Gradle
+`com.google.firebase.crashlytics` en `android/settings.gradle.kts` y
+`android/app/build.gradle.kts` (mismo patrón que `google-services`),
+necesario para subir símbolos de crashes nativos/NDK. **Falta activar
+Crashlytics para el proyecto `rachatribu` en la consola de Firebase**
+(Release Monitoring → Crashlytics → habilitar) si todavía no está
+activo — sin eso, la app manda los reportes pero la consola no los
+muestra. iOS no necesitó cambios de proyecto Xcode para el reporte
+Dart-level; el paso opcional de subir dSYMs para symbolicar crashes
+nativos de iOS se deja pendiente (requiere Xcode, que este entorno no
+tiene) — ver plan de pruebas más abajo.
 
 **Cómo se integra** (patrón ya usado en `main.dart` para Firebase Core: si
 falla, la app sigue funcionando):

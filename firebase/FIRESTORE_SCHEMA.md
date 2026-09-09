@@ -146,31 +146,22 @@ firebase use rachatribu
 firebase deploy --only functions,firestore:rules,firestore:indexes
 ```
 
-`functions/` usa **pnpm** (no npm): más liviano, con un store global
-compartido entre proyectos (`~/.local/share/pnpm/store`) en vez de
-duplicar `node_modules` por copia, y más estricto con dependencias
-fantasma (solo resuelve lo que está declarado en `package.json`).
-
-Instalar pnpm **directo con npm** (recomendado):
-
-```bash
-npm install -g pnpm@12.3.4
-```
-
-`corepack enable` también funciona en teoría (pnpm queda fijado en la
-versión de `"packageManager"` de `functions/package.json` sin instalar
-nada aparte), pero algunas copias de `corepack` traen claves de firma
-desactualizadas tras una rotación que hizo npm — si da un error de tipo
-`Cannot find matching keyid` al intentar bajar pnpm, no es un problema de
-red ni del proyecto: actualizar corepack primero
-(`npm install -g corepack@latest`) o instalar pnpm directo con npm (arriba)
-lo resuelve.
+`functions/` usa **npm** (no pnpm). Se intentó migrar a pnpm por ser más
+liviano, pero el build remoto de Cloud Functions (Cloud Build, vía
+buildpacks de Google) falla al detectar `pnpm-lock.yaml`: su motor de
+pnpm empaquetado está roto (`Cannot find module
+'/layers/google.nodejs.pnpm/pnpm_engine/bin/dist/pnpm.mjs'`) — es un bug
+del lado de Google, no algo arreglable desde este repo. El `predeploy`
+local (compilar TypeScript antes de subir) sí funciona con pnpm sin
+problema; el bloqueo es específico del build remoto que empaqueta la
+función para desplegar. Mientras ese bug siga presente, `functions/`
+se queda en npm — es la ruta probada y estable para Cloud Functions.
 
 `firebase.json` ya trae configurado el `predeploy` de `functions`
-(`pnpm install --frozen-lockfile && pnpm run build`), así que ese paso se
-ejecuta solo en cada deploy — no hace falta correr nada a mano antes
-(aunque no está de más para ver errores más rápido: `pnpm --dir functions
-install && pnpm --dir functions run build`).
+(`npm --prefix functions run build`), así que ese comando compila
+TypeScript solo — no hace falta correr `npm run build` a mano antes
+(aunque no está de más para ver errores más rápido: `npm --prefix
+functions install && npm --prefix functions run build`).
 
 Orden recomendado si es la primera vez que se despliega:
 1. `functions` primero — así, en cuanto Firestore reciba el próximo

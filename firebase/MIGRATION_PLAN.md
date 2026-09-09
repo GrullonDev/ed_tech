@@ -195,9 +195,29 @@ Lo único que sigue haciendo falta del lado de la app:
    callable `redeemInviteCode` para unirse a un círculo por código (hoy
    `addMemberToCircle` sigue siendo 100% simulado) — depende de la
    decisión de Blaze/Cloud Functions de la sección 0.
-5. **Fase 4**: migrar el feed de actividad a `activityEvents` +
-   `snapshots()`, retirar `_pushActivityEvent` de Dart (si se usa la ruta
-   con Cloud Functions).
+5. **Fase 4 (hecha — feed de actividad de círculo compartido)**: los
+   eventos de un círculo (check-in, hito, escudo usado) ya no los redacta
+   cada dispositivo por separado a partir de datos que observa (así
+   funcionaba desde la Fase 2, con el riesgo de que cada quien viera un
+   texto distinto). Ahora `HomeLogic._recordCircleActivity()` los escribe
+   una sola vez, directo desde el cliente que hizo la acción, en
+   `circles/{id}/activityEvents` (ruta sin Cloud Functions — plan Spark,
+   ver sección 0), y `_watchCircleActivityEvents()` los lee con
+   `snapshots()` para que **todos** los miembros del círculo vean el mismo
+   evento, incluido quien lo generó (el propio caché optimista de
+   Firestore se lo devuelve casi al instante). `ActivityEvent` gana un
+   `id` (= ID del documento) para no duplicar un evento que Firestore
+   reenvíe al reconectar. `firestore.rules` para `activityEvents` pasó de
+   `write: if false` a `create: if isCircleMember(...) && actorId ==
+   auth.uid` — si más adelante se despliegan las Cloud Functions de
+   `functions/src/index.ts`, hay que revertir esa regla a `write: if
+   false` y quitar estos writes de Dart (los pondría el trigger).
+
+   `_pushActivityEvent` (feed 100% local en Hive) se mantiene como
+   respaldo para cuando no hay sesión de Firebase, y para los eventos que
+   no son de un círculo (aliados, miembros simulados vía
+   `addMemberToCircle`) — esos siguen siendo locales a propósito, ver sus
+   propios doc-comments.
 6. **Fase 5**: decidir si Hive se retira del todo o se deja como fallback
    de arranque; en cualquier caso, ya no hace falta el outbox manual
    (sección 4).

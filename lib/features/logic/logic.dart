@@ -435,13 +435,16 @@ class HomeLogic extends ChangeNotifier {
   }
 
   /// Registra un evento de actividad de [circle] (check-in, hito, escudo
-  /// usado): si hay sesión de Firebase lo escribe directo en
-  /// `circles/{id}/activityEvents` (Fase 4, ruta sin Cloud Functions — ver
-  /// sección 0 de firebase/MIGRATION_PLAN.md) para que **todos** los
-  /// miembros vean el mismo texto vía [_watchCircleActivityEvents],
-  /// incluido este mismo dispositivo (el propio caché optimista de
-  /// Firestore lo devuelve casi al instante, sin esperar al servidor). Si
-  /// no hay sesión, cae al [_pushActivityEvent] local de siempre.
+  /// usado). Fase 6 (plan Blaze, ver sección 0 de
+  /// firebase/MIGRATION_PLAN.md): con Cloud Functions desplegadas
+  /// (`functions/src/index.ts`), el evento real ya lo genera el servidor
+  /// como efecto de los `checkIns`/`members`/`streakShieldUses` que la app
+  /// escribe (`_mirrorCheckIn`, `_mirrorCircleCreation`, el job diario
+  /// `applyPendingShields`) — así que aquí, con sesión de Firebase, no se
+  /// escribe nada: escribirlo también duplicaría el evento en el feed, ya
+  /// que [_watchCircleActivityEvents] ya está escuchando esa colección y
+  /// recibirá el que genere el trigger del servidor. Sin sesión, cae al
+  /// [_pushActivityEvent] local de siempre (modo 100% offline).
   void _recordCircleActivity(
     HabitCircle circle, {
     required String emoji,
@@ -449,46 +452,18 @@ class HomeLogic extends ChangeNotifier {
   }) {
     if (_firebaseUid == null) {
       _pushActivityEvent(emoji: emoji, message: message);
-      return;
-    }
-    unawaited(_mirrorActivityEvent(circle, emoji: emoji, message: message));
-  }
-
-  /// Escribe un evento en `circles/{id}/activityEvents`, ver
-  /// [_recordCircleActivity]. Fire-and-forget: si falla, el círculo sigue
-  /// funcionando 100% local (el evento simplemente no llega a la tribu esta
-  /// vez, sin romper nada más).
-  Future<void> _mirrorActivityEvent(
-    HabitCircle circle, {
-    required String emoji,
-    required String message,
-  }) async {
-    final uid = _firebaseUid;
-    if (uid == null) return;
-    try {
-      await FirebaseFirestore.instance
-          .collection('circles')
-          .doc(circle.id)
-          .collection('activityEvents')
-          .add({
-            'emoji': emoji,
-            'message': message,
-            'actorId': uid,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-    } catch (_) {
-      // Se ignora a propósito: ver doc-comment del método.
     }
   }
 
   /// Se suscribe al feed de actividad real de [circle]
-  /// (`circles/{id}/activityEvents`, ver [_recordCircleActivity]) para que
-  /// todos los miembros vean el mismo evento, generado una sola vez por
-  /// quien hizo la acción, en vez de que cada dispositivo redacte su propia
-  /// versión al observar datos remotos (así funcionaba el feed en la
-  /// Fase 2). Los documentos ya traen [ActivityEvent.id] para no duplicar
-  /// un evento que ya está en el feed local si Firestore lo reenvía (por
-  /// ejemplo, al reconectar). No hace nada si no hay sesión de Firebase.
+  /// (`circles/{id}/activityEvents`), generado por las Cloud Functions de
+  /// `functions/src/index.ts` (Fase 6) como efecto de los `checkIns`/
+  /// `members`/escudos que la app escribe — nunca por el propio cliente
+  /// (ver [_recordCircleActivity]), para que **todos** los miembros vean
+  /// el mismo evento sin que ninguno pueda falsearlo. Los documentos ya
+  /// traen [ActivityEvent.id] para no duplicar un evento que ya está en
+  /// el feed local si Firestore lo reenvía (por ejemplo, al reconectar).
+  /// No hace nada si no hay sesión de Firebase.
   void _watchCircleActivityEvents(HabitCircle circle) {
     final uid = _firebaseUid;
     if (uid == null || _activityEventSubscriptions.containsKey(circle.id)) {

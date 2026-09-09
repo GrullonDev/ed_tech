@@ -8,11 +8,17 @@ frontera con una capa de repositorio.
 
 ## 0. Antes que nada: plan de Firebase (Spark vs. Blaze)
 
+**Decidido: Blaze.** El proyecto `rachatribu` ya está en el plan Blaze y
+las Cloud Functions de `functions/src/index.ts` son la ruta activa desde
+la Fase 6 — ver esa sección para el detalle de qué cambió en el cliente
+al hacer el corte.
+
 El diseño en `FIRESTORE_SCHEMA.md` usa Cloud Functions para calcular
 racha/gotas/escudos y generar el feed de actividad en el servidor —
 **Cloud Functions requiere el plan Blaze** (pago por uso; tiene capa
-gratuita generosa, pero exige tarjeta asociada al proyecto). Si el plan
-es quedarse en Spark (100% gratis, sin tarjeta), la alternativa es:
+gratuita generosa, pero exige tarjeta asociada al proyecto). La
+alternativa que se usó mientras el proyecto estuvo en Spark (100% gratis,
+sin tarjeta, Fases 2-5) era:
 
 - Calcular `streakDays`/`longestStreakDays`/`constancyDropsEarned` **en
   el cliente Dart** (reutilizando literalmente los getters que ya existen
@@ -224,7 +230,7 @@ Lo único que sigue haciendo falta del lado de la app:
    exista cualquier caché de Firestore) y el respaldo si Firebase no
    está disponible — todo el código de esta migración ya está escrito
    sobre esa premisa (ver doc-comments de `_mirrorCircleCreation`,
-   `_mirrorCheckIn`, `_mirrorActivityEvent`, `sendAllyRequest`, etc.: cada
+   `_mirrorCheckIn`, `_mirrorCircleCreation`, `sendAllyRequest`, etc.: cada
    escritura a Firestore es fire-and-forget, nunca bloquea ni reemplaza
    el guardado local). Retirarlo ataría la app por completo a tener una
    sesión de Firestore ya sincronizada, perdiendo la garantía de "100%
@@ -234,11 +240,37 @@ Lo único que sigue haciendo falta del lado de la app:
    construirse (sección 4 ya explica por qué no hacía falta), así que no
    queda nada que retirar ahí tampoco.
 
-   Con esto, las Fases 1–5 de este plan quedan completas. Lo único
-   pendiente de todo el documento sigue siendo la decisión de la
-   sección 0 (Blaze/Cloud Functions vs. cálculo 100% cliente) y, si se
-   opta por Blaze, migrar `completedMembers`/`isPerfect`/racha/gotas a
-   leer de `memberStats` en vez de los cálculos locales actuales.
+   Con esto, las Fases 1–5 de este plan quedan completas.
+7. **Fase 6 (en progreso — corte a Cloud Functions, plan Blaze)**: el
+   proyecto pasó a Blaze; el corte real tiene dos partes:
+
+   - **Hecho**: `HomeLogic._recordCircleActivity()` ya no escribe
+     `circles/{id}/activityEvents` desde el cliente (eso duplicaría el
+     evento). Las Cloud Functions de `functions/src/index.ts`
+     (`onCheckInWrite`, `onMemberCreate`, `onShieldUseCreate`,
+     `applyPendingShields`) lo generan solas como efecto de los
+     `checkIns`/`members` que la app ya escribía desde la Fase 2 — el
+     cliente no cambió esos writes, solo dejó de duplicar el evento.
+     `firestore.rules` volvió `circles/{id}/activityEvents` a
+     `write: if false` (ya no hay excepción para el cliente). Esto
+     **requiere que las Cloud Functions ya estén desplegadas** —
+     `firebase deploy --only functions,firestore:rules` — antes de
+     mergear/publicar este cambio: si no, el feed de círculo se queda
+     mudo (nadie escribe ahí) hasta que se desplieguen.
+   - **Pendiente, a propósito no se tocó todavía** (requiere pruebas
+     contra un proyecto real que este entorno no puede hacer): migrar
+     `HabitCircle.streakDays`/`.longestStreakDays`/
+     `.constancyDropsEarned`/`.freezesAvailable` — hoy calculados 100%
+     en el cliente sobre `checkIns` locales — a leer de
+     `circles/{id}/memberStats/{uid}` (que las Cloud Functions ya
+     recalculan en cada `checkIns`/escudo). Esto también implica dejar
+     de otorgar/consumir escudos desde el cliente
+     (`_grantFreezeIfMilestoneReached`, `_applyPendingStreakFreezes`) y
+     confiar en `maybeGrantShields`/`applyPendingShields` del servidor.
+     Tocar esto sin poder probarlo contra Firestore/Functions reales es
+     alto riesgo (podría desincronizar la racha que ve el usuario), así
+     que queda para cuando puedas confirmar que las Cloud Functions
+     están desplegadas y validar el resultado en un dispositivo real.
 
 Cada fase deja la app funcional y testeable de punta a punta antes de
 empezar la siguiente.

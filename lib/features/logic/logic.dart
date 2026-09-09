@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/material.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
@@ -176,13 +177,6 @@ class HomeLogic extends ChangeNotifier {
     _memberSince = savedUser?.memberSince;
     _playerId = savedUser?.playerId ?? '';
     usernameController.text = _username;
-
-    // Perfiles guardados antes de que existiera `playerId` reciben uno
-    // nuevo al leerse (ver AppUser.fromMap); se persiste de una vez para
-    // que quede fijo entre reinicios en vez de regenerarse en cada
-    // arranque (rompería "Invocar por QR": el otro dispositivo dejaría de
-    // reconocer un `playerId` que cambia solo).
-    if (savedUser != null) LocalStorageService.saveUser(savedUser);
 
     // Círculos guardados antes de que HabitCircle tuviera `id` reciben uno
     // nuevo al leerse (ver HabitCircle.fromMap); se persiste de una vez
@@ -395,7 +389,9 @@ class HomeLogic extends ChangeNotifier {
     final uid = _firebaseUid;
     if (uid == null) return;
     try {
-      final circleRef = FirebaseFirestore.instance.collection('circles').doc(circle.id);
+      final circleRef = FirebaseFirestore.instance
+          .collection('circles')
+          .doc(circle.id);
       final batch = FirebaseFirestore.instance.batch()
         ..set(circleRef, {
           'name': circle.name,
@@ -560,7 +556,9 @@ class HomeLogic extends ChangeNotifier {
           emoji: '✨',
           message: '¡"${circle.name}" logró el Círculo Perfecto de hoy!',
         );
-        _logAnalyticsEvent('perfect_circle', {'circle_category': circle.category});
+        _logAnalyticsEvent('perfect_circle', {
+          'circle_category': circle.category,
+        });
       }
     }
     _circlesUpdatedTick++;
@@ -785,7 +783,9 @@ class HomeLogic extends ChangeNotifier {
               final status = data['status'] as String?;
               if (fromUserId == null || fromUsername == null) continue;
               if (status == 'pending') {
-                if (_pendingAllyRequests.any((r) => r.fromUserId == fromUserId)) {
+                if (_pendingAllyRequests.any(
+                  (r) => r.fromUserId == fromUserId,
+                )) {
                   continue;
                 }
                 _pendingAllyRequests.add(

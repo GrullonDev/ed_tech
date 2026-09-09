@@ -839,7 +839,7 @@ class HomeLogic extends ChangeNotifier {
             for (final change in snapshot.docChanges) {
               final data = change.doc.data();
               if (data == null) continue;
-              if (data['status'] as String? != 'accepted') continue;
+              if ((data['status'] as String?) != 'accepted') continue;
               final toUsername = data['toUsername'] as String?;
               if (toUsername == null || _allies.contains(toUsername)) continue;
               _allies.add(toUsername);

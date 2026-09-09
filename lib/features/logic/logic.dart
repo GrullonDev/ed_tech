@@ -136,7 +136,7 @@ class HomeLogic extends ChangeNotifier {
   int get constancyDrops {
     final totalDrops = _circles.fold<int>(
       0,
-      (sum, c) => sum + c.constancyDropsEarned,
+      (total, c) => total + c.constancyDropsEarned,
     );
     const milestoneBonuses = [7, 21, 30, 50, 100];
     final milestonesReached = milestoneBonuses

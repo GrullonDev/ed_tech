@@ -84,7 +84,7 @@ se puede agregar de forma incremental, empezando sin traces manuales
 (las automáticas ya dan valor) y agregando 2-3 traces puntuales después
 si hace falta diagnosticar algo lento en particular.
 
-## 3. Remote Config (`firebase_remote_config`)
+## 3. Remote Config (`firebase_remote_config`) — Hecho (parcial, a propósito)
 
 **Qué da**: parámetros configurables desde la consola sin publicar una
 nueva versión de la app — y es el requisito técnico de A/B Testing (un
@@ -94,33 +94,44 @@ distintos valores de un parámetro de Remote Config).
 **Candidatos de parámetros para esta app** (todos ya tienen su valor
 "hardcoded" hoy, se volverían configurables):
 
-| Parámetro | Hoy vive en | Valor por defecto |
-|---|---|---|
-| `constancy_drops_base` / `_tier2` / `_tier3` | `HabitCircle._dropsForStreakDay` | 10 / 15 / 20 / 30 |
-| `streak_shield_milestones` | `Milestone.targets` | 7, 21, 30, 50, 100 |
-| `onboarding_headline` | copy fija en la pantalla de onboarding | texto actual |
+| Parámetro | Hoy vive en | Valor por defecto | Estado |
+|---|---|---|---|
+| `onboarding_headline` | copy fija en la pantalla de onboarding | texto actual | **Hecho** |
+| `constancy_drops_base` / `_tier2` / `_tier3` | `HabitCircle._dropsForStreakDay` | 10 / 15 / 20 / 30 | Pendiente, a propósito |
+| `streak_shield_milestones` | `Milestone.targets` | 7, 21, 30, 50, 100 | Pendiente, a propósito |
 
-**Cómo se integra**:
+**Estado de la infraestructura**: integrada. `pubspec.yaml` agrega
+`firebase_remote_config`; `main.dart._initRemoteConfig()` configura
+`fetchTimeout: 5s` / `minimumFetchInterval: 1h`, declara los defaults
+locales y llama `fetchAndActivate()` — todo dentro del mismo try/catch
+best-effort de `_initFirebase()`, así que un fallo (sin red, Firebase no
+configurado) deja la app viéndose exactamente igual que antes. Se
+implementó el primer parámetro, `onboarding_headline`
+(`Onboarding._headline()`, con `Onboarding.defaultHeadline` como
+fallback si Remote Config no activó a tiempo o Firebase no está
+disponible — envuelto en su propio try/catch porque es la primera
+pantalla que ve un usuario nuevo).
 
-```dart
-// pubspec.yaml
-firebase_remote_config: ^5.x
-
-// Al iniciar (main.dart o primer uso en HomeLogic), con defaults locales
-// para que la app funcione igual si no hay red la primera vez:
-final remoteConfig = FirebaseRemoteConfig.instance;
-await remoteConfig.setConfigSettings(RemoteConfigSettings(
-  fetchTimeout: const Duration(seconds: 5),
-  minimumFetchInterval: const Duration(hours: 1),
-));
-await remoteConfig.setDefaults({'constancy_drops_tier2': 15, ...});
-await remoteConfig.fetchAndActivate(); // fire-and-forget, con try/catch
-```
-
-`HabitCircle._dropsForStreakDay` pasaría de constantes fijas a leer
-`FirebaseRemoteConfig.instance.getInt(...)` con el valor actual como
-fallback si Remote Config no llegó a sincronizar — mismo patrón
-fire-and-forget que el resto de la integración de Firebase.
+**Por qué `constancy_drops_*` y `streak_shield_milestones` quedan
+pendientes a propósito**: a diferencia del titular de onboarding (puro
+copy, sin lógica), estos dos valores están **duplicados y hardcodeados
+también en el servidor** — `functions/src/streakLogic.ts`
+(`computeDropsEarned`/`SHIELD_MILESTONES`) usa exactamente los mismos
+números para calcular `circles/{id}/memberStats/{uid}` (racha/gotas/
+escudos "de verdad", ver Fase 6 de `MIGRATION_PLAN.md`). Volver
+Remote-Config-only el lado del cliente sin tocar la Cloud Function
+crearía el mismo riesgo de desincronización que el diseño de
+`memberStats` (sección 7 de `MIGRATION_PLAN.md`) fue pensado para
+evitar: un experimento de A/B Testing que cambie `constancy_drops_tier2`
+en el cliente mostraría un número de gotas que el servidor nunca
+otorgó. Hacerlo bien requiere: (a) mover esos valores a Remote Config
+también en la Cloud Function (que sí puede leer Remote Config desde el
+Admin SDK), o (b) aceptar que el servidor sea la fuente de verdad y que
+el cliente ignore el valor de Remote Config para estos dos parámetros
+específicos una vez llegue `remoteDropsEarned`/etc. Cualquiera de las
+dos es una decisión de producto/arquitectura que amerita su propio
+PR — se deja fuera de este cambio para no ensancharlo ni introducir un
+desface visible en la racha del usuario.
 
 ## 4. A/B Testing
 

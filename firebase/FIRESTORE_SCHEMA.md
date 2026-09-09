@@ -146,11 +146,23 @@ firebase use rachatribu
 firebase deploy --only functions,firestore:rules,firestore:indexes
 ```
 
-`firebase.json` ya trae configurado el `predeploy` de `functions`
-(`npm --prefix functions run build`), así que ese comando compila
-TypeScript solo — no hace falta correr `npm run build` a mano antes
-(aunque no está de más para ver errores más rápido: `npm --prefix
-functions install && npm --prefix functions run build`).
+`functions/` usa **pnpm** (no npm): más liviano, con un store global
+compartido entre proyectos (`~/.local/share/pnpm/store`) en vez de
+duplicar `node_modules` por copia, y más estricto con dependencias
+fantasma (solo resuelve lo que está declarado en `package.json`). Con
+`corepack` (ya viene con Node ≥ 16.9) alcanza con:
+
+```bash
+corepack enable
+```
+
+y pnpm queda disponible automáticamente en la versión fijada por
+`"packageManager"` en `functions/package.json` — no hace falta instalarlo
+aparte. `firebase.json` ya trae configurado el `predeploy` de `functions`
+(`pnpm install --frozen-lockfile && pnpm run build`), así que ese paso se
+ejecuta solo en cada deploy — no hace falta correr nada a mano antes
+(aunque no está de más para ver errores más rápido: `pnpm --dir functions
+install && pnpm --dir functions run build`).
 
 Orden recomendado si es la primera vez que se despliega:
 1. `functions` primero — así, en cuanto Firestore reciba el próximo

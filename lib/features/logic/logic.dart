@@ -59,6 +59,13 @@ class HomeLogic extends ChangeNotifier {
   final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
   _checkInSubscriptions = {};
 
+  /// Suscripciones a `allyRequests` (ver [_watchIncomingAllyRequests] y
+  /// [_watchOutgoingAllyRequests]). Se cancelan en [dispose].
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+  _incomingAllyRequestsSubscription;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+  _outgoingAllyRequestsSubscription;
+
   /// IDs de círculo que ya recibieron su primer snapshot de
   /// `circles/{id}/checkIns`, para distinguir "check-ins que ya estaban
   /// hechos antes de abrir la app" (se anuncian una sola vez al conectar) de
@@ -181,6 +188,8 @@ class HomeLogic extends ChangeNotifier {
     for (final circle in _circles) {
       _watchCircleCheckIns(circle);
     }
+    _watchIncomingAllyRequests();
+    _watchOutgoingAllyRequests();
     notifyListeners();
   }
 
@@ -280,6 +289,15 @@ class HomeLogic extends ChangeNotifier {
       AppUser(username: name, memberSince: DateTime.now(), playerId: _playerId),
     );
     _logAnalyticsEvent('onboarding_complete');
+    // El onboarding es el primer momento en que puede existir un uid de
+    // Firebase (en arranques posteriores ya lo hace _loadFromStorage): si el
+    // Auth anónimo tuvo éxito arriba, hay que arrancar aquí las
+    // suscripciones a aliados/check-ins que dependen de él.
+    _watchIncomingAllyRequests();
+    _watchOutgoingAllyRequests();
+    for (final circle in _circles) {
+      _watchCircleCheckIns(circle);
+    }
     notifyListeners();
   }
 
@@ -586,27 +604,61 @@ class HomeLogic extends ChangeNotifier {
     return true;
   }
 
-  /// Envía una "misiva" de solicitud de aliado a partir de
-  /// [allyUsernameController] (ej. "@usuario"). Sin backend real no hay forma
-  /// de que llegue a otro dispositivo, así que se simula que ya llegó
-  /// registrándola de inmediato como pendiente, lista para ser aceptada o
-  /// rechazada desde el perfil sin conexión a internet. Retorna `false` sin
-  /// hacer nada si el campo está vacío o si ya existe una solicitud o
-  /// aliado con ese nombre.
-  bool sendAllyRequest() {
+  /// Envía una solicitud de aliado real a partir de [allyUsernameController]
+  /// (ej. "@usuario"). Si hay sesión de Firebase, busca el `uid` dueño de ese
+  /// username en `users` y escribe `allyRequests/{miUid}_{suUid}` con
+  /// `status: 'pending'` — el otro dispositivo la ve al instante vía
+  /// [_watchIncomingAllyRequests] (o en cuanto recupere conexión, gracias a
+  /// la persistencia offline nativa de Firestore). Si Firebase no está
+  /// disponible, cae al modo simulado anterior: registra la solicitud de
+  /// inmediato como pendiente en este mismo dispositivo, solo para poder
+  /// demostrar el flujo de aceptar/rechazar sin backend.
+  ///
+  /// Retorna `false` sin hacer nada si el campo está vacío, si el username
+  /// es el propio, si ya es aliado/solicitud pendiente, o (con Firebase
+  /// disponible) si no existe ningún usuario con ese username.
+  Future<bool> sendAllyRequest() async {
     final trimmed = allyUsernameController.text.trim().replaceFirst('@', '');
-    if (trimmed.isEmpty) return false;
+    if (trimmed.isEmpty || trimmed == _username) return false;
     if (_pendingAllyRequests.any((r) => r.fromUsername == trimmed) ||
         _allies.contains(trimmed)) {
       return false;
     }
-    _pendingAllyRequests.add(
-      AllyRequest(fromUsername: trimmed, sentAt: DateTime.now()),
-    );
-    LocalStorageService.saveAllyRequests(_pendingAllyRequests);
+    final uid = _firebaseUid;
+    if (uid == null) {
+      _pendingAllyRequests.add(
+        AllyRequest(fromUsername: trimmed, sentAt: DateTime.now()),
+      );
+      LocalStorageService.saveAllyRequests(_pendingAllyRequests);
+      allyUsernameController.clear();
+      _logAnalyticsEvent('ally_request_sent');
+      notifyListeners();
+      return true;
+    }
+    try {
+      final matches = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: trimmed)
+          .limit(1)
+          .get();
+      if (matches.docs.isEmpty) return false;
+      final targetUid = matches.docs.first.id;
+      await FirebaseFirestore.instance
+          .collection('allyRequests')
+          .doc('${uid}_$targetUid')
+          .set({
+            'fromUserId': uid,
+            'fromUsername': _username,
+            'toUserId': targetUid,
+            'toUsername': trimmed,
+            'status': 'pending',
+            'sentAt': FieldValue.serverTimestamp(),
+          });
+    } catch (_) {
+      return false;
+    }
     allyUsernameController.clear();
     _logAnalyticsEvent('ally_request_sent');
-    notifyListeners();
     return true;
   }
 
@@ -622,15 +674,21 @@ class HomeLogic extends ChangeNotifier {
       message: 'Ahora eres aliado de ${request.fromUsername}.',
     );
     _logAnalyticsEvent('ally_request_accepted');
+    unawaited(_updateAllyRequestStatus(request, 'accepted'));
     notifyListeners();
   }
 
   /// Procesa el contenido de un QR escaneado con "Invocar por QR"
-  /// (formato `RACHATRIBU:<playerId>:<username>`, ver [qrPayload]) y agrega
-  /// al instante a ese username como aliado — sin pasar por el flujo de
-  /// solicitud pendiente, ya que el escaneo presencial ya es la prueba de
-  /// confianza. Retorna el username agregado, o `null` si el código no es
-  /// válido, es el propio jugador, o ya era aliado.
+  /// (formato `RACHATRIBU:<uid>:<username>`, ver [qrPayload] — el `uid` es
+  /// el playerId, que desde la Fase 1 es el `uid` real de Firebase Auth
+  /// cuando hay sesión) y agrega al instante a ese username como aliado —
+  /// sin pasar por el flujo de solicitud pendiente, ya que el escaneo
+  /// presencial ya es la prueba de confianza. Si hay sesión de Firebase,
+  /// además escribe `allyRequests/{miUid}_{suUid}` con `status: 'accepted'`
+  /// directamente, para que el otro dispositivo (que escanea el escáner, no
+  /// al revés) también reciba el aliado vía [_watchIncomingAllyRequests].
+  /// Retorna el username agregado, o `null` si el código no es válido, es el
+  /// propio jugador, o ya era aliado.
   String? addAllyFromScannedCode(String code) {
     final parts = code.split(':');
     if (parts.length < 3 || parts[0] != 'RACHATRIBU') return null;
@@ -646,6 +704,23 @@ class HomeLogic extends ChangeNotifier {
       emoji: '⚡',
       message: 'Invocaste a $scannedUsername como aliado.',
     );
+    final uid = _firebaseUid;
+    if (uid != null) {
+      unawaited(
+        FirebaseFirestore.instance
+            .collection('allyRequests')
+            .doc('${uid}_$scannedPlayerId')
+            .set({
+              'fromUserId': uid,
+              'fromUsername': _username,
+              'toUserId': scannedPlayerId,
+              'toUsername': scannedUsername,
+              'status': 'accepted',
+              'sentAt': FieldValue.serverTimestamp(),
+            })
+            .catchError((_) {}),
+      );
+    }
     notifyListeners();
     return scannedUsername;
   }
@@ -653,7 +728,135 @@ class HomeLogic extends ChangeNotifier {
   void rejectAllyRequest(AllyRequest request) {
     _pendingAllyRequests.remove(request);
     LocalStorageService.saveAllyRequests(_pendingAllyRequests);
+    unawaited(_updateAllyRequestStatus(request, 'rejected'));
     notifyListeners();
+  }
+
+  /// Actualiza el `status` del documento real de [request] en Firestore
+  /// (`allyRequests/{fromUserId}_{toUserId}`) tras aceptarla o rechazarla.
+  /// No hace nada si [request] viene del modo simulado local
+  /// (`fromUserId`/`toUserId` nulos, ver [AllyRequest]) ni si no hay sesión.
+  Future<void> _updateAllyRequestStatus(
+    AllyRequest request,
+    String status,
+  ) async {
+    final fromUserId = request.fromUserId;
+    final toUserId = request.toUserId;
+    if (fromUserId == null || toUserId == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('allyRequests')
+          .doc('${fromUserId}_$toUserId')
+          .update({'status': status});
+    } catch (_) {
+      // Se ignora a propósito: el estado local (Hive) ya quedó actualizado.
+    }
+  }
+
+  /// Se suscribe a las solicitudes de aliado dirigidas a este `uid`
+  /// (`allyRequests` con `toUserId == uid`), para reflejar en vivo lo que
+  /// haga otro dispositivo: una solicitud nueva con `status: 'pending'`
+  /// aparece en [pendingAllyRequests] (ver [sendAllyRequest] del remitente),
+  /// y una con `status: 'accepted'` agrega de inmediato a `fromUsername`
+  /// como aliado (caso del escaneo de QR, ver [addAllyFromScannedCode]).
+  /// No hace nada si no hay sesión de Firebase.
+  void _watchIncomingAllyRequests() {
+    final uid = _firebaseUid;
+    if (uid == null || _incomingAllyRequestsSubscription != null) return;
+    try {
+      _incomingAllyRequestsSubscription = FirebaseFirestore.instance
+          .collection('allyRequests')
+          .where('toUserId', isEqualTo: uid)
+          .snapshots()
+          .listen((snapshot) {
+            var changed = false;
+            for (final change in snapshot.docChanges) {
+              final data = change.doc.data();
+              if (data == null) continue;
+              final fromUserId = data['fromUserId'] as String?;
+              final fromUsername = data['fromUsername'] as String?;
+              final status = data['status'] as String?;
+              if (fromUserId == null || fromUsername == null) continue;
+              if (status == 'pending') {
+                if (_pendingAllyRequests.any((r) => r.fromUserId == fromUserId)) {
+                  continue;
+                }
+                _pendingAllyRequests.add(
+                  AllyRequest(
+                    fromUsername: fromUsername,
+                    sentAt: DateTime.now(),
+                    fromUserId: fromUserId,
+                    toUserId: uid,
+                  ),
+                );
+                changed = true;
+              } else if (status == 'accepted') {
+                _pendingAllyRequests.removeWhere(
+                  (r) => r.fromUserId == fromUserId,
+                );
+                if (!_allies.contains(fromUsername)) {
+                  _allies.add(fromUsername);
+                  _pushActivityEvent(
+                    emoji: '🕊️',
+                    message: 'Ahora eres aliado de $fromUsername.',
+                  );
+                }
+                changed = true;
+              } else {
+                _pendingAllyRequests.removeWhere(
+                  (r) => r.fromUserId == fromUserId,
+                );
+                changed = true;
+              }
+            }
+            if (changed) {
+              LocalStorageService.saveAllyRequests(_pendingAllyRequests);
+              LocalStorageService.saveAllies(_allies);
+              notifyListeners();
+            }
+          }, onError: (_) {});
+    } catch (_) {
+      // Se ignora a propósito: sin Firebase configurado, la app sigue
+      // funcionando 100% local con las solicitudes simuladas en Hive.
+    }
+  }
+
+  /// Se suscribe a las solicitudes de aliado que **yo** envié
+  /// (`allyRequests` con `fromUserId == uid`, ver [sendAllyRequest]), para
+  /// enterarse cuando el receptor las acepta desde su propio dispositivo y
+  /// agregarlo como aliado también de este lado. No hace nada si no hay
+  /// sesión de Firebase.
+  void _watchOutgoingAllyRequests() {
+    final uid = _firebaseUid;
+    if (uid == null || _outgoingAllyRequestsSubscription != null) return;
+    try {
+      _outgoingAllyRequestsSubscription = FirebaseFirestore.instance
+          .collection('allyRequests')
+          .where('fromUserId', isEqualTo: uid)
+          .snapshots()
+          .listen((snapshot) {
+            var changed = false;
+            for (final change in snapshot.docChanges) {
+              final data = change.doc.data();
+              if (data == null) continue;
+              if (data['status'] as String? != 'accepted') continue;
+              final toUsername = data['toUsername'] as String?;
+              if (toUsername == null || _allies.contains(toUsername)) continue;
+              _allies.add(toUsername);
+              _pushActivityEvent(
+                emoji: '🕊️',
+                message: 'Ahora eres aliado de $toUsername.',
+              );
+              changed = true;
+            }
+            if (changed) {
+              LocalStorageService.saveAllies(_allies);
+              notifyListeners();
+            }
+          }, onError: (_) {});
+    } catch (_) {
+      // Se ignora a propósito: ver doc-comment de _watchIncomingAllyRequests.
+    }
   }
 
   @override
@@ -661,6 +864,8 @@ class HomeLogic extends ChangeNotifier {
     for (final subscription in _checkInSubscriptions.values) {
       unawaited(subscription.cancel());
     }
+    unawaited(_incomingAllyRequestsSubscription?.cancel());
+    unawaited(_outgoingAllyRequestsSubscription?.cancel());
     usernameController.dispose();
     habitNameController.dispose();
     habitCategoryController.dispose();

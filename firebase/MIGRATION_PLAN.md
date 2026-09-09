@@ -172,8 +172,29 @@ Lo único que sigue haciendo falta del lado de la app:
    (plan Blaze) o se sigue calculando todo en el cliente (ver sección 0);
    si se despliegan, migrar `completedMembers`/`isPerfect`/progreso del
    día a leer de `memberStats` en vez de simular miembros locales.
-4. **Fase 3**: migrar aliados/invitaciones reales (`allyRequests`, canje
-   de `inviteCode` vía `redeemInviteCode`).
+4. **Fase 3 (hecha — solicitudes de aliado reales)**: `sendAllyRequest()`
+   busca el `uid` dueño del username en `users` (query por campo, sin
+   Cloud Function) y escribe `allyRequests/{miUid}_{suUid}` con
+   `status: 'pending'`. `HomeLogic._watchIncomingAllyRequests()` /
+   `_watchOutgoingAllyRequests()` se suscriben con `snapshots()` a
+   `allyRequests` (`toUserId == uid` y `fromUserId == uid`
+   respectivamente) para reflejar en vivo lo que pase en el otro
+   dispositivo: una solicitud pendiente nueva aparece en
+   `pendingAllyRequests`, y una aceptada agrega al instante al aliado en
+   ambos lados. `acceptAllyRequest()`/`rejectAllyRequest()` actualizan el
+   `status` del documento real además de su efecto local de siempre. El
+   escaneo de QR (`addAllyFromScannedCode`) ya usaba el `uid` real como
+   playerId desde la Fase 1; ahora además escribe la solicitud
+   directamente con `status: 'accepted'` (el escaneo presencial ya es la
+   prueba de confianza, no hace falta un paso pendiente) para que el
+   otro dispositivo también reciba el aliado.
+
+   Si no hay sesión de Firebase, cae al modo simulado anterior (solicitud
+   local inmediata en el mismo dispositivo) para no perder la demo
+   sin backend. Pendiente: el canje de `inviteCode` vía la Cloud Function
+   callable `redeemInviteCode` para unirse a un círculo por código (hoy
+   `addMemberToCircle` sigue siendo 100% simulado) — depende de la
+   decisión de Blaze/Cloud Functions de la sección 0.
 5. **Fase 4**: migrar el feed de actividad a `activityEvents` +
    `snapshots()`, retirar `_pushActivityEvent` de Dart (si se usa la ruta
    con Cloud Functions).

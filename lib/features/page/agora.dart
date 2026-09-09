@@ -28,7 +28,7 @@ class AgoraPage extends StatelessWidget {
   /// de sincronización local sin servidor.
   final int circlesUpdatedTick;
   final TextEditingController allyUsernameController;
-  final bool Function() onSendAllyRequest;
+  final Future<bool> Function() onSendAllyRequest;
 
   /// Feed de actividad de la tribu (check-ins, hitos, escudos usados, nuevos
   /// miembros, aliados), más reciente primero.
@@ -197,7 +197,7 @@ class _AddAllySection extends StatefulWidget {
   const _AddAllySection({required this.usernameController, required this.onSend});
 
   final TextEditingController usernameController;
-  final bool Function() onSend;
+  final Future<bool> Function() onSend;
 
   @override
   State<_AddAllySection> createState() => _AddAllySectionState();
@@ -207,7 +207,7 @@ class _AddAllySectionState extends State<_AddAllySection> {
   bool _justSent = false;
 
   Future<void> _handleSend() async {
-    final sent = widget.onSend();
+    final sent = await widget.onSend();
     if (!sent) return;
     setState(() => _justSent = true);
     await Future<void>.delayed(const Duration(milliseconds: 1600));

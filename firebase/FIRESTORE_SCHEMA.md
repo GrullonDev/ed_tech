@@ -65,11 +65,11 @@ circles/{circleId}
   circles/{circleId}/activityEvents/{eventId}  -- solo Cloud Functions escribe
     actorId, type, emoji, message, payload, createdAt
 
-allyRequests/{fromUid_toUid}
+allyRequests/{fromUid_toUid}     -- escrito directo por el cliente (Fase 3), sin Cloud Function
   fromUserId, toUserId: string
+  fromUsername, toUsername: string  -- denormalizados para no tener que leer users/{uid} aparte
   status: 'pending' | 'accepted' | 'rejected'
-  createdAt: Timestamp
-  respondedAt: Timestamp | null
+  sentAt: Timestamp
 ```
 
 ## Mapeo modelo Dart → colección Firestore

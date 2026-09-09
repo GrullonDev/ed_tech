@@ -85,235 +85,242 @@ class ProfilePage extends StatelessWidget {
           child: Stack(
             children: [
               ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg)
-                .copyWith(
-                  bottom: AppSpacing.xl2 +
+                padding: const EdgeInsets.all(AppSpacing.lg).copyWith(
+                  bottom:
+                      AppSpacing.xl2 +
                       AppBottomNav.reservedHeight +
                       MediaQuery.paddingOf(context).bottom,
                 ),
-            children: [
-              Center(
-                child: Column(
-                  children: [
-                    const CircleAvatar(
-                      radius: 44,
-                      backgroundColor: AppColors.surfaceContainer,
-                      backgroundImage: AssetImage(AppAssets.avatarSample),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      username,
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _memberSinceLabel(memberSince),
-                      style: textTheme.bodySmall?.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Column(
                       children: [
-                        _ProfileLevelPill(level: userLevel),
-                        const SizedBox(width: AppSpacing.sm),
-                        ConstancyDropsPill(drops: constancyDrops),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    GamePressable(
-                      onTap: onOpenQrSummon,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
+                        const CircleAvatar(
+                          radius: 44,
+                          backgroundColor: AppColors.surfaceContainer,
+                          backgroundImage: AssetImage(AppAssets.avatarSample),
                         ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppColors.lavenderContainer,
-                              AppColors.surface,
-                            ],
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          username,
+                          style: textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
                           ),
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                          border: Border.all(color: AppColors.primaryContainer),
                         ),
-                        child: Row(
+                        const SizedBox(height: 2),
+                        Text(
+                          _memberSinceLabel(memberSince),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.qr_code_2_rounded,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              'Invocar por QR',
-                              style: textTheme.labelMedium?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                            _ProfileLevelPill(level: userLevel),
+                            const SizedBox(width: AppSpacing.sm),
+                            ConstancyDropsPill(drops: constancyDrops),
                           ],
                         ),
+                        const SizedBox(height: AppSpacing.md),
+                        GamePressable(
+                          onTap: onOpenQrSummon,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  AppColors.lavenderContainer,
+                                  AppColors.surface,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
+                              border: Border.all(
+                                color: AppColors.primaryContainer,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.qr_code_2_rounded,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Text(
+                                  'Invocar por QR',
+                                  style: textTheme.labelMedium?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.eco_rounded,
+                        color: AppColors.primary,
+                        size: 20,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl2),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.eco_rounded,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'Tu Ritmo Vital',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatTile(
-                      icon: Icons.bolt_rounded,
-                      color: AppColors.secondary,
-                      value: '$overallStreakDays días',
-                      label: 'Racha activa',
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: _StatTile(
-                      icon: Icons.emoji_events_rounded,
-                      color: AppColors.primary,
-                      value: '$recordStreakDays días',
-                      label: 'Récord personal',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatTile(
-                      icon: Icons.donut_large_rounded,
-                      color: AppColors.primary,
-                      value: '${(monthlyComplianceRate * 100).round()}%',
-                      label: 'Cumplimiento (mes de ${_currentMonthName()})',
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: _StatTile(
-                      icon: Icons.group_rounded,
-                      color: AppColors.secondary,
-                      value: '${circles.length}',
-                      label: 'Círculos activos',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xl2),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_month_rounded,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      'Mapa de Presencia',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        'Tu Ritmo Vital',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatTile(
+                          icon: Icons.bolt_rounded,
+                          color: AppColors.secondary,
+                          value: '$overallStreakDays días',
+                          label: 'Racha activa',
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: _StatTile(
+                          icon: Icons.emoji_events_rounded,
+                          color: AppColors.primary,
+                          value: '$recordStreakDays días',
+                          label: 'Récord personal',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatTile(
+                          icon: Icons.donut_large_rounded,
+                          color: AppColors.primary,
+                          value: '${(monthlyComplianceRate * 100).round()}%',
+                          label: 'Cumplimiento (mes de ${_currentMonthName()})',
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: _StatTile(
+                          icon: Icons.group_rounded,
+                          color: AppColors.secondary,
+                          value: '${circles.length}',
+                          label: 'Círculos activos',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_month_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          'Mapa de Presencia',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Últimas 10 semanas',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Cada día cuenta para tu constancia, sin culpas ni presiones '
+                    'innecesarias.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                      height: 1.4,
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  _PresenceMap(circles: circles),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.military_tech_rounded,
+                        color: AppColors.secondary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          'Tótems de Maestría',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Últimas 10 semanas',
+                    'Desliza tu vitrina de tótems coleccionables. Cada uno se '
+                    'esculpe al alcanzar su rito.',
                     style: textTheme.bodySmall?.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Cada día cuenta para tu constancia, sin culpas ni presiones '
-                'innecesarias.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _PresenceMap(circles: circles),
-              const SizedBox(height: AppSpacing.xl2),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.military_tech_rounded,
-                    color: AppColors.secondary,
-                    size: 20,
+                  const SizedBox(height: AppSpacing.md),
+                  _TotemShowcase(
+                    overallStreakDays: overallStreakDays,
+                    recordStreakDays: recordStreakDays,
+                    hasPerfectCircle: perfectCount > 0,
                   ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      'Tótems de Maestría',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Text(
+                    'Tus círculos',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Desliza tu vitrina de tótems coleccionables. Cada uno se '
-                'esculpe al alcanzar su rito.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _TotemShowcase(
-                overallStreakDays: overallStreakDays,
-                recordStreakDays: recordStreakDays,
-                hasPerfectCircle: perfectCount > 0,
-              ),
-              const SizedBox(height: AppSpacing.xl2),
-              Text(
-                'Tus círculos',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              if (circles.isEmpty)
-                Text(
-                  'Aún no tienes círculos.',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                )
-              else
-                for (final circle in circles) ...[
-                  _CircleRow(circle: circle, onTap: () => onOpenCircle(circle)),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
+                  const SizedBox(height: AppSpacing.md),
+                  if (circles.isEmpty)
+                    Text(
+                      'Aún no tienes círculos.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    )
+                  else
+                    for (final circle in circles) ...[
+                      _CircleRow(
+                        circle: circle,
+                        onTap: () => onOpenCircle(circle),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
                 ],
               ),
               if (pendingAllyRequests.isNotEmpty)
@@ -374,10 +381,8 @@ class _ProfileLevelPill extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             'Nivel $level',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(context).textTheme.labelMedium
+                ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -436,7 +441,10 @@ class _AllyRequestsBadge extends StatelessWidget {
                 top: -4,
                 right: -4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: const BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
@@ -753,7 +761,9 @@ class _TotemShowcase extends StatefulWidget {
 }
 
 class _TotemShowcaseState extends State<_TotemShowcase> {
-  late final PageController _controller = PageController(viewportFraction: 0.42);
+  late final PageController _controller = PageController(
+    viewportFraction: 0.42,
+  );
   double _page = 0;
 
   @override

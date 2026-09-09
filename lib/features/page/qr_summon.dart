@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -108,7 +109,9 @@ class _MyCodeTab extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             Text(
               username,
-              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -188,7 +191,11 @@ class _ScanTabState extends State<_ScanTab> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.videocam_off_rounded, color: Colors.white, size: 48),
+                const Icon(
+                  Icons.videocam_off_rounded,
+                  color: Colors.white,
+                  size: 48,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   _describeCameraError(error),

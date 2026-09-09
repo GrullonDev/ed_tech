@@ -63,7 +63,8 @@ class RachasPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
                 .copyWith(
                   top: AppSpacing.lg,
-                  bottom: AppSpacing.xl2 +
+                  bottom:
+                      AppSpacing.xl2 +
                       AppBottomNav.reservedHeight +
                       MediaQuery.paddingOf(context).bottom,
                 ),
@@ -564,10 +565,7 @@ class _CircleStreakRow extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             TweenAnimationBuilder<double>(
               key: ValueKey('checkin-${circle.name}-${circle.checkedInToday}'),
-              tween: Tween(
-                begin: circle.checkedInToday ? 1.4 : 1.0,
-                end: 1.0,
-              ),
+              tween: Tween(begin: circle.checkedInToday ? 1.4 : 1.0, end: 1.0),
               duration: const Duration(milliseconds: 350),
               curve: Curves.elasticOut,
               builder: (context, scale, child) =>

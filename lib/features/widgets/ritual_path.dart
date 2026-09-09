@@ -64,8 +64,9 @@ class RitualPath extends StatelessWidget {
                       size: Size(_naturalWidth, naturalHeight),
                       painter: _RitualPathPainter(
                         centers: centers,
-                        reachedCount:
-                            milestones.where((m) => m.unlocked).length,
+                        reachedCount: milestones
+                            .where((m) => m.unlocked)
+                            .length,
                       ),
                     ),
                     for (var i = 0; i < milestones.length; i++)
@@ -77,9 +78,7 @@ class RitualPath extends StatelessWidget {
                           index: i,
                           isCurrentQuest:
                               !milestones[i].unlocked &&
-                              milestones
-                                      .indexWhere((m) => !m.unlocked) ==
-                                  i,
+                              milestones.indexWhere((m) => !m.unlocked) == i,
                         ),
                       ),
                   ],
@@ -122,12 +121,7 @@ class _RitualPathPainter extends CustomPainter {
       final control = Offset((start.dx + end.dx) / 2, (start.dy + end.dy) / 2);
       final segment = Path()
         ..moveTo(start.dx, start.dy)
-        ..quadraticBezierTo(
-          start.dx,
-          control.dy,
-          control.dx,
-          control.dy,
-        )
+        ..quadraticBezierTo(start.dx, control.dy, control.dx, control.dy)
         ..quadraticBezierTo(end.dx, control.dy, end.dx, end.dy);
       final isDone = i < reachedCount - 1 || (i == reachedCount - 1);
       canvas.drawPath(segment, isDone ? donePaint : todoPaint);
@@ -202,9 +196,7 @@ class _RitualNode extends StatelessWidget {
             '$days d',
             style: textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w800,
-              color: reached
-                  ? AppColors.secondary
-                  : AppColors.onSurfaceVariant,
+              color: reached ? AppColors.secondary : AppColors.onSurfaceVariant,
             ),
           ),
         ],

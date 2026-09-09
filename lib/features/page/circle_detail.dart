@@ -150,7 +150,8 @@ class CircleDetailPage extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => _showInviteMemberDialog(context, onInviteMember),
+                onPressed: () =>
+                    _showInviteMemberDialog(context, onInviteMember),
                 icon: const Icon(Icons.person_add_alt_1_rounded),
                 label: const Text('Invitar a un amigo'),
               ),
@@ -231,9 +232,8 @@ class _InviteMemberDialogState extends State<_InviteMemberDialog> {
             'Se agrega solo en este teléfono, como marcador visual: tu '
             'amigo no recibe ninguna invitación real.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(
-                alpha: 0.7,
-              ),
+              color: Theme.of(context).textTheme.bodySmall?.color
+                  ?.withValues(alpha: 0.7),
             ),
           ),
         ],

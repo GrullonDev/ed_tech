@@ -72,7 +72,8 @@ class Dashboard extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
                 .copyWith(
-                  bottom: AppSpacing.xl2 +
+                  bottom:
+                      AppSpacing.xl2 +
                       AppBottomNav.reservedHeight +
                       MediaQuery.paddingOf(context).bottom,
                 ),
@@ -148,12 +149,12 @@ class Dashboard extends StatelessWidget {
                     onTap: circles.isEmpty
                         ? null
                         : () => _showManageCirclesSheet(
-                              context,
-                              circles: circles,
-                              allies: allies,
-                              onOpenCircle: onOpenCircle,
-                              onInviteMember: onInviteMember,
-                            ),
+                            context,
+                            circles: circles,
+                            allies: allies,
+                            onOpenCircle: onOpenCircle,
+                            onInviteMember: onInviteMember,
+                          ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.xs,
@@ -258,7 +259,9 @@ class _ManageCirclesSheet extends StatelessWidget {
           children: [
             Text(
               'Tus círculos',
-              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             for (final circle in circles)
@@ -303,7 +306,9 @@ class _ManageCirclesSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Tus aliados',
-              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
@@ -382,8 +387,9 @@ Future<void> _promptAddAllyToCircle(
   String allyUsername,
   void Function(HabitCircle circle, String name) onInviteMember,
 ) async {
-  final available =
-      circles.where((c) => !c.members.contains(allyUsername)).toList();
+  final available = circles
+      .where((c) => !c.members.contains(allyUsername))
+      .toList();
   if (available.isEmpty) return;
   if (available.length == 1) {
     onInviteMember(available.first, allyUsername);
@@ -457,9 +463,8 @@ class _InviteMemberDialogState extends State<_InviteMemberDialog> {
             'Se agrega solo en este teléfono, como marcador visual: tu '
             'amigo no recibe ninguna invitación real.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(
-                alpha: 0.7,
-              ),
+              color: Theme.of(context).textTheme.bodySmall?.color
+                  ?.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -617,14 +622,16 @@ class _LevelPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.military_tech_rounded, size: 14, color: Colors.white),
+          const Icon(
+            Icons.military_tech_rounded,
+            size: 14,
+            color: Colors.white,
+          ),
           const SizedBox(width: 4),
           Text(
             'Nv. $level',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(context).textTheme.labelMedium
+                ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -810,10 +817,7 @@ class _TodayCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                   child: TweenAnimationBuilder<double>(
                     key: ValueKey('${habit.label}-${habit.done}'),
-                    tween: Tween(
-                      begin: habit.done ? 1.3 : 1.0,
-                      end: 1.0,
-                    ),
+                    tween: Tween(begin: habit.done ? 1.3 : 1.0, end: 1.0),
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.elasticOut,
                     builder: (context, scale, child) =>

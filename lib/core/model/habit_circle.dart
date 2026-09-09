@@ -123,7 +123,8 @@ class HabitCircle {
     for (final day in orderedDays) {
       final gap = previous == null ? null : day.difference(previous).inDays;
       final bridgedByFreeze =
-          gap == 2 && frozenDays.contains(previous!.add(const Duration(days: 1)));
+          gap == 2 &&
+          frozenDays.contains(previous!.add(const Duration(days: 1)));
       if (gap == 1 || bridgedByFreeze) {
         streakSoFar++;
       } else {
@@ -206,11 +207,13 @@ class HabitCircle {
         .map((e) => CheckIn.fromMap(e as Map<dynamic, dynamic>))
         .toList(),
     freezesAvailable: map['freezesAvailable'] as int? ?? 0,
-    freezeUsedDates: (map['freezeUsedDates'] as List?)
+    freezeUsedDates:
+        (map['freezeUsedDates'] as List?)
             ?.map((e) => DateTime.parse(e as String))
             .toList() ??
         [],
-    claimedFreezeMilestones: (map['claimedFreezeMilestones'] as List?)
+    claimedFreezeMilestones:
+        (map['claimedFreezeMilestones'] as List?)
             ?.map((e) => e as int)
             .toList() ??
         [],

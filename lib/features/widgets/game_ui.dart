@@ -109,8 +109,15 @@ class Iso3DIcon extends StatelessWidget {
                 ),
               ),
               child: emoji != null
-                  ? Text(emoji!, style: TextStyle(fontSize: iconSize ?? size * 0.45))
-                  : Icon(icon, color: Colors.white, size: iconSize ?? size * 0.5),
+                  ? Text(
+                      emoji!,
+                      style: TextStyle(fontSize: iconSize ?? size * 0.45),
+                    )
+                  : Icon(
+                      icon,
+                      color: Colors.white,
+                      size: iconSize ?? size * 0.5,
+                    ),
             ),
           ),
         ],

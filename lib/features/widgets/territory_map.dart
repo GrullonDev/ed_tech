@@ -101,10 +101,8 @@ class TerritoryMap extends StatelessWidget {
                             litPath: _path
                                 .take(circles.length)
                                 .map(
-                                  (p) => Offset(
-                                    p[0].toDouble(),
-                                    p[1].toDouble(),
-                                  ),
+                                  (p) =>
+                                      Offset(p[0].toDouble(), p[1].toDouble()),
                                 )
                                 .toList(),
                           ),
@@ -192,9 +190,7 @@ class _IsoGroundPainter extends CustomPainter {
         final isLit = litPath.any(
           (p) => p.dx == col.toDouble() && p.dy == row.toDouble(),
         );
-        final tilePaint = isLit
-            ? path
-            : ((col + row).isEven ? grassA : grassB);
+        final tilePaint = isLit ? path : ((col + row).isEven ? grassA : grassB);
 
         final diamond = Path()
           ..moveTo(cx, cy - tileHeight / 2)
@@ -324,10 +320,8 @@ class _TerritoryTotemState extends State<_TerritoryTotem> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 10,
-              ),
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(fontWeight: FontWeight.w700, fontSize: 10),
             ),
             if (circle.streakDays > 0)
               Text(

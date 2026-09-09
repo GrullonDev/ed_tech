@@ -73,8 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
           builder: (context, _) => CircleDetailPage(
             circle: circle,
             onCheckIn: () => _logic.toggleCheckIn(circle),
-            onInviteMember: (name) =>
-                _logic.addMemberToCircle(circle, name),
+            onInviteMember: (name) => _logic.addMemberToCircle(circle, name),
           ),
         ),
       ),
@@ -119,9 +118,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _openCreateHabit() {
-    Navigator.of(context).push(
-      GamePageRoute(builder: (context) => CreateHabitPage(logic: _logic)),
-    );
+    Navigator.of(
+      context,
+    ).push(GamePageRoute(builder: (context) => CreateHabitPage(logic: _logic)));
   }
 
   void _openProfile() {

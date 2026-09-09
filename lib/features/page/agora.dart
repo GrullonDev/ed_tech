@@ -22,6 +22,7 @@ class AgoraPage extends StatelessWidget {
   });
 
   final List<HabitCircle> circles;
+
   /// Se incrementa cada vez que un check-in o un nuevo miembro actualiza
   /// algún círculo; se usa como parte de la key de cada hoguera para que
   /// reproduzca su animación de reignición al instante, como señal visual
@@ -50,9 +51,8 @@ class AgoraPage extends StatelessWidget {
       body: SafeArea(
         child: AppMaxWidth(
           child: ListView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-            ).copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
+                .copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
             children: [
               _AddAllySection(
                 usernameController: allyUsernameController,
@@ -194,7 +194,10 @@ class _ActivityFeedCard extends StatelessWidget {
 /// con éxito, muestra una breve animación de misiva enviada como refuerzo
 /// tipo juego.
 class _AddAllySection extends StatefulWidget {
-  const _AddAllySection({required this.usernameController, required this.onSend});
+  const _AddAllySection({
+    required this.usernameController,
+    required this.onSend,
+  });
 
   final TextEditingController usernameController;
   final Future<bool> Function() onSend;
@@ -525,10 +528,8 @@ class _MemberAvatar extends StatelessWidget {
       ),
       child: Text(
         initial,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w800,
-          color: AppColors.primary,
-        ),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary),
       ),
     );
   }

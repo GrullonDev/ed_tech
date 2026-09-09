@@ -15,12 +15,13 @@ class HabitCircle {
     List<String>? members,
     List<CheckIn>? checkIns,
     this.pendingMemberName,
-    this.freezesAvailable = 0,
+    int freezesAvailable = 0,
     List<DateTime>? freezeUsedDates,
     List<int>? claimedFreezeMilestones,
   }) : id = id ?? _generateId(),
        members = members ?? ['Yo'],
        checkIns = checkIns ?? [],
+       _localFreezesAvailable = freezesAvailable,
        freezeUsedDates = freezeUsedDates ?? [],
        claimedFreezeMilestones = claimedFreezeMilestones ?? [];
 
@@ -37,10 +38,12 @@ class HabitCircle {
   final String? pendingMemberName;
   final List<CheckIn> checkIns;
 
-  /// "Escudos de Racha" disponibles: cuando un día se salta sin check-in,
-  /// [HomeLogic] consume uno automáticamente para que la racha no se rompa
-  /// (ver [freezeUsedDates]), en vez de perder toda la cadena de golpe.
-  int freezesAvailable;
+  /// "Escudos de Racha" disponibles calculados en local, a partir de
+  /// [freezeUsedDates]/[claimedFreezeMilestones] — respaldo para cuando no
+  /// hay sesión de Firebase o [remoteFreezesAvailable] todavía no llegó. Ver
+  /// [freezesAvailable] (el getter público que la UI usa) para cuál de los
+  /// dos gana.
+  int _localFreezesAvailable;
 
   /// Fechas (normalizadas a medianoche) en las que un escudo cubrió un día
   /// sin check-in real. No cuentan como check-in para el progreso del día,
@@ -52,6 +55,20 @@ class HabitCircle {
   /// y vuelve a cruzar el mismo umbral.
   final List<int> claimedFreezeMilestones;
 
+  /// Racha/gotas/escudos calculados por la Cloud Function
+  /// `recomputeMemberStats` (ver `functions/src/index.ts`), leídos de
+  /// `circles/{id}/memberStats/{uid}` por `HomeLogic._watchCircleMemberStats`
+  /// — Fase 6 de `firebase/MIGRATION_PLAN.md` (plan Blaze). No se persisten
+  /// en Hive (se repueblan solos al reconectar) y tienen prioridad sobre el
+  /// cálculo local en cuanto llegan, para que todos los dispositivos vean el
+  /// mismo número aunque hayan hecho check-in desde otro. Mientras no llegan
+  /// (recién instalada la app, sin red, o sin sesión de Firebase), los
+  /// getters públicos caen al cálculo 100% local de siempre.
+  int? remoteStreakDays;
+  int? remoteLongestStreakDays;
+  int? remoteDropsEarned;
+  int? remoteFreezesAvailable;
+
   int get totalMembers => members.length;
   int get completedMembers => checkedInToday ? totalMembers : totalMembers - 1;
   bool get isPerfect => completedMembers >= totalMembers;
@@ -61,14 +78,23 @@ class HabitCircle {
 
   bool get checkedInToday => checkIns.any((c) => c.date == CheckIn.today());
 
+  /// Escudos disponibles: prioriza [remoteFreezesAvailable] (la Cloud
+  /// Function ve el historial real de todos los dispositivos) sobre el
+  /// conteo local, que solo conoce los escudos otorgados/usados desde este
+  /// dispositivo.
+  int get freezesAvailable => remoteFreezesAvailable ?? _localFreezesAvailable;
+
   /// Días consecutivos con check-in, contando hacia atrás desde hoy (o desde
   /// ayer si hoy todavía no se ha marcado, para que la racha no "muera" a la
   /// medianoche antes de que el usuario tenga oportunidad de marcar el día).
   ///
-  /// Una fecha cubierta por un escudo ([freezeUsedDates]) no rompe la cadena
-  /// hacia atrás (actúa como puente), pero tampoco suma un día extra al
-  /// conteo: el escudo protege la racha, no la infla.
-  int get streakDays {
+  /// Prioriza [remoteStreakDays] (calculado por la Cloud Function sobre el
+  /// historial real de check-ins de todos los dispositivos) sobre el cálculo
+  /// local, que solo ve los check-ins hechos desde este dispositivo — ver
+  /// doc-comment de [remoteStreakDays].
+  int get streakDays => remoteStreakDays ?? _localStreakDays;
+
+  int get _localStreakDays {
     if (checkIns.isEmpty) return 0;
     final realDays = checkIns.map((c) => c.date).toSet();
     final frozenDays = freezeUsedDates.toSet();
@@ -90,7 +116,10 @@ class HabitCircle {
 
   /// Racha consecutiva más larga alcanzada en toda la historia del círculo
   /// (no solo la actual). Se usa como "récord personal" en el perfil.
-  int get longestStreakDays {
+  /// Prioriza [remoteLongestStreakDays] — ver doc-comment de [streakDays].
+  int get longestStreakDays => remoteLongestStreakDays ?? _localLongestStreakDays;
+
+  int get _localLongestStreakDays {
     if (checkIns.isEmpty) return 0;
     final days = checkIns.map((c) => c.date).toSet().toList()..sort();
     var longest = 1;
@@ -112,8 +141,11 @@ class HabitCircle {
   /// hizo cada check-in (10 gotas en racha 1-6, x1.5 desde el día 7, x2
   /// desde el día 21, x3 desde el día 50). Un día cubierto por un escudo
   /// mantiene el conteo de racha para el multiplicador pero no gana gotas
-  /// propias, porque no hubo check-in real ese día.
-  int get constancyDropsEarned {
+  /// propias, porque no hubo check-in real ese día. Prioriza
+  /// [remoteDropsEarned] — ver doc-comment de [streakDays].
+  int get constancyDropsEarned => remoteDropsEarned ?? _localConstancyDropsEarned;
+
+  int get _localConstancyDropsEarned {
     if (checkIns.isEmpty) return 0;
     final orderedDays = checkIns.map((c) => c.date).toSet().toList()..sort();
     final frozenDays = freezeUsedDates.toSet();
@@ -157,22 +189,28 @@ class HabitCircle {
     members.add(name);
   }
 
-  /// Consume un escudo disponible para cubrir [date] (un día sin check-in
-  /// real que de otro modo habría roto la racha). No hace nada si no quedan
-  /// escudos o si esa fecha ya fue cubierta antes.
+  /// Consume un escudo local disponible para cubrir [date] (un día sin
+  /// check-in real que de otro modo habría roto la racha). Sigue corriendo
+  /// aunque haya sesión de Firebase — sirve de respaldo offline y no puede
+  /// desincronizar nada visible, porque [freezesAvailable] ya prioriza
+  /// [remoteFreezesAvailable] en cuanto existe (ver su doc-comment). No hace
+  /// nada si no quedan escudos locales o si esa fecha ya fue cubierta antes.
   bool useFreezeFor(DateTime date) {
-    if (freezesAvailable <= 0 || freezeUsedDates.contains(date)) return false;
-    freezesAvailable--;
+    if (_localFreezesAvailable <= 0 || freezeUsedDates.contains(date)) {
+      return false;
+    }
+    _localFreezesAvailable--;
     freezeUsedDates.add(date);
     return true;
   }
 
-  /// Otorga un escudo gratis por alcanzar [milestoneDays] por primera vez.
-  /// No hace nada si ese hito ya fue reclamado antes.
+  /// Otorga un escudo local gratis por alcanzar [milestoneDays] por primera
+  /// vez. Mismo criterio de "respaldo offline, nunca desincroniza la UI" que
+  /// [useFreezeFor]. No hace nada si ese hito ya fue reclamado antes.
   bool grantFreezeForMilestone(int milestoneDays) {
     if (claimedFreezeMilestones.contains(milestoneDays)) return false;
     claimedFreezeMilestones.add(milestoneDays);
-    freezesAvailable++;
+    _localFreezesAvailable++;
     return true;
   }
 
@@ -192,7 +230,7 @@ class HabitCircle {
     'members': members,
     'pendingMemberName': pendingMemberName,
     'checkIns': checkIns.map((c) => c.toMap()).toList(),
-    'freezesAvailable': freezesAvailable,
+    'freezesAvailable': _localFreezesAvailable,
     'freezeUsedDates': freezeUsedDates.map((d) => d.toIso8601String()).toList(),
     'claimedFreezeMilestones': claimedFreezeMilestones,
   };

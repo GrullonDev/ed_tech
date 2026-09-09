@@ -56,6 +56,11 @@ class HomeLogic extends ChangeNotifier {
   final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
   _activityEventSubscriptions = {};
 
+  /// Suscripciones activas a `circles/{id}/memberStats/{uid}` por círculo,
+  /// ver [_watchCircleMemberStats]. Se cancelan en [dispose].
+  final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
+  _memberStatsSubscriptions = {};
+
   /// Suscripciones a `allyRequests` (ver [_watchIncomingAllyRequests] y
   /// [_watchOutgoingAllyRequests]). Se cancelan en [dispose].
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
@@ -182,6 +187,7 @@ class HomeLogic extends ChangeNotifier {
     _applyPendingStreakFreezes();
     for (final circle in _circles) {
       _watchCircleActivityEvents(circle);
+      _watchCircleMemberStats(circle);
     }
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
@@ -514,6 +520,46 @@ class HomeLogic extends ChangeNotifier {
     }
   }
 
+  /// Se suscribe a `circles/{id}/memberStats/{uid}` (el propio usuario), el
+  /// documento que la Cloud Function `recomputeMemberStats`
+  /// (`functions/src/index.ts`) recalcula a partir del historial real de
+  /// `checkIns`/`streakShieldUses`/`streakShieldGrants` cada vez que alguno
+  /// cambia — Fase 6 de `firebase/MIGRATION_PLAN.md` (plan Blaze). Puebla
+  /// los campos `remote*` de [circle] (ver doc-comment en
+  /// `HabitCircle.remoteStreakDays`), que desde ahí tienen prioridad sobre
+  /// el cálculo local en los getters públicos (`streakDays`,
+  /// `longestStreakDays`, `constancyDropsEarned`, `freezesAvailable`). No
+  /// hace nada si no hay sesión de Firebase.
+  void _watchCircleMemberStats(HabitCircle circle) {
+    final uid = _firebaseUid;
+    if (uid == null || _memberStatsSubscriptions.containsKey(circle.id)) {
+      return;
+    }
+    final docRef = FirebaseFirestore.instance
+        .collection('circles')
+        .doc(circle.id)
+        .collection('memberStats')
+        .doc(uid);
+    try {
+      _memberStatsSubscriptions[circle.id] = docRef.snapshots().listen((
+        snapshot,
+      ) {
+        final data = snapshot.data();
+        if (data == null) return;
+        circle.remoteStreakDays = data['streakDays'] as int?;
+        circle.remoteLongestStreakDays = data['longestStreakDays'] as int?;
+        circle.remoteDropsEarned = data['dropsEarned'] as int?;
+        circle.remoteFreezesAvailable = data['freezesAvailable'] as int?;
+        _circlesUpdatedTick++;
+        notifyListeners();
+      }, onError: (_) {});
+    } catch (_) {
+      // Se ignora a propósito: sin Firebase configurado, la app sigue
+      // funcionando 100% con el cálculo local de siempre (ver
+      // [HabitCircle.streakDays] y afines).
+    }
+  }
+
   /// Formatea [date] como "yyyy-mm-dd", igual que el `date` string que
   /// esperan las Cloud Functions en functions/src/streakLogic.ts.
   static String _dateKey(DateTime date) =>
@@ -610,6 +656,7 @@ class HomeLogic extends ChangeNotifier {
     _logAnalyticsEvent('circle_created', {'circle_category': category});
     unawaited(_mirrorCircleCreation(circle));
     _watchCircleActivityEvents(circle);
+    _watchCircleMemberStats(circle);
     notifyListeners();
   }
 
@@ -888,6 +935,9 @@ class HomeLogic extends ChangeNotifier {
   @override
   void dispose() {
     for (final subscription in _activityEventSubscriptions.values) {
+      unawaited(subscription.cancel());
+    }
+    for (final subscription in _memberStatsSubscriptions.values) {
       unawaited(subscription.cancel());
     }
     unawaited(_incomingAllyRequestsSubscription?.cancel());

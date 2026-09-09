@@ -77,11 +77,18 @@ para que no quede colgado si falla por falta de red). Android: se agregó
 el plugin de Gradle `com.google.firebase.firebase-perf` en
 `android/settings.gradle.kts` y `android/app/build.gradle.kts` (mismo
 patrón que `google-services`/Crashlytics), recomendado para
-instrumentación automática de red en Android. **Falta activar
-Performance Monitoring para `rachatribu` en la consola** si no está ya
-activo, y agregar más traces manuales puntuales (2-3) si más adelante
-hace falta diagnosticar algo lento en particular — se dejó solo el
-ejemplo del plan para no ensanchar el cambio de más.
+instrumentación automática de red en Android. **iOS no necesitó ningún
+plugin ni cambio de proyecto Xcode**: la instrumentación automática de
+red en iOS se hace por method swizzling dentro del propio SDK nativo de
+`firebase_performance`, sin el paso de bytecode-instrumentation que sí
+hace falta en Android — alcanza con que CocoaPods instale el pod
+`FirebasePerformance` (automático la primera vez que se corra `flutter
+build ios`/`flutter run` en un Mac, ver nota de `GoogleService-Info.plist`
+en la sección 1). **Falta activar Performance Monitoring para
+`rachatribu` en la consola** si no está ya activo, y agregar más traces
+manuales puntuales (2-3) si más adelante hace falta diagnosticar algo
+lento en particular — se dejó solo el ejemplo del plan para no ensanchar
+el cambio de más.
 
 ## 3. Remote Config (`firebase_remote_config`)
 

@@ -133,20 +133,56 @@ dos es una decisión de producto/arquitectura que amerita su propio
 PR — se deja fuera de este cambio para no ensancharlo ni introducir un
 desface visible en la racha del usuario.
 
-## 4. A/B Testing
+## 4. A/B Testing — sin código, 100% consola (guía para correr el primero)
 
-No es un package aparte: una vez Remote Config está integrado (sección
-3), un experimento de A/B Testing se crea **desde la consola de
-Firebase**, no desde código — se elige un parámetro de Remote Config
-(por ejemplo `constancy_drops_tier2`), se definen 2+ variantes de su
-valor, y Firebase reparte usuarios entre variantes automáticamente,
-usando Analytics (ya integrado) para medir qué variante retiene mejor.
+No es un package aparte ni requiere ningún cambio en este repo: una vez
+Remote Config está integrado (sección 3, ya hecho), un experimento de
+A/B Testing se crea **desde la consola de Firebase** — se elige un
+parámetro de Remote Config, se definen 2+ variantes de su valor, y
+Firebase reparte usuarios entre variantes automáticamente, usando
+Analytics (ya integrado) para medir qué variante se comporta mejor
+contra una métrica objetivo.
 
-**Primer experimento sugerido**: variar `constancy_drops_tier2` (15 vs.
-20 vs. 25) y medir impacto en `check_in` diario por usuario (evento de
-Analytics que ya se registra desde la Fase 4 de `MIGRATION_PLAN.md`) —
-es la palanca de gamificación más directa para probar si más
-recompensa = más constancia.
+**Primer experimento recomendado ahora mismo**: `onboarding_headline`
+(el único parámetro que ya está implementado, ver sección 3), midiendo
+impacto en el evento de conversión `onboarding_complete` (ya se
+registra desde la Fase 4 de `MIGRATION_PLAN.md` — falta solo marcarlo
+como "evento de conversión" en la consola, ver sección 5 más abajo).
+Sin código nuevo: la app ya lee `onboarding_headline` de Remote Config
+(`Onboarding._headline()`) y ya manda el evento; falta únicamente
+crearlo en la consola.
+
+**Pasos** (consola de Firebase, proyecto `rachatribu`):
+
+1. Remote Config → confirmar que existe el parámetro `onboarding_headline`
+   (se crea solo la primera vez que la app corre con esta versión y
+   hace `fetchAndActivate`, pero también se puede crear a mano con el
+   valor por defecto `Bienvenido a\nRacha Tribu` si preferís adelantarte).
+2. A/B Testing → Crear experimento → "Remote Config experiment".
+3. Nombre del experimento (por ejemplo `onboarding_headline_v1`),
+   audiencia 100% de usuarios (o un % si preferís arrancar chico).
+4. Parámetro objetivo: `onboarding_headline`. Definir 2-3 variantes de
+   texto (el "Control" ya usa el valor actual/por defecto automáticamente
+   — no hace falta declararlo aparte).
+5. Métrica principal: `onboarding_complete` (una vez marcado como
+   evento de conversión, sección 5) — Firebase reparte tráfico y
+   muestra cuál variante convierte más onboardings completados por
+   usuario que vio la pantalla.
+6. Iniciar el experimento y dejarlo correr el tiempo que la consola
+   recomiende (Firebase avisa cuándo hay significancia estadística).
+
+**Sobre `constancy_drops_tier2` (el candidato "de gamificación" más
+obvio)**: **todavía no se puede experimentar con este** de forma
+segura — ver el detalle en la sección 3 ("Por qué `constancy_drops_*` y
+`streak_shield_milestones` quedan pendientes a propósito"). Como ese
+valor también está hardcodeado en `functions/src/streakLogic.ts` para
+calcular `memberStats` en el servidor, un experimento de A/B Testing
+que lo varíe en el cliente le mostraría a una parte de los usuarios un
+número de "Gotas de Constancia" que el servidor nunca les otorgó
+realmente — hay que resolver esa duplicación primero (moverla también a
+Remote Config del lado de la Cloud Function, vía Admin SDK) antes de
+correr este experimento. Queda como el candidato natural para *después*
+de esa migración, no para ahora.
 
 ## 5. Analytics — qué falta más allá de lo ya integrado
 

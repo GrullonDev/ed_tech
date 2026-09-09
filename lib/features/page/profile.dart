@@ -46,6 +46,10 @@ class ProfilePage extends StatelessWidget {
     required this.onOpenRachas,
     required this.onCreateCircle,
     required this.onOpenQrSummon,
+    required this.isAnonymousAccount,
+    required this.linkedProviderIds,
+    required this.onLinkWithGoogle,
+    required this.onLinkWithEmailPassword,
   });
 
   final String username;
@@ -63,6 +67,23 @@ class ProfilePage extends StatelessWidget {
   final VoidCallback onOpenRachas;
   final VoidCallback onCreateCircle;
   final VoidCallback onOpenQrSummon;
+
+  /// `true` si la sesión sigue siendo anónima — controla si se muestra la
+  /// sección "Vincular cuenta" (ver [_AccountLinkingSection]).
+  final bool isAnonymousAccount;
+
+  /// IDs de proveedores ya vinculados (`'google.com'`, `'password'`), para
+  /// no ofrecer vincular de nuevo el mismo proveedor.
+  final List<String> linkedProviderIds;
+
+  /// Retorna `null` si se vinculó con éxito, o un mensaje de error para
+  /// mostrar en un SnackBar.
+  final Future<String?> Function() onLinkWithGoogle;
+
+  /// Retorna `null` si se vinculó con éxito, o un mensaje de error para
+  /// mostrar en un SnackBar.
+  final Future<String?> Function(String email, String password)
+  onLinkWithEmailPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +189,14 @@ class ProfilePage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (isAnonymousAccount) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _AccountLinkingSection(
+                      linkedProviderIds: linkedProviderIds,
+                      onLinkWithGoogle: onLinkWithGoogle,
+                      onLinkWithEmailPassword: onLinkWithEmailPassword,
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xl2),
                   Row(
                     children: [
@@ -347,6 +376,231 @@ class ProfilePage extends StatelessWidget {
   }
 
   static String _currentMonthName() => _kMonthNames[DateTime.now().month - 1];
+}
+
+/// "Vincular cuenta" (Fase Authentication de `firebase/PRODUCTS_PLAN.md`,
+/// sección 6): ofrece pasar de la sesión anónima de siempre a una cuenta
+/// real (Google o email/contraseña), sin perder el `uid` — y por lo tanto
+/// sin perder círculos/aliados/racha ya asociados a ese `uid`. Solo se
+/// muestra mientras la cuenta sigue siendo anónima (ver
+/// [ProfilePage.isAnonymousAccount]); cada botón se deshabilita si ese
+/// proveedor puntual ya está vinculado (puede pasar que uno esté vinculado
+/// y el otro no, si el usuario solo hizo una de las dos).
+class _AccountLinkingSection extends StatelessWidget {
+  const _AccountLinkingSection({
+    required this.linkedProviderIds,
+    required this.onLinkWithGoogle,
+    required this.onLinkWithEmailPassword,
+  });
+
+  final List<String> linkedProviderIds;
+  final Future<String?> Function() onLinkWithGoogle;
+  final Future<String?> Function(String email, String password)
+  onLinkWithEmailPassword;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final googleLinked = linkedProviderIds.contains('google.com');
+    final emailLinked = linkedProviderIds.contains('password');
+    if (googleLinked && emailLinked) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.shield_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'Asegura tu cuenta',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Vincula una cuenta real para no perder tu racha si cambias de '
+            'dispositivo o desinstalas la app.',
+            style: textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (!googleLinked)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _linkWithGoogle(context),
+                icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
+                label: const Text('Continuar con Google'),
+              ),
+            ),
+          if (!googleLinked && !emailLinked)
+            const SizedBox(height: AppSpacing.sm),
+          if (!emailLinked)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _openEmailPasswordSheet(context),
+                icon: const Icon(Icons.email_rounded, size: 18),
+                label: const Text('Vincular con email y contraseña'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _linkWithGoogle(BuildContext context) async {
+    final error = await onLinkWithGoogle();
+    if (!context.mounted) return;
+    _showResult(context, error, successMessage: 'Cuenta de Google vinculada.');
+  }
+
+  void _openEmailPasswordSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
+      builder: (sheetContext) =>
+          _EmailPasswordLinkSheet(onLinkWithEmailPassword: onLinkWithEmailPassword),
+    );
+  }
+
+  static void _showResult(
+    BuildContext context,
+    String? error, {
+    required String successMessage,
+  }) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error ?? successMessage)));
+  }
+}
+
+/// Hoja inferior con el formulario de email/contraseña para
+/// [_AccountLinkingSection.onLinkWithEmailPassword]. Widget con estado
+/// propio (no vive en [HomeLogic]) porque el texto de los campos y el
+/// spinner de carga son puramente de esta pantalla — nadie más los
+/// necesita.
+class _EmailPasswordLinkSheet extends StatefulWidget {
+  const _EmailPasswordLinkSheet({required this.onLinkWithEmailPassword});
+
+  final Future<String?> Function(String email, String password)
+  onLinkWithEmailPassword;
+
+  @override
+  State<_EmailPasswordLinkSheet> createState() =>
+      _EmailPasswordLinkSheetState();
+}
+
+class _EmailPasswordLinkSheetState extends State<_EmailPasswordLinkSheet> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        top: AppSpacing.lg,
+        bottom: AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vincular con email y contraseña',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _emailController,
+              enabled: !_submitting,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: _passwordController,
+              enabled: !_submitting,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Contraseña (mínimo 6 caracteres)',
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Vincular'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    final error = await widget.onLinkWithEmailPassword(
+      _emailController.text,
+      _passwordController.text,
+    );
+    if (!mounted) return;
+    if (error == null) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cuenta vinculada con email y contraseña.')),
+      );
+      return;
+    }
+    setState(() => _submitting = false);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error)));
+  }
 }
 
 /// Insignia de "nivel" derivada de la racha general, igual criterio que en

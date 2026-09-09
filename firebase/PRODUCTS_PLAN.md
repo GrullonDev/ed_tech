@@ -155,28 +155,66 @@ Ya hay eventos (`onboarding_complete`, `circle_created`, `check_in`,
   funciona mejor — ya se sabe cuál fue en `sendAllyRequest`/
   `addAllyFromScannedCode`, solo falta pasarlo al evento existente.
 
-## 6. Authentication — de anónimo a cuenta real (opcional, a futuro)
+## 6. Authentication — de anónimo a cuenta real — Hecho (Google + email); teléfono pendiente
 
 Hoy el onboarding usa `signInAnonymously()` (Fase 1 de
 `MIGRATION_PLAN.md`) — no hay contraseña ni forma de recuperar la cuenta
-si se desinstala la app o se cambia de dispositivo. La consola de
-Firebase ofrece Google/email/teléfono; el camino sin perder el `uid`
-actual (y por lo tanto sin perder círculos/aliados/racha ya asociados a
-ese `uid`) es `linkWithCredential`:
+si se desinstala la app o se cambia de dispositivo. El camino elegido
+para no perder el `uid` actual (y por lo tanto sin perder
+círculos/aliados/racha ya asociados a ese `uid`) es `linkWithCredential`,
+igual que proponía este documento.
 
-```dart
-final googleCredential = ...; // via google_sign_in
-await FirebaseAuth.instance.currentUser!.linkWithCredential(googleCredential);
-```
+**Decisión de dónde ofrecerlo**: opcional, desde el perfil — el
+onboarding actual (solo username + `signInAnonymously()`) **no cambió en
+nada**. `ProfilePage` muestra una sección "Asegura tu cuenta" solo
+mientras `HomeLogic.isAnonymousAccount` sea `true`, con un botón por
+proveedor todavía no vinculado (`HomeLogic.linkedProviderIds`). Se eligió
+esta opción (sobre agregar un paso al onboarding) porque es cero riesgo
+para el flujo de entrada de usuarios nuevos, que sigue siendo de una sola
+pantalla.
 
-Esto **no** se recomienda hacer ahora: cambia el flujo de onboarding
-(agregar un botón "Vincular con Google" en el perfil, manejar el caso de
-`credential-already-in-use` si el usuario ya tiene otra cuenta con ese
-Google), y el valor principal es "no perder tu progreso si cambias de
-teléfono" — un problema real pero no urgente mientras la base de
-usuarios sea de prueba. Se deja documentado como el siguiente paso
-natural de Authentication cuando haya usuarios reales a los que les
-importe no perder su cuenta.
+**Estado**:
+
+- **Google — Hecho**: `pubspec.yaml` agrega `google_sign_in`;
+  `HomeLogic.linkWithGoogle()` abre el selector de cuentas nativo y
+  vincula con `linkWithCredential`. Si el usuario cancela el selector, no
+  es error (retorna `null` igual que un éxito silencioso). Si esa cuenta
+  de Google ya está vinculada a *otro* usuario de Firebase
+  (`credential-already-in-use`), se muestra un mensaje claro en vez de
+  fallar en silencio — **a propósito no se intenta fusionar los datos de
+  ambas cuentas** (mover círculos/aliados de un `uid` a otro en Firestore
+  es una operación de datos bastante más delicada, fuera de este cambio).
+- **Email/contraseña — Hecho**: `HomeLogic.linkWithEmailPassword(email, password)`
+  valida formato mínimo en el cliente y vincula con
+  `EmailAuthProvider.credential` + `linkWithCredential`, con mensajes de
+  error específicos por código (`email-already-in-use`, `invalid-email`,
+  `weak-password`).
+- **Teléfono (SMS) — pendiente, a propósito no se tocó**: mayor
+  complejidad (verificación por reCAPTCHA/Play Integrity en Android,
+  push silencioso vía APNs en iOS) y costo (SMS fuera de la capa
+  gratuita) que las otras dos, y no se puede probar de punta a punta
+  desde este entorno. Queda para cuando haya oportunidad de probarlo en
+  un dispositivo real.
+
+**Pasos manuales pendientes para que funcione en dispositivo** (ninguno
+es código; ninguno se pudo verificar desde este entorno):
+
+- **Android**: registrar el SHA-1 (y SHA-256 para Play App Signing) del
+  certificado de firma en la consola de Firebase (Configuración del
+  proyecto → tu app Android → Agregar huella digital) — sin esto, Google
+  Sign-In falla en runtime aunque el código esté bien. Con la firma debug
+  actual (`android/app/build.gradle.kts`, "Signing with the debug keys
+  for now"), es el SHA-1 de esa keystore de debug.
+- **iOS**: agregar un `CFBundleURLTypes`/`CFBundleURLSchemes` a
+  `ios/Runner/Info.plist` con el `REVERSED_CLIENT_ID` del
+  `GoogleService-Info.plist` real (ver nota de este mismo archivo que
+  falta, sección 1) — sin esto, Google Sign-In no puede volver a la app
+  tras el login. `ios/Runner/Info.plist` hoy no tiene ningún
+  `CFBundleURLTypes` — confirmado al revisar el archivo.
+- **Consola de Firebase**: habilitar los proveedores Google y
+  Email/contraseña en Authentication → Sign-in method, si no están ya
+  habilitados (`signInAnonymously()` solo necesita el proveedor
+  Anónimo, que sí está activo desde la Fase 1).
 
 ## 7. Qué NO se incluye en este plan
 

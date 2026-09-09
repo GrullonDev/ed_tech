@@ -50,10 +50,32 @@ necesario para subir símbolos de crashes nativos/NDK. **Falta activar
 Crashlytics para el proyecto `rachatribu` en la consola de Firebase**
 (Release Monitoring → Crashlytics → habilitar) si todavía no está
 activo — sin eso, la app manda los reportes pero la consola no los
-muestra. iOS no necesitó cambios de proyecto Xcode para el reporte
-Dart-level; el paso opcional de subir dSYMs para symbolicar crashes
-nativos de iOS se deja pendiente (requiere Xcode, que este entorno no
-tiene) — ver plan de pruebas más abajo.
+muestra.
+
+**iOS**: no necesitó cambios de proyecto Xcode para el reporte
+Dart-level — `Firebase.initializeApp` ya usa `DefaultFirebaseOptions.currentPlatform`
+(`lib/firebase_options.dart`) de forma 100% programática, así que
+Crashlytics debería arrancar igual aunque `ios/Runner` no tenga un
+`GoogleService-Info.plist` commiteado (hoy no lo tiene). Para una prueba
+completa en dispositivo real, igual conviene:
+
+1. Descargar el `GoogleService-Info.plist` real desde la consola de
+   Firebase (Configuración del proyecto → app iOS, bundle id
+   `com.example.edtechTiktok`) y agregarlo a `ios/Runner` desde Xcode
+   ("Copy items if needed" + target membership en Runner) — es lo que
+   el SDK nativo espera por convención.
+2. Opcional, solo para symbolicar crashes nativos/NDK de iOS: agregar
+   el Run Script Phase `${PODS_ROOT}/FirebaseCrashlytics/run` en Xcode.
+   El reporte de crashes Dart-level ya funciona sin este paso.
+3. `flutter build ios`/`flutter run` en un Mac corre `pod install` solo
+   y trae `FirebaseCrashlytics` — no hace falta tocar el Podfile a mano
+   (no está commiteado en este repo, es normal en proyectos Flutter).
+
+Ninguno de los 3 pasos requiere Xcode GUI para que Crashlytics *empiece*
+a reportar (la inicialización Dart ya cubre lo básico), pero si algo no
+aparece en la consola durante la prueba en dispositivo, este es el
+primer lugar a revisar. No pude verificar nada de esto desde este
+entorno (no hay Mac/Xcode) — ver plan de pruebas más abajo.
 
 **Cómo se integra** (patrón ya usado en `main.dart` para Firebase Core: si
 falla, la app sigue funcionando):

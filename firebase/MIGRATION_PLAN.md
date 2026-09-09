@@ -218,9 +218,27 @@ Lo único que sigue haciendo falta del lado de la app:
    no son de un círculo (aliados, miembros simulados vía
    `addMemberToCircle`) — esos siguen siendo locales a propósito, ver sus
    propios doc-comments.
-6. **Fase 5**: decidir si Hive se retira del todo o se deja como fallback
-   de arranque; en cualquier caso, ya no hace falta el outbox manual
-   (sección 4).
+6. **Fase 5 (hecha — decisión: Hive se queda como fallback)**: Hive
+   **no** se retira. Sigue siendo la fuente de verdad que arranca la app
+   al instante (incluso en la primerísima apertura sin red, antes de que
+   exista cualquier caché de Firestore) y el respaldo si Firebase no
+   está disponible — todo el código de esta migración ya está escrito
+   sobre esa premisa (ver doc-comments de `_mirrorCircleCreation`,
+   `_mirrorCheckIn`, `_mirrorActivityEvent`, `sendAllyRequest`, etc.: cada
+   escritura a Firestore es fire-and-forget, nunca bloquea ni reemplaza
+   el guardado local). Retirarlo ataría la app por completo a tener una
+   sesión de Firestore ya sincronizada, perdiendo la garantía de "100%
+   funcional offline" que tiene hoy.
+
+   El "outbox manual" que motivaba originalmente esta fase nunca llegó a
+   construirse (sección 4 ya explica por qué no hacía falta), así que no
+   queda nada que retirar ahí tampoco.
+
+   Con esto, las Fases 1–5 de este plan quedan completas. Lo único
+   pendiente de todo el documento sigue siendo la decisión de la
+   sección 0 (Blaze/Cloud Functions vs. cálculo 100% cliente) y, si se
+   opta por Blaze, migrar `completedMembers`/`isPerfect`/racha/gotas a
+   leer de `memberStats` en vez de los cálculos locales actuales.
 
 Cada fase deja la app funcional y testeable de punta a punta antes de
 empezar la siguiente.

@@ -177,6 +177,13 @@ class HomeLogic extends ChangeNotifier {
     _playerId = savedUser?.playerId ?? '';
     usernameController.text = _username;
 
+    // Perfiles guardados antes de que existiera `playerId` reciben uno
+    // nuevo al leerse (ver AppUser.fromMap); se persiste de una vez para
+    // que quede fijo entre reinicios en vez de regenerarse en cada
+    // arranque (rompería "Invocar por QR": el otro dispositivo dejaría de
+    // reconocer un `playerId` que cambia solo).
+    if (savedUser != null) LocalStorageService.saveUser(savedUser);
+
     // Círculos guardados antes de que HabitCircle tuviera `id` reciben uno
     // nuevo al leerse (ver HabitCircle.fromMap); se persiste de una vez
     // para que ese id quede fijo entre reinicios y sirva de ID de

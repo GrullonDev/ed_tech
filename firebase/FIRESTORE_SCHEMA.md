@@ -149,16 +149,24 @@ firebase deploy --only functions,firestore:rules,firestore:indexes
 `functions/` usa **pnpm** (no npm): más liviano, con un store global
 compartido entre proyectos (`~/.local/share/pnpm/store`) en vez de
 duplicar `node_modules` por copia, y más estricto con dependencias
-fantasma (solo resuelve lo que está declarado en `package.json`). Con
-`corepack` (ya viene con Node ≥ 16.9) alcanza con:
+fantasma (solo resuelve lo que está declarado en `package.json`).
+
+Instalar pnpm **directo con npm** (recomendado):
 
 ```bash
-corepack enable
+npm install -g pnpm@12.3.4
 ```
 
-y pnpm queda disponible automáticamente en la versión fijada por
-`"packageManager"` en `functions/package.json` — no hace falta instalarlo
-aparte. `firebase.json` ya trae configurado el `predeploy` de `functions`
+`corepack enable` también funciona en teoría (pnpm queda fijado en la
+versión de `"packageManager"` de `functions/package.json` sin instalar
+nada aparte), pero algunas copias de `corepack` traen claves de firma
+desactualizadas tras una rotación que hizo npm — si da un error de tipo
+`Cannot find matching keyid` al intentar bajar pnpm, no es un problema de
+red ni del proyecto: actualizar corepack primero
+(`npm install -g corepack@latest`) o instalar pnpm directo con npm (arriba)
+lo resuelve.
+
+`firebase.json` ya trae configurado el `predeploy` de `functions`
 (`pnpm install --frozen-lockfile && pnpm run build`), así que ese paso se
 ejecuta solo en cada deploy — no hace falta correr nada a mano antes
 (aunque no está de más para ver errores más rápido: `pnpm --dir functions

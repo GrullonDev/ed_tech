@@ -60,6 +60,10 @@ class _MyHomePageState extends State<MyHomePage> {
           onOpenProfile: _openProfile,
           onInviteMember: _logic.addMemberToCircle,
           allies: _logic.allies,
+          todaysTrivia: _logic.todaysTrivia,
+          hasAnsweredTodaysTrivia: _logic.hasAnsweredTodaysTrivia,
+          triviaLastSelectedIndex: _logic.triviaLastSelectedIndex,
+          onAnswerTrivia: _logic.answerTrivia,
         );
       },
     );

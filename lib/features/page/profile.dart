@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 import 'package:edtech_tiktok/core/data/streak_cards.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
@@ -464,13 +466,8 @@ class _AccountLinkingSection extends StatelessWidget {
     final emailLinked = linkedProviderIds.contains('password');
     if (googleLinked && emailLinked) return const SizedBox.shrink();
 
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppShadows.card,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -890,13 +887,8 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: AppShadows.card,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -938,13 +930,8 @@ class _PresenceMap extends StatelessWidget {
       const Duration(days: 7 * (_weeks - 1)),
     );
 
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppShadows.card,
-      ),
       child: Column(
         children: [
           for (var row = 0; row < 7; row++) ...[

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
 
@@ -20,9 +22,8 @@ class CreateHabitPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Crear círculo')),
+    return GlassScaffold(
+      appBar: GlassAppBar(title: const Text('Crear círculo')),
       body: AppMaxWidth(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -57,9 +58,9 @@ class CreateHabitPage extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl2),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _submit(context),
-                child: const Text('Crear círculo'),
+              child: GlassButton(
+                onTap: () => _submit(context),
+                label: 'Crear círculo',
               ),
             ),
           ],

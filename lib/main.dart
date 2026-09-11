@@ -8,8 +8,8 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 
 import 'package:edtech_tiktok/app.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
-import 'package:edtech_tiktok/firebase_options.dart';
 import 'package:edtech_tiktok/features/widgets/onboarding.dart';
+import 'package:edtech_tiktok/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

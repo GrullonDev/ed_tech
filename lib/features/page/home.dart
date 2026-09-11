@@ -64,6 +64,10 @@ class _MyHomePageState extends State<MyHomePage> {
           hasAnsweredTodaysTrivia: _logic.hasAnsweredTodaysTrivia,
           triviaLastSelectedIndex: _logic.triviaLastSelectedIndex,
           onAnswerTrivia: _logic.answerTrivia,
+          hasPendingPredictionToday: _logic.hasPendingPredictionToday,
+          pendingPredictionCircleId: _logic.pendingPredictionCircleId,
+          predictionBetAmount: HomeLogic.predictionBetAmount,
+          onPlacePrediction: _logic.placePrediction,
         );
       },
     );
@@ -153,6 +157,9 @@ class _MyHomePageState extends State<MyHomePage> {
             linkedProviderIds: _logic.linkedProviderIds,
             onLinkWithGoogle: _logic.linkWithGoogle,
             onLinkWithEmailPassword: _logic.linkWithEmailPassword,
+            unlockedStreakCardMilestones: _logic.unlockedStreakCardMilestones,
+            pendingStreakCardMilestones: _logic.pendingStreakCardMilestones,
+            onOpenStreakCard: _logic.openStreakCard,
           ),
         ),
       ),

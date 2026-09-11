@@ -105,6 +105,23 @@ class HomeLogic extends ChangeNotifier {
   /// vacío, [todaysTrivia] cae al banco local [TriviaBank.questions].
   List<TriviaQuestion> _remoteTriviaQuestions = [];
 
+  /// Hitos de racha (ver [Milestone.targets]) cuya Carta de Racha ya fue
+  /// abierta — ver [openStreakCard] y [pendingStreakCardMilestones].
+  List<int> _openedStreakCardMilestones = [];
+
+  /// ID del círculo con una Predicción de Tribu pendiente de resolver, o
+  /// `null` si no hay ninguna. Ver [placePrediction].
+  String? _predictionPendingCircleId;
+
+  /// Fecha (normalizada a medianoche) sobre la que se hizo la predicción
+  /// pendiente, o `null` si no hay ninguna.
+  DateTime? _predictionPendingDate;
+
+  /// Saldo neto (puede ser negativo) de Gotas de Constancia ganadas o
+  /// perdidas en la Predicción de Tribu — ver doc-comment de
+  /// [constancyDrops].
+  int _predictionNetDrops = 0;
+
   bool get hasUsername => _hasUsername;
   String get username => _username;
   DateTime? get memberSince => _memberSince;
@@ -158,10 +175,13 @@ class HomeLogic extends ChangeNotifier {
   /// alcanzado), nunca de un contador guardado aparte que dependa de
   /// check-ins, para que no se pueda desincronizar de ellos.
   ///
-  /// La única excepción intencional es [_triviaBonusDrops]: sí es un
-  /// contador persistido, pero no reemplaza ni puede desincronizar nada de
-  /// check-ins — es una fuente de gotas totalmente aparte, ganada por
-  /// responder bien el "Desafío del día" (ver [answerTrivia]).
+  /// La misma excepción intencional aplica a [_triviaBonusDrops] y
+  /// [_predictionNetDrops]: son contadores persistidos, pero ninguno
+  /// reemplaza ni puede desincronizar nada de check-ins — son fuentes de
+  /// gotas totalmente aparte, ganadas (o apostadas y perdidas, en el caso
+  /// de la predicción) por responder bien el "Desafío del día" (ver
+  /// [answerTrivia]) o jugar la "Predicción de Tribu" (ver
+  /// [placePrediction]).
   int get constancyDrops {
     final totalDrops = _circles.fold<int>(
       0,
@@ -171,7 +191,10 @@ class HomeLogic extends ChangeNotifier {
     final milestonesReached = milestoneBonuses
         .where((m) => recordStreakDays >= m)
         .length;
-    return totalDrops + milestonesReached * 50 + _triviaBonusDrops;
+    return totalDrops +
+        milestonesReached * 50 +
+        _triviaBonusDrops +
+        _predictionNetDrops;
   }
 
   /// Cuántas gotas otorga responder bien el desafío de trivia de hoy.
@@ -231,6 +254,112 @@ class HomeLogic extends ChangeNotifier {
     return isCorrect;
   }
 
+  /// Hitos de racha ya alcanzados (ver [Milestone.targets]), cada uno con
+  /// su Carta de Racha correspondiente ya desbloqueada (aunque todavía no
+  /// se haya "abierto" — ver [pendingStreakCardMilestones]).
+  List<int> get unlockedStreakCardMilestones =>
+      Milestone.targets.where((m) => recordStreakDays >= m).toList();
+
+  /// Hitos desbloqueados cuya carta todavía no fue abierta — se muestran
+  /// "selladas" en el perfil hasta que el usuario las toca.
+  List<int> get pendingStreakCardMilestones => unlockedStreakCardMilestones
+      .where((m) => !_openedStreakCardMilestones.contains(m))
+      .toList();
+
+  /// Abre la Carta de Racha de [milestoneDays], revelándola de forma
+  /// permanente. No hace nada si ese hito todavía no está desbloqueado o
+  /// si esa carta ya estaba abierta.
+  void openStreakCard(int milestoneDays) {
+    if (!unlockedStreakCardMilestones.contains(milestoneDays)) return;
+    if (_openedStreakCardMilestones.contains(milestoneDays)) return;
+    _openedStreakCardMilestones = [
+      ..._openedStreakCardMilestones,
+      milestoneDays,
+    ];
+    LocalStorageService.saveOpenedStreakCardMilestones(
+      _openedStreakCardMilestones,
+    );
+    _logAnalyticsEvent('streak_card_opened', {
+      'milestone_days': milestoneDays,
+    });
+    notifyListeners();
+  }
+
+  /// Cuántas Gotas de Constancia se apuestan en cada Predicción de Tribu.
+  static const int predictionBetAmount = 20;
+
+  /// `true` si hay una predicción hecha hoy, todavía sin resolver.
+  bool get hasPendingPredictionToday =>
+      _predictionPendingDate == CheckIn.today();
+
+  /// ID del círculo sobre el que se hizo la predicción pendiente de hoy, o
+  /// `null` si no hay ninguna.
+  String? get pendingPredictionCircleId =>
+      hasPendingPredictionToday ? _predictionPendingCircleId : null;
+
+  /// Apuesta [predictionBetAmount] gotas a que [circle] va a lograr el
+  /// Círculo Perfecto hoy (ver [HabitCircle.isPerfect]) — se resuelve
+  /// automáticamente la próxima vez que se abra la app en un día distinto
+  /// (ver [_resolvePendingPredictionIfDue]). No hace nada si ya hay una
+  /// predicción pendiente hoy o si no alcanzan las gotas para apostar.
+  /// Retorna `true` si la apuesta se registró.
+  bool placePrediction(HabitCircle circle) {
+    if (hasPendingPredictionToday) return false;
+    if (constancyDrops < predictionBetAmount) return false;
+    _predictionPendingCircleId = circle.id;
+    _predictionPendingDate = CheckIn.today();
+    _predictionNetDrops -= predictionBetAmount;
+    LocalStorageService.savePredictionPendingCircleId(circle.id);
+    LocalStorageService.savePredictionPendingDate(_predictionPendingDate);
+    LocalStorageService.savePredictionNetDrops(_predictionNetDrops);
+    _logAnalyticsEvent('prediction_placed', {
+      'circle_category': circle.category,
+    });
+    notifyListeners();
+    return true;
+  }
+
+  /// Resuelve una predicción pendiente de un día anterior: si el círculo
+  /// tuvo check-in ese día, devuelve la apuesta más una ganancia igual; si
+  /// no, la apuesta ya se dio por perdida al apostar (ver
+  /// [placePrediction]). Se llama en [_loadFromStorage] antes de
+  /// [_applyDailyResetIfNeeded] — los check-ins históricos del círculo no
+  /// se tocan con el cambio de día, así que la predicción sigue pudiendo
+  /// evaluarse aunque hayan pasado varios días sin abrir la app.
+  void _resolvePendingPredictionIfDue() {
+    final pendingDate = _predictionPendingDate;
+    if (pendingDate == null || pendingDate == CheckIn.today()) return;
+    HabitCircle? circle;
+    for (final c in _circles) {
+      if (c.id == _predictionPendingCircleId) {
+        circle = c;
+        break;
+      }
+    }
+    final won =
+        circle != null && circle.checkIns.any((c) => c.date == pendingDate);
+    if (won) {
+      _predictionNetDrops += predictionBetAmount * 2;
+      _pushActivityEvent(
+        emoji: '🔮',
+        message:
+            '¡Ganaste tu Predicción de Tribu sobre "${circle!.name}"! '
+            '+${predictionBetAmount * 2} gotas.',
+      );
+    } else {
+      _pushActivityEvent(
+        emoji: '💔',
+        message: 'Perdiste tu Predicción de Tribu de ayer.',
+      );
+    }
+    _predictionPendingCircleId = null;
+    _predictionPendingDate = null;
+    LocalStorageService.savePredictionPendingCircleId(null);
+    LocalStorageService.savePredictionPendingDate(null);
+    LocalStorageService.savePredictionNetDrops(_predictionNetDrops);
+    _logAnalyticsEvent('prediction_resolved', {'won': won});
+  }
+
   /// Fracción de días transcurridos en el mes actual (desde el día 1 hasta
   /// hoy) en los que hubo al menos un check-in en algún círculo.
   double get monthlyComplianceRate {
@@ -262,6 +391,12 @@ class HomeLogic extends ChangeNotifier {
         LocalStorageService.readTriviaLastSelectedIndex();
     _triviaBonusDrops = LocalStorageService.readTriviaBonusDrops();
     _remoteTriviaQuestions = LocalStorageService.readRemoteTriviaQuestions();
+    _openedStreakCardMilestones =
+        LocalStorageService.readOpenedStreakCardMilestones();
+    _predictionPendingCircleId =
+        LocalStorageService.readPredictionPendingCircleId();
+    _predictionPendingDate = LocalStorageService.readPredictionPendingDate();
+    _predictionNetDrops = LocalStorageService.readPredictionNetDrops();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
@@ -275,6 +410,7 @@ class HomeLogic extends ChangeNotifier {
     // documento estable al espejar el círculo en Firestore.
     if (_circles.isNotEmpty) LocalStorageService.saveCircles(_circles);
 
+    _resolvePendingPredictionIfDue();
     _applyDailyResetIfNeeded();
     _applyPendingStreakFreezes();
     for (final circle in _circles) {

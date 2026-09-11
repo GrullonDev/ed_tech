@@ -25,9 +25,15 @@ plugins {
     // START: Crashlytics (firebase/PRODUCTS_PLAN.md, sección 1)
     id("com.google.firebase.crashlytics") version("3.0.2") apply false
     // END: Crashlytics
-    // START: Performance Monitoring (firebase/PRODUCTS_PLAN.md, sección 2)
-    id("com.google.firebase.firebase-perf") version("1.4.2") apply false
-    // END: Performance Monitoring
+    // Performance Monitoring (firebase/PRODUCTS_PLAN.md, sección 2): el
+    // plugin de Gradle com.google.firebase.firebase-perf (probado hasta
+    // 1.4.2) todavía depende de com.android.build.api.transform.Transform,
+    // que AGP 9.x eliminó por completo — aplicarlo rompe el build entero
+    // ("Could not generate a decorated class for type FirebasePerfPlugin").
+    // Se saca el plugin hasta que Firebase publique una versión compatible
+    // con AGP 9; firebase_performance en pubspec.yaml sigue funcionando
+    // igual para app-start y traces manuales (ver nota en PRODUCTS_PLAN.md),
+    // solo se pierde la instrumentación automática de red en Android.
     // END: FlutterFire Configuration
     id("org.jetbrains.kotlin.android") version "2.4.0" apply false
 }

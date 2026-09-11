@@ -5,9 +5,8 @@ plugins {
     // START: Crashlytics (firebase/PRODUCTS_PLAN.md, sección 1)
     id("com.google.firebase.crashlytics")
     // END: Crashlytics
-    // START: Performance Monitoring (firebase/PRODUCTS_PLAN.md, sección 2)
-    id("com.google.firebase.firebase-perf")
-    // END: Performance Monitoring
+    // Performance Monitoring: plugin sacado por incompatibilidad con AGP 9.x
+    // — ver nota en android/settings.gradle.kts y PRODUCTS_PLAN.md sección 2.
     // END: FlutterFire Configuration
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")

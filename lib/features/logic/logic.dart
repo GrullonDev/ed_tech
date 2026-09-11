@@ -99,6 +99,12 @@ class HomeLogic extends ChangeNotifier {
   /// desafío de trivia — ver doc-comment de [constancyDrops].
   int _triviaBonusDrops = 0;
 
+  /// Banco de preguntas sincronizado desde Firestore (`triviaQuestions`,
+  /// ver [_syncTriviaQuestions]), cacheado en Hive. Vacío hasta la primera
+  /// sincronización exitosa (o si nunca hay red/sesión) — mientras esté
+  /// vacío, [todaysTrivia] cae al banco local [TriviaBank.questions].
+  List<TriviaQuestion> _remoteTriviaQuestions = [];
+
   bool get hasUsername => _hasUsername;
   String get username => _username;
   DateTime? get memberSince => _memberSince;
@@ -171,18 +177,28 @@ class HomeLogic extends ChangeNotifier {
   /// Cuántas gotas otorga responder bien el desafío de trivia de hoy.
   static const int triviaCorrectAnswerReward = 15;
 
+  /// Banco de preguntas del que sale [todaysTrivia]: el sincronizado desde
+  /// Firestore si ya llegó al menos una vez ([_remoteTriviaQuestions]), o
+  /// el banco local hardcodeado ([TriviaBank.questions]) mientras tanto —
+  /// nunca vacío, así que siempre hay desafío del día.
+  List<TriviaQuestion> get _triviaPool =>
+      _remoteTriviaQuestions.isNotEmpty
+          ? _remoteTriviaQuestions
+          : TriviaBank.questions;
+
   /// Pregunta del "Desafío del día": misma para todos los usuarios que
   /// abran la app ese día (como un Wordle), elegida de forma determinística
-  /// a partir de la fecha — no depende de red ni de qué preguntas ya
-  /// contestó este dispositivo. Insertar preguntas en medio de
-  /// [TriviaBank.questions] corre el índice de las que quedan detrás (ver
-  /// doc-comment de esa clase).
+  /// a partir de la fecha sobre [_triviaPool] — no depende de qué
+  /// preguntas ya contestó este dispositivo. Insertar una pregunta en medio
+  /// de [TriviaBank.questions] (o cambiar el `order` de una remota) corre
+  /// el índice de las que quedan detrás.
   TriviaQuestion get todaysTrivia {
+    final pool = _triviaPool;
     final daysSinceEpoch = CheckIn.today()
         .difference(DateTime(2024, 1, 1))
         .inDays;
-    final index = daysSinceEpoch % TriviaBank.questions.length;
-    return TriviaBank.questions[index];
+    final index = daysSinceEpoch % pool.length;
+    return pool[index];
   }
 
   /// `true` si ya se respondió el desafío de hoy — controla si la UI
@@ -245,6 +261,7 @@ class HomeLogic extends ChangeNotifier {
     _triviaLastSelectedIndex =
         LocalStorageService.readTriviaLastSelectedIndex();
     _triviaBonusDrops = LocalStorageService.readTriviaBonusDrops();
+    _remoteTriviaQuestions = LocalStorageService.readRemoteTriviaQuestions();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
@@ -267,6 +284,7 @@ class HomeLogic extends ChangeNotifier {
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
     _updatePrimaryCategoryUserProperty();
+    unawaited(_syncTriviaQuestions());
     notifyListeners();
   }
 
@@ -489,6 +507,44 @@ class HomeLogic extends ChangeNotifier {
   /// éxito, o `null` si la app sigue en modo 100% local. Se usa como
   /// guardia para no intentar escribir en Firestore cuando no hay sesión.
   String? get _firebaseUid => FirebaseAuth.instance.currentUser?.uid;
+
+  /// Trae el banco de preguntas del "Desafío del día" desde la colección
+  /// `triviaQuestions` de Firestore (ver `firebase/FIRESTORE_SCHEMA.md`),
+  /// para que se puedan agregar/editar preguntas desde la consola de
+  /// Firebase sin publicar una nueva versión de la app. Es un `get()` de
+  /// una sola vez por sesión (no un listener en vivo): el contenido
+  /// cambia con tan poca frecuencia que no amerita mantener una
+  /// suscripción abierta. El resultado se cachea en Hive
+  /// ([LocalStorageService.saveRemoteTriviaQuestions]) para que, si esta
+  /// sesión no tiene red, la próxima siga viendo el último banco
+  /// sincronizado en vez de caer directo al banco local hardcodeado.
+  ///
+  /// A propósito no usa `where`/`orderBy` en la consulta (trae toda la
+  /// colección y filtra/ordena en el cliente): así evita depender de un
+  /// índice compuesto de Firestore por una colección que, en la práctica,
+  /// nunca va a tener más que unas pocas docenas de documentos.
+  Future<void> _syncTriviaQuestions() async {
+    if (_firebaseUid == null) return;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('triviaQuestions')
+          .get();
+      final questions =
+          snapshot.docs
+              .map((doc) => doc.data())
+              .where((data) => data['active'] as bool? ?? true)
+              .map(TriviaQuestion.fromMap)
+              .toList()
+            ..sort((a, b) => a.order.compareTo(b.order));
+      if (questions.isEmpty) return;
+      _remoteTriviaQuestions = questions;
+      await LocalStorageService.saveRemoteTriviaQuestions(questions);
+      notifyListeners();
+    } catch (_) {
+      // Se ignora a propósito: sin red o sin la colección todavía creada,
+      // [todaysTrivia] sigue funcionando con el banco cacheado/local.
+    }
+  }
 
   /// `true` si la sesión actual es anónima (o si no hay sesión de Firebase
   /// en absoluto) — es decir, si todavía tiene sentido ofrecer "Vincular

@@ -5,6 +5,7 @@ import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
+import 'package:edtech_tiktok/core/model/trivia_question.dart';
 
 /// Persistencia local temporal (Hive) para que la app sea funcional sin
 /// backend. Guarda el usuario, los círculos y los hábitos diarios. No usa
@@ -22,6 +23,7 @@ class LocalStorageService {
   static const String _todayHabitsBoxName = 'today_habits_box';
   static const String _allyRequestsBoxName = 'ally_requests_box';
   static const String _activityFeedBoxName = 'activity_feed_box';
+  static const String _triviaQuestionsBoxName = 'trivia_questions_box';
   static const String _userKey = 'user';
   static const String _lastActiveDateKey = 'lastActiveDate';
   static const String _alliesKey = 'allies';
@@ -35,6 +37,7 @@ class LocalStorageService {
   static late Box<dynamic> _todayHabitsBox;
   static late Box<dynamic> _allyRequestsBox;
   static late Box<dynamic> _activityFeedBox;
+  static late Box<dynamic> _triviaQuestionsBox;
 
   /// Inicializa Hive y abre las cajas necesarias. Debe llamarse una vez en
   /// `main()` antes de `runApp`.
@@ -45,6 +48,7 @@ class LocalStorageService {
     _todayHabitsBox = await Hive.openBox<dynamic>(_todayHabitsBoxName);
     _allyRequestsBox = await Hive.openBox<dynamic>(_allyRequestsBoxName);
     _activityFeedBox = await Hive.openBox<dynamic>(_activityFeedBoxName);
+    _triviaQuestionsBox = await Hive.openBox<dynamic>(_triviaQuestionsBoxName);
   }
 
   // ---- Usuario ----
@@ -168,6 +172,25 @@ class LocalStorageService {
   static Future<void> saveHasSeenGameTour(bool value) =>
       _settingsBox.put(_hasSeenGameTourKey, value);
 
+  /// Caché local del banco de preguntas sincronizado desde Firestore (ver
+  /// `HomeLogic._syncTriviaQuestions`, colección `triviaQuestions`). Vacío
+  /// hasta la primera sincronización exitosa; mientras esté vacío,
+  /// `HomeLogic.todaysTrivia` usa `TriviaBank.questions` (banco local
+  /// hardcodeado) — nunca se queda sin desafío del día por falta de red.
+  static List<TriviaQuestion> readRemoteTriviaQuestions() =>
+      _triviaQuestionsBox.values
+          .map(
+            (e) => TriviaQuestion.fromMap(Map<String, dynamic>.from(e as Map)),
+          )
+          .toList();
+
+  static Future<void> saveRemoteTriviaQuestions(
+    List<TriviaQuestion> questions,
+  ) async {
+    await _triviaQuestionsBox.clear();
+    await _triviaQuestionsBox.addAll(questions.map((q) => q.toMap()));
+  }
+
   /// Borra todo el estado local (útil para pruebas o "cerrar sesión" local).
   static Future<void> clearAll() async {
     await _settingsBox.clear();
@@ -175,5 +198,6 @@ class LocalStorageService {
     await _todayHabitsBox.clear();
     await _allyRequestsBox.clear();
     await _activityFeedBox.clear();
+    await _triviaQuestionsBox.clear();
   }
 }

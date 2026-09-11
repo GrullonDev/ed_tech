@@ -105,6 +105,18 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------
+    // triviaQuestions/{questionId}: banco del "Desafío del día" (ver
+    // firebase/FIRESTORE_SCHEMA.md). Contenido educativo público, no hay
+    // nada que "falsear": cualquier usuario autenticado puede leerlo, pero
+    // solo se edita a mano desde la consola de Firebase (o el script de
+    // seed en functions/scripts/), nunca desde la app.
+    // ------------------------------------------------------------------
+    match /triviaQuestions/{questionId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------------
     // allyRequests/{requestId}: requestId es siempre "{fromUid}_{toUid}".
     // ------------------------------------------------------------------
     match /allyRequests/{requestId} {

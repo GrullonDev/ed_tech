@@ -345,5 +345,296 @@ abstract final class TriviaBank {
           'pero que es la unidad básica de un sistema mayor — pequeños '
           'hábitos diarios que, sumados, generan cambios grandes.',
     ),
+    TriviaQuestion(
+      question: '¿Qué es la "regla de los dos minutos" para empezar un '
+          'hábito nuevo?',
+      options: [
+        'Solo podés practicar el hábito 2 minutos por semana',
+        'Reducir cualquier hábito nuevo a algo que tome 2 minutos o menos',
+        'Esperar 2 minutos antes de decidir si hacerlo',
+        'Hacer 2 minutos de descanso después de cada hábito',
+      ],
+      correctIndex: 1,
+      explanation: 'Popularizada por James Clear: "leer 30 páginas" se '
+          'vuelve "leer 1 página", "correr 5km" se vuelve "ponerme las '
+          'zapatillas". Bajar el umbral de entrada es lo que hace que un '
+          'hábito realmente empiece.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué le pasa a la motivación a lo largo del tiempo, '
+          'comparada con la constancia de un sistema o rutina?',
+      options: [
+        'La motivación es más estable que un sistema',
+        'La motivación fluctúa mucho; un sistema/rutina sostiene el '
+            'comportamiento incluso sin ella',
+        'Son exactamente lo mismo',
+        'La motivación siempre aumenta con el tiempo',
+      ],
+      correctIndex: 1,
+      explanation: 'Depender solo de "sentirse motivado" falla porque la '
+          'motivación varía día a día. Un sistema (hora fija, entorno '
+          'preparado) sostiene el hábito incluso los días de baja '
+          'motivación.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué beneficio comprobado tiene pasar tiempo al aire '
+          'libre / luz solar por la mañana?',
+      options: [
+        'Ninguno relevante',
+        'Ayuda a regular el ritmo circadiano y mejorar el sueño nocturno',
+        'Solo sirve para broncearse',
+        'Empeora la calidad del sueño',
+      ],
+      correctIndex: 1,
+      explanation: 'La exposición a luz natural por la mañana ayuda a '
+          'sincronizar el reloj biológico interno, lo que mejora la '
+          'calidad del sueño esa misma noche.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué es más sostenible al elegir una rutina de '
+          'ejercicio nueva?',
+      options: [
+        'Elegir la rutina más de moda, aunque no te guste',
+        'Elegir una actividad que realmente disfrutes hacer',
+        'Elegir la más difícil para "obligarte" a mejorar',
+        'No importa cuál elijas',
+      ],
+      correctIndex: 1,
+      explanation: 'La adherencia a largo plazo depende mucho más del '
+          'disfrute genuino de la actividad que de su "eficiencia" '
+          'teórica — el mejor ejercicio es el que de verdad vas a seguir '
+          'haciendo.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué significa "recaída" (relapse) en el contexto de '
+          'cambio de comportamiento, y cómo se maneja mejor?',
+      options: [
+        'Significa que fallaste para siempre',
+        'Es una etapa esperable del cambio; lo importante es retomar '
+            'rápido',
+        'Nunca sucede si el hábito es bueno',
+        'Hay que empezar un hábito completamente distinto',
+      ],
+      correctIndex: 1,
+      explanation: 'Modelos como el de Prochaska y DiClemente incluyen la '
+          'recaída como una etapa normal del cambio de comportamiento, no '
+          'un fracaso final — lo que predice el éxito a largo plazo es '
+          'qué tan rápido se retoma.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué rol cumple la "identidad" en mantener un hábito, '
+          'según la psicología del comportamiento?',
+      options: [
+        'Ninguno, es solo un concepto abstracto',
+        'Verte a vos mismo como "el tipo de persona que hace X" refuerza '
+            'el comportamiento',
+        'Solo importa la identidad para hábitos negativos',
+        'Cambiar de identidad rompe cualquier hábito',
+      ],
+      correctIndex: 1,
+      explanation: 'Cuando un comportamiento se conecta con cómo te ves a '
+          'vos mismo ("soy alguien constante"), se vuelve más resistente '
+          'a excusas puntuales que si solo perseguís un resultado externo.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué es el "efecto dominó de los hábitos" (o "keystone '
+          'habit")?',
+      options: [
+        'Un hábito que, al adoptarse, facilita la aparición de otros '
+            'hábitos positivos',
+        'Un hábito que rompe todos los demás',
+        'Un tipo de meditación específica',
+        'Un hábito que solo funciona los domingos',
+      ],
+      correctIndex: 0,
+      explanation: 'Hábitos "ancla" como hacer ejercicio regularmente '
+          'suelen arrastrar mejoras en otras áreas (alimentación, sueño, '
+          'productividad) sin proponérselo directamente — el concepto lo '
+          'popularizó Charles Duhigg en "El poder de los hábitos".',
+    ),
+    TriviaQuestion(
+      question: '¿Qué tan efectivo es "castigarse" mentalmente después '
+          'de fallar un hábito, para volver a intentarlo?',
+      options: [
+        'Muy efectivo, genera disciplina',
+        'Poco efectivo: la autocompasión ayuda más a retomar que la '
+            'autocrítica dura',
+        'Es indiferente',
+        'Solo funciona en hábitos de ejercicio',
+      ],
+      correctIndex: 1,
+      explanation: 'Investigaciones sobre autocompasión (Kristin Neff, '
+          'entre otras) muestran que tratarse con comprensión tras un '
+          'tropiezo predice mejor la persistencia que la autocrítica '
+          'severa, que suele llevar a abandonar del todo.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué tan seguido se recomienda revisar/ajustar tus '
+          'metas de hábitos?',
+      options: [
+        'Nunca, una meta fijada no debe tocarse',
+        'Periódicamente, ajustándolas según lo que la experiencia real '
+            'te muestra que funciona',
+        'Todos los días cambiar de meta',
+        'Solo cuando fallás por completo',
+      ],
+      correctIndex: 1,
+      explanation: 'Las metas rígidas que ignoran la realidad (poco '
+          'tiempo, cambios de contexto) suelen abandonarse del todo. '
+          'Revisarlas cada cierto tiempo con datos reales las hace más '
+          'sostenibles.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué es el "efecto de mera exposición" y cómo se '
+          'relaciona con formar hábitos?',
+      options: [
+        'No tiene relación con hábitos',
+        'Cuanto más expuesto estás a algo, más cómodo/familiar se vuelve '
+            'con el tiempo',
+        'Solo aplica a publicidad',
+        'Hace que odies más una actividad repetida',
+      ],
+      correctIndex: 1,
+      explanation: 'La repetición genera familiaridad y preferencia '
+          '(Robert Zajonc lo estudió en los 60s) — por eso un hábito '
+          'incómodo al principio se vuelve más natural cuanto más se '
+          'repite, aunque no cambie nada más.',
+    ),
+    TriviaQuestion(
+      question: '¿Cuál de estos snacks aporta más proteína por porción?',
+      options: [
+        'Un puñado de almendras',
+        'Una manzana',
+        'Una galleta',
+        'Un caramelo',
+      ],
+      correctIndex: 0,
+      explanation: 'Los frutos secos como las almendras son una de las '
+          'fuentes de snack con más proteína y grasas saludables, a '
+          'diferencia de opciones basadas casi solo en azúcar.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué efecto tiene notificar/recordar un hábito en el '
+          'momento y lugar correctos (en vez de a cualquier hora)?',
+      options: [
+        'Ninguna diferencia',
+        'Aumenta mucho la probabilidad de que se cumpla, comparado con '
+            'un recordatorio genérico',
+        'Genera rechazo siempre',
+        'Solo funciona para hábitos de trabajo',
+      ],
+      correctIndex: 1,
+      explanation: 'Los recordatorios "implementation intentions" '
+          '(cuándo y dónde específicos) son mucho más efectivos que '
+          'intenciones vagas como "voy a hacer ejercicio esta semana".',
+    ),
+    TriviaQuestion(
+      question: '¿Qué es más realista esperar de un cambio de hábito '
+          'grande (como dejar de fumar o empezar a entrenar en serio)?',
+      options: [
+        'Un cambio lineal sin tropiezos',
+        'Un progreso con altibajos, no una línea recta hacia arriba',
+        'Que sea instantáneo si tenés suficiente voluntad',
+        'Que no requiera ningún ajuste en el camino',
+      ],
+      correctIndex: 1,
+      explanation: 'El cambio de comportamiento real casi nunca es '
+          'lineal — tener expectativas realistas sobre altibajos ayuda a '
+          'no abandonar ante el primer tropiezo.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué es la "carga cognitiva" y por qué importa al '
+          'diseñar un hábito nuevo?',
+      options: [
+        'El peso físico de un objeto',
+        'Cuánto esfuerzo mental requiere decidir/ejecutar algo — menos '
+            'decisiones necesarias, más fácil sostenerlo',
+        'Un tipo de ejercicio de resistencia',
+        'No tiene relación con hábitos',
+      ],
+      correctIndex: 1,
+      explanation: 'Cuantas menos decisiones haya que tomar en el '
+          'momento (qué ropa usar, a qué hora, con qué), menos esfuerzo '
+          'mental consume el hábito y más fácil es sostenerlo día a día.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué relación hay entre la hidratación y el rendimiento '
+          'cognitivo (concentración, memoria)?',
+      options: [
+        'Ninguna relación',
+        'La deshidratación leve ya puede afectar concentración y ánimo',
+        'Solo afecta el rendimiento físico, nunca el mental',
+        'Beber más agua siempre mejora la memoria sin límite',
+      ],
+      correctIndex: 1,
+      explanation: 'Estudios muestran que incluso una deshidratación '
+          'leve (1-2% del peso corporal en agua) puede afectar el estado '
+          'de ánimo y la capacidad de concentración.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué tan útil es "visualizar" el hábito completado, '
+          'comparado con solo planificar los pasos concretos?',
+      options: [
+        'Visualizar el resultado final es más efectivo que planificar '
+            'pasos',
+        'Planificar los pasos concretos (cuándo, dónde, cómo) suele ser '
+            'más efectivo que solo visualizar el resultado',
+        'Ninguna de las dos cosas funciona',
+        'Solo sirve visualizar, nunca planificar',
+      ],
+      correctIndex: 1,
+      explanation: 'La investigación sobre "implementation intentions" '
+          'muestra que planificar el "cuándo/dónde/cómo" concreto supera '
+          'a la simple visualización del resultado final deseado.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué buscó demostrar el experimento de las "dos '
+          'macetas" de Jerry Seinfeld sobre productividad (la técnica de '
+          '"no rompas la cadena")?',
+      options: [
+        'Que regar plantas es un buen hábito',
+        'Que marcar visualmente cada día cumplido crea presión positiva '
+            'por mantener la racha',
+        'Que hay que tomarse descansos largos',
+        'Que las rachas no importan',
+      ],
+      correctIndex: 1,
+      explanation: 'La técnica ("Don\'t break the chain") consiste en '
+          'marcar un calendario cada día que cumplís el hábito — ver la '
+          'cadena crecer genera un incentivo visual fuerte para no '
+          'cortarla, la misma idea detrás de una racha en esta app.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué efecto tiene reducir el uso de pantallas antes de '
+          'dormir?',
+      options: [
+        'Ninguno comprobado',
+        'Puede mejorar la calidad del sueño al reducir la exposición a '
+            'luz azul',
+        'Empeora el sueño siempre',
+        'Solo afecta a los niños',
+      ],
+      correctIndex: 1,
+      explanation: 'La luz azul de las pantallas puede suprimir la '
+          'producción de melatonina, la hormona que regula el sueño — '
+          'reducir su uso antes de dormir suele mejorar la calidad del '
+          'descanso.',
+    ),
+    TriviaQuestion(
+      question: '¿Qué significa tener una "tribu" o comunidad de apoyo '
+          'para un hábito, en términos prácticos?',
+      options: [
+        'Nada, es solo un concepto de marketing',
+        'Personas que comparten el mismo objetivo y se dan seguimiento '
+            'mutuo, reforzando el compromiso',
+        'Un grupo que compite para ver quién abandona primero',
+        'Solo aplica a hábitos deportivos',
+      ],
+      correctIndex: 1,
+      explanation: 'Compartir un objetivo con otros y saber que ellos '
+          'también están al tanto de tu progreso combina responsabilidad '
+          'social con apoyo emocional — la base del diseño de "círculos" '
+          'de esta app.',
+    ),
   ];
 }

@@ -70,7 +70,46 @@ allyRequests/{fromUid_toUid}     -- escrito directo por el cliente (Fase 3), sin
   fromUsername, toUsername: string  -- denormalizados para no tener que leer users/{uid} aparte
   status: 'pending' | 'accepted' | 'rejected'
   sentAt: Timestamp
+
+triviaQuestions/{questionId}     -- banco del "Desafío del día" (mini-juego del dashboard)
+  question: string
+  options: string[4]
+  correctIndex: number           -- índice dentro de `options`
+  explanation: string            -- se muestra después de responder, acierte o no
+  order: number                  -- posición para elegir "la pregunta de hoy" de forma estable
+  active: boolean                -- false = se ignora sin borrar el documento
 ```
+
+### `triviaQuestions`: cómo se completa el banco y cómo editarlo
+
+`HomeLogic.todaysTrivia` (ver `lib/features/logic/logic.dart`) elige una
+pregunta determinística por fecha (`día desde una fecha fija % cantidad de
+preguntas`), igual para todos los usuarios ese día. El banco puede venir
+de dos lugares, con el mismo modelo (`TriviaQuestion`) para ambos:
+
+1. **Banco local hardcodeado** (`lib/core/data/trivia_bank.dart`, 44
+   preguntas hoy): funciona 100% offline, sin Firebase ni red. Es el
+   fallback de siempre.
+2. **Colección `triviaQuestions`**: si `HomeLogic._syncTriviaQuestions()`
+   logra traerla al menos una vez (con sesión de Firebase y red), pasa a
+   ser la fuente — se cachea en Hive para que sesiones futuras sin red
+   sigan usando el último banco sincronizado en vez de caer directo al
+   banco local.
+
+**Para agregar o editar preguntas después del seed inicial**: directo
+desde la consola de Firebase (Firestore Database → colección
+`triviaQuestions` → editar/agregar documentos a mano) — no hace falta
+tocar código ni publicar una nueva versión de la app. Asegurate de que
+cada documento tenga los 6 campos de arriba; `active: false` en vez de
+borrar el documento es la forma de "pausar" una pregunta sin perderla.
+
+**Para el seed inicial** (poblar la colección la primera vez): correr
+`functions/scripts/seed_trivia_questions.js` una vez desde tu máquina —
+ver los comentarios de ese archivo para los pasos completos (credenciales
+de una cuenta de servicio con acceso a Firestore, variable de entorno
+`GOOGLE_APPLICATION_CREDENTIALS`, y `node scripts/seed_trivia_questions.js`
+desde `functions/`). Usa IDs de documento determinísticos (`q-000`,
+`q-001`, ...), así que correrlo de nuevo reemplaza en vez de duplicar.
 
 ## Mapeo modelo Dart → colección Firestore
 
@@ -135,6 +174,10 @@ Resumen — detalle completo comentado en `firestore.rules`:
   ver sección 0 de `MIGRATION_PLAN.md`).
 - **`allyRequests`**: cada quien ve sus propias solicitudes (enviadas o
   recibidas); solo el receptor puede aceptar/rechazar.
+- **`triviaQuestions`**: de solo lectura para cualquier usuario
+  autenticado (`write: false`) — contenido educativo público, se edita a
+  mano desde la consola de Firebase o el script de seed, nunca desde la
+  app.
 
 ## Cómo aplicar (proyecto ya en plan Blaze)
 

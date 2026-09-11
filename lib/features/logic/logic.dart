@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_performance/firebase_performance.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
@@ -415,6 +416,106 @@ class HomeLogic extends ChangeNotifier {
   /// éxito, o `null` si la app sigue en modo 100% local. Se usa como
   /// guardia para no intentar escribir en Firestore cuando no hay sesión.
   String? get _firebaseUid => FirebaseAuth.instance.currentUser?.uid;
+
+  /// `true` si la sesión actual es anónima (o si no hay sesión de Firebase
+  /// en absoluto) — es decir, si todavía tiene sentido ofrecer "Vincular
+  /// cuenta" (Fase "Authentication" de `firebase/PRODUCTS_PLAN.md`, sección
+  /// 6). `false` una vez que [linkWithGoogle]/[linkWithEmailPassword] ya
+  /// vincularon un proveedor real.
+  bool get isAnonymousAccount {
+    try {
+      return FirebaseAuth.instance.currentUser?.isAnonymous ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// IDs de los proveedores ya vinculados a la cuenta actual (por ejemplo
+  /// `'google.com'`, `'password'`), para que la UI de perfil pueda mostrar
+  /// "ya vinculado" en vez de ofrecer vincular de nuevo el mismo proveedor.
+  List<String> get linkedProviderIds {
+    try {
+      return FirebaseAuth.instance.currentUser?.providerData
+              .map((p) => p.providerId)
+              .toList() ??
+          [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Vincula la cuenta anónima actual con una cuenta real de Google, sin
+  /// perder el `uid` (y por lo tanto sin perder círculos/aliados/racha ya
+  /// asociados a ese `uid` — ver sección 6 de `firebase/PRODUCTS_PLAN.md`).
+  /// Retorna `null` si se vinculó con éxito (o si el usuario canceló el
+  /// selector de cuentas de Google, que no es un error), o un mensaje listo
+  /// para mostrar en la UI si falló.
+  ///
+  /// Caso no resuelto a propósito: si esa cuenta de Google ya está
+  /// vinculada a *otro* usuario de Firebase (`credential-already-in-use`),
+  /// no se intenta fusionar los datos de ambas cuentas — eso requeriría
+  /// mover círculos/aliados de un `uid` a otro en Firestore, una operación
+  /// de datos bastante más delicada que queda fuera de este cambio. Se
+  /// devuelve un mensaje claro en vez de fallar en silencio.
+  Future<String?> linkWithGoogle() async {
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return null;
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await FirebaseAuth.instance.currentUser!.linkWithCredential(credential);
+      notifyListeners();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'credential-already-in-use') {
+        return 'Esa cuenta de Google ya está vinculada a otro usuario de '
+            'Racha Tribu.';
+      }
+      return 'No se pudo vincular con Google. Intenta de nuevo.';
+    } catch (_) {
+      return 'No se pudo vincular con Google. Intenta de nuevo.';
+    }
+  }
+
+  /// Vincula la cuenta anónima actual con un email/contraseña reales, mismo
+  /// criterio de "no perder el `uid`" que [linkWithGoogle]. Valida el
+  /// formato mínimo en el cliente (Firebase igual lo revalida del lado del
+  /// servidor) antes de intentar la llamada de red. Retorna `null` si se
+  /// vinculó con éxito, o un mensaje listo para mostrar en la UI si falló.
+  Future<String?> linkWithEmailPassword(String email, String password) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty || !trimmedEmail.contains('@')) {
+      return 'Ingresa un email válido.';
+    }
+    if (password.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres.';
+    }
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: trimmedEmail,
+        password: password,
+      );
+      await FirebaseAuth.instance.currentUser!.linkWithCredential(credential);
+      notifyListeners();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          return 'Ese email ya está en uso por otra cuenta.';
+        case 'invalid-email':
+          return 'Ese email no es válido.';
+        case 'weak-password':
+          return 'Esa contraseña es muy débil.';
+        default:
+          return 'No se pudo vincular la cuenta. Intenta de nuevo.';
+      }
+    } catch (_) {
+      return 'No se pudo vincular la cuenta. Intenta de nuevo.';
+    }
+  }
 
   /// Espeja la creación de [circle] en Firestore (`circles/{id}` +
   /// `circles/{id}/members/{uid}` como dueño), ver

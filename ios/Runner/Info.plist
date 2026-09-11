@@ -22,6 +22,24 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google-signin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- REVERSED_CLIENT_ID de ios/Runner/GoogleService-Info.plist,
+				     requerido por google_sign_in para volver a la app tras el
+				     login (Fase Authentication, firebase/PRODUCTS_PLAN.md
+				     sección 6). Si se regenera el plist con otro OAuth
+				     client, este valor hay que actualizarlo también. -->
+				<string>com.googleusercontent.apps.315811589668-gg8g1d8btlqm9mj0ijtp1jnqputc0pb4</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>

@@ -99,30 +99,36 @@ si se quiere evitar ruido de crashes durante desarrollo local.
 
 **Nada que decidir de producto**: es puramente instrumentación.
 
-## 2. Performance Monitoring (`firebase_performance`)
+## 2. Performance Monitoring (`firebase_performance`) — Hecho
 
 **Qué da**: tiempos de arranque de la app, duración de las pantallas, y
 "custom traces"/"metrics" para medir operaciones puntuales (por ejemplo,
 cuánto tarda `_watchCircleActivityEvents` en recibir su primer snapshot).
 
-**Cómo se integra**:
-
-```dart
-// pubspec.yaml
-firebase_performance: ^0.10.x
-
-// Automático: HTTP y arranque de red se miden solos al agregar el
-// package. Traces manuales opcionales, por ejemplo en HomeLogic:
-final trace = FirebasePerformance.instance.newTrace('circle_creation');
-await trace.start();
-// ... _mirrorCircleCreation(circle) ...
-await trace.stop();
-```
-
-Igual que Crashlytics, no cambia contrato de `HomeLogic` hacia la UI —
-se puede agregar de forma incremental, empezando sin traces manuales
-(las automáticas ya dan valor) y agregando 2-3 traces puntuales después
-si hace falta diagnosticar algo lento en particular.
+**Estado**: integrado. `pubspec.yaml` agrega `firebase_performance`;
+`main.dart._initPerformanceMonitoring()` llama
+`FirebasePerformance.instance.setPerformanceCollectionEnabled(!kDebugMode)`
+dentro del mismo try/catch de `_initFirebase()` (fire-and-forget, no
+cambia contrato de `HomeLogic` hacia la UI). Arranque de app y HTTP se
+miden automáticamente solo con agregar el package. Se agregó el primer
+trace manual sugerido, `circle_creation`, envolviendo
+`HomeLogic._mirrorCircleCreation` (con `trace.stop()` en un `finally`
+para que no quede colgado si falla por falta de red). Android: se agregó
+el plugin de Gradle `com.google.firebase.firebase-perf` en
+`android/settings.gradle.kts` y `android/app/build.gradle.kts` (mismo
+patrón que `google-services`/Crashlytics), recomendado para
+instrumentación automática de red en Android. **iOS no necesitó ningún
+plugin ni cambio de proyecto Xcode**: la instrumentación automática de
+red en iOS se hace por method swizzling dentro del propio SDK nativo de
+`firebase_performance`, sin el paso de bytecode-instrumentation que sí
+hace falta en Android — alcanza con que CocoaPods instale el pod
+`FirebasePerformance` (automático la primera vez que se corra `flutter
+build ios`/`flutter run` en un Mac, ver nota de `GoogleService-Info.plist`
+en la sección 1). **Falta activar Performance Monitoring para
+`rachatribu` en la consola** si no está ya activo, y agregar más traces
+manuales puntuales (2-3) si más adelante hace falta diagnosticar algo
+lento en particular — se dejó solo el ejemplo del plan para no ensanchar
+el cambio de más.
 
 ## 3. Remote Config (`firebase_remote_config`)
 

@@ -25,6 +25,9 @@ plugins {
     // START: Crashlytics (firebase/PRODUCTS_PLAN.md, sección 1)
     id("com.google.firebase.crashlytics") version("3.0.2") apply false
     // END: Crashlytics
+    // START: Performance Monitoring (firebase/PRODUCTS_PLAN.md, sección 2)
+    id("com.google.firebase.firebase-perf") version("1.4.2") apply false
+    // END: Performance Monitoring
     // END: FlutterFire Configuration
     id("org.jetbrains.kotlin.android") version "2.4.0" apply false
 }

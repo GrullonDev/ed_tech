@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 
 import 'package:edtech_tiktok/app.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
@@ -21,6 +22,7 @@ Future<void> _initFirebase() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     await _initCrashlytics();
+    await _initPerformanceMonitoring();
   } catch (error, stackTrace) {
     if (kDebugMode) {
       debugPrint(
@@ -46,4 +48,18 @@ Future<void> _initCrashlytics() async {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     return true;
   };
+}
+
+/// Mide tiempos de arranque/pantallas y peticiones HTTP automáticamente
+/// (Fase "Release Monitoring" de `firebase/PRODUCTS_PLAN.md`, sección 2) —
+/// solo con agregar `firebase_performance` ya empieza a recolectar, sin
+/// tocar `HomeLogic` ni la UI. Deshabilitado en debug por el mismo motivo
+/// que Crashlytics: no ensuciar la consola con datos de desarrollo local.
+/// Solo se llama tras un `Firebase.initializeApp` exitoso, dentro del
+/// mismo try/catch de [_initFirebase], así que un fallo acá tampoco tumba
+/// la app.
+Future<void> _initPerformanceMonitoring() async {
+  await FirebasePerformance.instance.setPerformanceCollectionEnabled(
+    !kDebugMode,
+  );
 }

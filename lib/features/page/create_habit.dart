@@ -23,7 +23,7 @@ class CreateHabitPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return GlassScaffold(
-      appBar: GlassAppBar(title: const Text('Crear círculo')),
+      appBar: const GlassAppBar(title: Text('Crear círculo')),
       body: AppMaxWidth(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -61,6 +61,7 @@ class CreateHabitPage extends StatelessWidget {
               child: GlassButton(
                 onTap: () => _submit(context),
                 label: 'Crear círculo',
+                icon: const Icon(Icons.add_circle_outlined),
               ),
             ),
           ],

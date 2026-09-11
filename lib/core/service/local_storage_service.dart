@@ -30,6 +30,11 @@ class LocalStorageService {
   static const String _triviaLastAnsweredDateKey = 'triviaLastAnsweredDate';
   static const String _triviaLastSelectedIndexKey = 'triviaLastSelectedIndex';
   static const String _triviaBonusDropsKey = 'triviaBonusDrops';
+  static const String _wheelLastSpunDateKey = 'wheelLastSpunDate';
+  static const String _wheelLastRewardKey = 'wheelLastReward';
+  static const String _wheelBonusDropsKey = 'wheelBonusDrops';
+  static const String _duelRewardedWeekMondayKey = 'duelRewardedWeekMonday';
+  static const String _duelBonusDropsKey = 'duelBonusDrops';
   static const String _hasSeenGameTourKey = 'hasSeenGameTour';
 
   static late Box<dynamic> _settingsBox;
@@ -190,6 +195,60 @@ class LocalStorageService {
     await _triviaQuestionsBox.clear();
     await _triviaQuestionsBox.addAll(questions.map((q) => q.toMap()));
   }
+
+  // ---- Ruleta diaria de gotas ----
+
+  /// Fecha (normalizada a medianoche) del último giro de la ruleta diaria,
+  /// o `null` si nunca se giró. Igual criterio que
+  /// [readTriviaLastAnsweredDate]: se compara contra `CheckIn.today()` para
+  /// saber si ya se giró hoy (ver `HomeLogic.hasSpunTodaysWheel`).
+  static DateTime? readWheelLastSpunDate() {
+    final raw = _settingsBox.get(_wheelLastSpunDateKey) as String?;
+    return raw == null ? null : DateTime.parse(raw);
+  }
+
+  static Future<void> saveWheelLastSpunDate(DateTime date) =>
+      _settingsBox.put(_wheelLastSpunDateKey, date.toIso8601String());
+
+  /// Recompensa del último giro, para poder mostrarla si se reabre la
+  /// pantalla el mismo día sin volver a girar.
+  static int? readWheelLastReward() =>
+      _settingsBox.get(_wheelLastRewardKey) as int?;
+
+  static Future<void> saveWheelLastReward(int reward) =>
+      _settingsBox.put(_wheelLastRewardKey, reward);
+
+  /// Total acumulado de Gotas de Constancia ganadas girando la ruleta
+  /// diaria — misma excepción de "contador persistido aparte" que
+  /// [readTriviaBonusDrops] (ver doc-comment de [HomeLogic.constancyDrops]).
+  static int readWheelBonusDrops() =>
+      _settingsBox.get(_wheelBonusDropsKey) as int? ?? 0;
+
+  static Future<void> saveWheelBonusDrops(int drops) =>
+      _settingsBox.put(_wheelBonusDropsKey, drops);
+
+  // ---- Duelo de Racha Semanal ----
+
+  /// Lunes (normalizado a medianoche) de la semana por la que ya se otorgó
+  /// la recompensa de haber ganado el Duelo de Racha Semanal, o `null` si
+  /// todavía no se ganó ninguna. Evita volver a otorgarla dos veces la
+  /// misma semana (ver `HomeLogic._checkWeeklyDuelWin`).
+  static DateTime? readDuelRewardedWeekMonday() {
+    final raw = _settingsBox.get(_duelRewardedWeekMondayKey) as String?;
+    return raw == null ? null : DateTime.parse(raw);
+  }
+
+  static Future<void> saveDuelRewardedWeekMonday(DateTime monday) =>
+      _settingsBox.put(_duelRewardedWeekMondayKey, monday.toIso8601String());
+
+  /// Total acumulado de Gotas de Constancia ganadas ganando el Duelo de
+  /// Racha Semanal — misma excepción de "contador persistido aparte" que
+  /// [readTriviaBonusDrops].
+  static int readDuelBonusDrops() =>
+      _settingsBox.get(_duelBonusDropsKey) as int? ?? 0;
+
+  static Future<void> saveDuelBonusDrops(int drops) =>
+      _settingsBox.put(_duelBonusDropsKey, drops);
 
   /// Borra todo el estado local (útil para pruebas o "cerrar sesión" local).
   static Future<void> clearAll() async {

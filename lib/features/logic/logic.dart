@@ -99,6 +99,29 @@ class HomeLogic extends ChangeNotifier {
   /// desafío de trivia — ver doc-comment de [constancyDrops].
   int _triviaBonusDrops = 0;
 
+  /// Fecha (normalizada a medianoche) del último giro de la Ruleta diaria
+  /// de gotas, o `null` si nunca se giró. Ver [hasSpunTodaysWheel] y
+  /// [spinWheel].
+  DateTime? _wheelLastSpunDate;
+
+  /// Recompensa del último giro, solo válida cuando [hasSpunTodaysWheel] es
+  /// `true` — se usa para mostrar el mismo resultado si se reabre la
+  /// pantalla el mismo día.
+  int? _wheelLastReward;
+
+  /// Total acumulado de Gotas de Constancia ganadas girando la ruleta
+  /// diaria — ver doc-comment de [constancyDrops].
+  int _wheelBonusDrops = 0;
+
+  /// Lunes (normalizado a medianoche) de la última semana por la que ya se
+  /// otorgó la recompensa del Duelo de Racha Semanal, o `null` si nunca se
+  /// ganó ninguna. Ver [hasWonWeeklyDuel] y [_checkWeeklyDuelWin].
+  DateTime? _duelRewardedWeekMonday;
+
+  /// Total acumulado de Gotas de Constancia ganadas ganando el Duelo de
+  /// Racha Semanal — ver doc-comment de [constancyDrops].
+  int _duelBonusDrops = 0;
+
   /// `true` si el usuario ya vio el tour de "cómo se juega" (ver
   /// `lib/features/widgets/game_tour.dart` y [completeGameTour]) —
   /// controla si `page/home.dart` lo muestra automáticamente justo
@@ -165,10 +188,13 @@ class HomeLogic extends ChangeNotifier {
   /// alcanzado), nunca de un contador guardado aparte que dependa de
   /// check-ins, para que no se pueda desincronizar de ellos.
   ///
-  /// La única excepción intencional es [_triviaBonusDrops]: sí es un
-  /// contador persistido, pero no reemplaza ni puede desincronizar nada de
-  /// check-ins — es una fuente de gotas totalmente aparte, ganada por
-  /// responder bien el "Desafío del día" (ver [answerTrivia]).
+  /// Las mismas excepciones intencionales aplican a [_triviaBonusDrops],
+  /// [_wheelBonusDrops] y [_duelBonusDrops]: son contadores persistidos,
+  /// pero ninguno reemplaza ni puede desincronizar nada de check-ins — son
+  /// fuentes de gotas totalmente aparte, ganadas por responder bien el
+  /// "Desafío del día" (ver [answerTrivia]), girar la Ruleta diaria (ver
+  /// [spinWheel]) y ganar el Duelo de Racha Semanal (ver
+  /// [_checkWeeklyDuelWin]) respectivamente.
   int get constancyDrops {
     final totalDrops = _circles.fold<int>(
       0,
@@ -178,7 +204,11 @@ class HomeLogic extends ChangeNotifier {
     final milestonesReached = milestoneBonuses
         .where((m) => recordStreakDays >= m)
         .length;
-    return totalDrops + milestonesReached * 50 + _triviaBonusDrops;
+    return totalDrops +
+        milestonesReached * 50 +
+        _triviaBonusDrops +
+        _wheelBonusDrops +
+        _duelBonusDrops;
   }
 
   /// Cuántas gotas otorga responder bien el desafío de trivia de hoy.
@@ -238,6 +268,111 @@ class HomeLogic extends ChangeNotifier {
     return isCorrect;
   }
 
+  /// Recompensas posibles de un giro de la Ruleta diaria de gotas. Elegida
+  /// con una probabilidad simple (no pesada): cada giro es independiente
+  /// del anterior, sin necesitar coordinación con un servidor.
+  static const List<int> wheelRewards = [5, 10, 15, 20, 30, 50];
+
+  /// `true` si ya se giró la ruleta hoy — controla si la UI muestra el
+  /// botón de girar o el resultado guardado ([wheelLastReward]).
+  bool get hasSpunTodaysWheel => _wheelLastSpunDate == CheckIn.today();
+
+  /// Recompensa del último giro, o `null` si todavía no se giró hoy.
+  int? get wheelLastReward => hasSpunTodaysWheel ? _wheelLastReward : null;
+
+  /// Gira la ruleta diaria una vez: elige una recompensa al azar de
+  /// [wheelRewards] y la suma a las Gotas de Constancia. Si ya se giró hoy,
+  /// no vuelve a otorgar nada (evita re-girar para farmear gotas) y
+  /// devuelve directamente el resultado guardado.
+  int spinWheel() {
+    if (hasSpunTodaysWheel) return _wheelLastReward!;
+    final reward = wheelRewards[Random().nextInt(wheelRewards.length)];
+    _wheelLastSpunDate = CheckIn.today();
+    _wheelLastReward = reward;
+    _wheelBonusDrops += reward;
+    LocalStorageService.saveWheelLastSpunDate(_wheelLastSpunDate!);
+    LocalStorageService.saveWheelLastReward(reward);
+    LocalStorageService.saveWheelBonusDrops(_wheelBonusDrops);
+    _logAnalyticsEvent('wheel_spun', {'reward': reward});
+    notifyListeners();
+    return reward;
+  }
+
+  /// Cuántas gotas otorga ganar el Duelo de Racha Semanal.
+  static const int weeklyDuelWinReward = 40;
+
+  /// Lunes (normalizado a medianoche) de la semana que contiene [date].
+  static DateTime _mondayOf(DateTime date) =>
+      date.subtract(Duration(days: date.weekday - 1));
+
+  /// Total de check-ins (todos los círculos) en la semana lunes-domingo que
+  /// contiene [date].
+  int _checkInCountForWeekOf(DateTime date) {
+    final monday = _mondayOf(date);
+    final sunday = monday.add(const Duration(days: 6));
+    var count = 0;
+    for (final circle in _circles) {
+      count += circle.checkIns
+          .where((c) => !c.date.isBefore(monday) && !c.date.isAfter(sunday))
+          .length;
+    }
+    return count;
+  }
+
+  /// Check-ins acumulados (todos los círculos) en la semana en curso —
+  /// el lado "vos" del Duelo de Racha Semanal.
+  int get weeklyDuelUserTotal => _checkInCountForWeekOf(CheckIn.today());
+
+  /// "Racha Fantasma": el rival del Duelo de Racha Semanal. Es el mejor
+  /// total de check-ins que el propio usuario logró en alguna semana
+  /// anterior completa (lunes a domingo, sin contar la semana en curso) —
+  /// así el duelo compara al usuario contra su mejor versión pasada, sin
+  /// necesitar un servidor de matchmaking real. Si todavía no hay una
+  /// semana anterior registrada, el rival por defecto es 7 (un check-in
+  /// por día).
+  int get weeklyDuelRivalTotal {
+    final currentMonday = _mondayOf(CheckIn.today());
+    final allDates = _circles
+        .expand((c) => c.checkIns.map((ci) => ci.date))
+        .toSet();
+    if (allDates.isEmpty) return 7;
+    var earliestDate = allDates.first;
+    for (final date in allDates) {
+      if (date.isBefore(earliestDate)) earliestDate = date;
+    }
+    var monday = _mondayOf(earliestDate);
+    var best = 0;
+    while (monday.isBefore(currentMonday)) {
+      final total = _checkInCountForWeekOf(monday);
+      if (total > best) best = total;
+      monday = monday.add(const Duration(days: 7));
+    }
+    return best == 0 ? 7 : best;
+  }
+
+  /// `true` si ya se ganó el Duelo de Racha Semanal de esta semana.
+  bool get hasWonWeeklyDuel =>
+      _duelRewardedWeekMonday == _mondayOf(CheckIn.today());
+
+  /// Revisa si el usuario acaba de superar a su Racha Fantasma esta semana
+  /// y, de ser así, otorga la recompensa una sola vez por semana. Se llama
+  /// después de cada check-in nuevo (ver [toggleCheckIn]).
+  void _checkWeeklyDuelWin() {
+    if (hasWonWeeklyDuel) return;
+    if (weeklyDuelUserTotal <= weeklyDuelRivalTotal) return;
+    _duelRewardedWeekMonday = _mondayOf(CheckIn.today());
+    _duelBonusDrops += weeklyDuelWinReward;
+    LocalStorageService.saveDuelRewardedWeekMonday(_duelRewardedWeekMonday!);
+    LocalStorageService.saveDuelBonusDrops(_duelBonusDrops);
+    _pushActivityEvent(
+      emoji: '⚔️',
+      message:
+          '¡Ganaste el Duelo de Racha Semanal contra tu Racha Fantasma! '
+          '+$weeklyDuelWinReward gotas.',
+    );
+    _logAnalyticsEvent('weekly_duel_won');
+  }
+
   /// Fracción de días transcurridos en el mes actual (desde el día 1 hasta
   /// hoy) en los que hubo al menos un check-in en algún círculo.
   double get monthlyComplianceRate {
@@ -270,6 +405,12 @@ class HomeLogic extends ChangeNotifier {
     _triviaBonusDrops = LocalStorageService.readTriviaBonusDrops();
     _hasSeenGameTour = LocalStorageService.readHasSeenGameTour();
     _remoteTriviaQuestions = LocalStorageService.readRemoteTriviaQuestions();
+    _wheelLastSpunDate = LocalStorageService.readWheelLastSpunDate();
+    _wheelLastReward = LocalStorageService.readWheelLastReward();
+    _wheelBonusDrops = LocalStorageService.readWheelBonusDrops();
+    _duelRewardedWeekMonday =
+        LocalStorageService.readDuelRewardedWeekMonday();
+    _duelBonusDrops = LocalStorageService.readDuelBonusDrops();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
@@ -920,6 +1061,7 @@ class HomeLogic extends ChangeNotifier {
           'circle_category': circle.category,
         });
       }
+      _checkWeeklyDuelWin();
     }
     _circlesUpdatedTick++;
     LocalStorageService.saveCircles(_circles);

@@ -68,6 +68,12 @@ class _MyHomePageState extends State<MyHomePage> {
           hasAnsweredTodaysTrivia: _logic.hasAnsweredTodaysTrivia,
           triviaLastSelectedIndex: _logic.triviaLastSelectedIndex,
           onAnswerTrivia: _logic.answerTrivia,
+          hasSpunTodaysWheel: _logic.hasSpunTodaysWheel,
+          wheelLastReward: _logic.wheelLastReward,
+          onSpinWheel: _logic.spinWheel,
+          weeklyDuelUserTotal: _logic.weeklyDuelUserTotal,
+          weeklyDuelRivalTotal: _logic.weeklyDuelRivalTotal,
+          hasWonWeeklyDuel: _logic.hasWonWeeklyDuel,
         );
       },
     );

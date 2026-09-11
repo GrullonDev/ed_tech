@@ -130,7 +130,7 @@ manuales puntuales (2-3) si más adelante hace falta diagnosticar algo
 lento en particular — se dejó solo el ejemplo del plan para no ensanchar
 el cambio de más.
 
-## 3. Remote Config (`firebase_remote_config`)
+## 3. Remote Config (`firebase_remote_config`) — Hecho (parcial, a propósito)
 
 **Qué da**: parámetros configurables desde la consola sin publicar una
 nueva versión de la app — y es el requisito técnico de A/B Testing (un
@@ -140,48 +140,95 @@ distintos valores de un parámetro de Remote Config).
 **Candidatos de parámetros para esta app** (todos ya tienen su valor
 "hardcoded" hoy, se volverían configurables):
 
-| Parámetro | Hoy vive en | Valor por defecto |
-|---|---|---|
-| `constancy_drops_base` / `_tier2` / `_tier3` | `HabitCircle._dropsForStreakDay` | 10 / 15 / 20 / 30 |
-| `streak_shield_milestones` | `Milestone.targets` | 7, 21, 30, 50, 100 |
-| `onboarding_headline` | copy fija en la pantalla de onboarding | texto actual |
+| Parámetro | Hoy vive en | Valor por defecto | Estado |
+|---|---|---|---|
+| `onboarding_headline` | copy fija en la pantalla de onboarding | texto actual | **Hecho** |
+| `constancy_drops_base` / `_tier2` / `_tier3` | `HabitCircle._dropsForStreakDay` | 10 / 15 / 20 / 30 | Pendiente, a propósito |
+| `streak_shield_milestones` | `Milestone.targets` | 7, 21, 30, 50, 100 | Pendiente, a propósito |
 
-**Cómo se integra**:
+**Estado de la infraestructura**: integrada. `pubspec.yaml` agrega
+`firebase_remote_config`; `main.dart._initRemoteConfig()` configura
+`fetchTimeout: 5s` / `minimumFetchInterval: 1h`, declara los defaults
+locales y llama `fetchAndActivate()` — todo dentro del mismo try/catch
+best-effort de `_initFirebase()`, así que un fallo (sin red, Firebase no
+configurado) deja la app viéndose exactamente igual que antes. Se
+implementó el primer parámetro, `onboarding_headline`
+(`Onboarding._headline()`, con `Onboarding.defaultHeadline` como
+fallback si Remote Config no activó a tiempo o Firebase no está
+disponible — envuelto en su propio try/catch porque es la primera
+pantalla que ve un usuario nuevo).
 
-```dart
-// pubspec.yaml
-firebase_remote_config: ^5.x
+**Por qué `constancy_drops_*` y `streak_shield_milestones` quedan
+pendientes a propósito**: a diferencia del titular de onboarding (puro
+copy, sin lógica), estos dos valores están **duplicados y hardcodeados
+también en el servidor** — `functions/src/streakLogic.ts`
+(`computeDropsEarned`/`SHIELD_MILESTONES`) usa exactamente los mismos
+números para calcular `circles/{id}/memberStats/{uid}` (racha/gotas/
+escudos "de verdad", ver Fase 6 de `MIGRATION_PLAN.md`). Volver
+Remote-Config-only el lado del cliente sin tocar la Cloud Function
+crearía el mismo riesgo de desincronización que el diseño de
+`memberStats` (sección 7 de `MIGRATION_PLAN.md`) fue pensado para
+evitar: un experimento de A/B Testing que cambie `constancy_drops_tier2`
+en el cliente mostraría un número de gotas que el servidor nunca
+otorgó. Hacerlo bien requiere: (a) mover esos valores a Remote Config
+también en la Cloud Function (que sí puede leer Remote Config desde el
+Admin SDK), o (b) aceptar que el servidor sea la fuente de verdad y que
+el cliente ignore el valor de Remote Config para estos dos parámetros
+específicos una vez llegue `remoteDropsEarned`/etc. Cualquiera de las
+dos es una decisión de producto/arquitectura que amerita su propio
+PR — se deja fuera de este cambio para no ensancharlo ni introducir un
+desface visible en la racha del usuario.
 
-// Al iniciar (main.dart o primer uso en HomeLogic), con defaults locales
-// para que la app funcione igual si no hay red la primera vez:
-final remoteConfig = FirebaseRemoteConfig.instance;
-await remoteConfig.setConfigSettings(RemoteConfigSettings(
-  fetchTimeout: const Duration(seconds: 5),
-  minimumFetchInterval: const Duration(hours: 1),
-));
-await remoteConfig.setDefaults({'constancy_drops_tier2': 15, ...});
-await remoteConfig.fetchAndActivate(); // fire-and-forget, con try/catch
-```
+## 4. A/B Testing — sin código, 100% consola (guía para correr el primero)
 
-`HabitCircle._dropsForStreakDay` pasaría de constantes fijas a leer
-`FirebaseRemoteConfig.instance.getInt(...)` con el valor actual como
-fallback si Remote Config no llegó a sincronizar — mismo patrón
-fire-and-forget que el resto de la integración de Firebase.
+No es un package aparte ni requiere ningún cambio en este repo: una vez
+Remote Config está integrado (sección 3, ya hecho), un experimento de
+A/B Testing se crea **desde la consola de Firebase** — se elige un
+parámetro de Remote Config, se definen 2+ variantes de su valor, y
+Firebase reparte usuarios entre variantes automáticamente, usando
+Analytics (ya integrado) para medir qué variante se comporta mejor
+contra una métrica objetivo.
 
-## 4. A/B Testing
+**Primer experimento recomendado ahora mismo**: `onboarding_headline`
+(el único parámetro que ya está implementado, ver sección 3), midiendo
+impacto en el evento de conversión `onboarding_complete` (ya se
+registra desde la Fase 4 de `MIGRATION_PLAN.md` — falta solo marcarlo
+como "evento de conversión" en la consola, ver sección 5 más abajo).
+Sin código nuevo: la app ya lee `onboarding_headline` de Remote Config
+(`Onboarding._headline()`) y ya manda el evento; falta únicamente
+crearlo en la consola.
 
-No es un package aparte: una vez Remote Config está integrado (sección
-3), un experimento de A/B Testing se crea **desde la consola de
-Firebase**, no desde código — se elige un parámetro de Remote Config
-(por ejemplo `constancy_drops_tier2`), se definen 2+ variantes de su
-valor, y Firebase reparte usuarios entre variantes automáticamente,
-usando Analytics (ya integrado) para medir qué variante retiene mejor.
+**Pasos** (consola de Firebase, proyecto `rachatribu`):
 
-**Primer experimento sugerido**: variar `constancy_drops_tier2` (15 vs.
-20 vs. 25) y medir impacto en `check_in` diario por usuario (evento de
-Analytics que ya se registra desde la Fase 4 de `MIGRATION_PLAN.md`) —
-es la palanca de gamificación más directa para probar si más
-recompensa = más constancia.
+1. Remote Config → confirmar que existe el parámetro `onboarding_headline`
+   (se crea solo la primera vez que la app corre con esta versión y
+   hace `fetchAndActivate`, pero también se puede crear a mano con el
+   valor por defecto `Bienvenido a\nRacha Tribu` si preferís adelantarte).
+2. A/B Testing → Crear experimento → "Remote Config experiment".
+3. Nombre del experimento (por ejemplo `onboarding_headline_v1`),
+   audiencia 100% de usuarios (o un % si preferís arrancar chico).
+4. Parámetro objetivo: `onboarding_headline`. Definir 2-3 variantes de
+   texto (el "Control" ya usa el valor actual/por defecto automáticamente
+   — no hace falta declararlo aparte).
+5. Métrica principal: `onboarding_complete` (una vez marcado como
+   evento de conversión, sección 5) — Firebase reparte tráfico y
+   muestra cuál variante convierte más onboardings completados por
+   usuario que vio la pantalla.
+6. Iniciar el experimento y dejarlo correr el tiempo que la consola
+   recomiende (Firebase avisa cuándo hay significancia estadística).
+
+**Sobre `constancy_drops_tier2` (el candidato "de gamificación" más
+obvio)**: **todavía no se puede experimentar con este** de forma
+segura — ver el detalle en la sección 3 ("Por qué `constancy_drops_*` y
+`streak_shield_milestones` quedan pendientes a propósito"). Como ese
+valor también está hardcodeado en `functions/src/streakLogic.ts` para
+calcular `memberStats` en el servidor, un experimento de A/B Testing
+que lo varíe en el cliente le mostraría a una parte de los usuarios un
+número de "Gotas de Constancia" que el servidor nunca les otorgó
+realmente — hay que resolver esa duplicación primero (moverla también a
+Remote Config del lado de la Cloud Function, vía Admin SDK) antes de
+correr este experimento. Queda como el candidato natural para *después*
+de esa migración, no para ahora.
 
 ## 5. Analytics — qué falta más allá de lo ya integrado
 

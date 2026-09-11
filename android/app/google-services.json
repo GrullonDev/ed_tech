@@ -12,7 +12,20 @@
           "package_name": "com.grullondev.rachatribu"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "315811589668-n9v65q86ubfjh26ibi3bcn9c25eicg70.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.grullondev.rachatribu",
+            "certificate_hash": "65dd2e88070708d073324ec097ab63d0580d1f19"
+          }
+        },
+        {
+          "client_id": "315811589668-tkt84od1sv3jt4mnkcivn6m4qidhofi2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC0ZhEOmxzPL8AeQSXuBlh-COUrvoq2btA"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "315811589668-tkt84od1sv3jt4mnkcivn6m4qidhofi2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "315811589668-gg8g1d8btlqm9mj0ijtp1jnqputc0pb4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.edtechTiktok"
+              }
+            }
+          ]
         }
       }
     }

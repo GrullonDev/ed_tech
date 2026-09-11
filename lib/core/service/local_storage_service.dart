@@ -25,6 +25,9 @@ class LocalStorageService {
   static const String _userKey = 'user';
   static const String _lastActiveDateKey = 'lastActiveDate';
   static const String _alliesKey = 'allies';
+  static const String _triviaLastAnsweredDateKey = 'triviaLastAnsweredDate';
+  static const String _triviaLastSelectedIndexKey = 'triviaLastSelectedIndex';
+  static const String _triviaBonusDropsKey = 'triviaBonusDrops';
 
   static late Box<dynamic> _settingsBox;
   static late Box<dynamic> _circlesBox;
@@ -119,6 +122,39 @@ class LocalStorageService {
     await _activityFeedBox.clear();
     await _activityFeedBox.addAll(events.map((e) => e.toMap()));
   }
+
+  // ---- Desafío de trivia diario ----
+
+  /// Fecha (normalizada a medianoche) en la que se respondió el desafío de
+  /// trivia por última vez, o `null` si nunca se respondió uno. Se compara
+  /// contra `CheckIn.today()` para saber si el desafío de hoy ya se
+  /// contestó (ver `HomeLogic.hasAnsweredTodaysTrivia`).
+  static DateTime? readTriviaLastAnsweredDate() {
+    final raw = _settingsBox.get(_triviaLastAnsweredDateKey) as String?;
+    return raw == null ? null : DateTime.parse(raw);
+  }
+
+  static Future<void> saveTriviaLastAnsweredDate(DateTime date) =>
+      _settingsBox.put(_triviaLastAnsweredDateKey, date.toIso8601String());
+
+  /// Índice de la opción elegida en el desafío de hoy, para poder mostrar
+  /// el mismo resultado (acertaste/fallaste) si se vuelve a abrir la
+  /// pantalla el mismo día sin volver a preguntar.
+  static int? readTriviaLastSelectedIndex() =>
+      _settingsBox.get(_triviaLastSelectedIndexKey) as int?;
+
+  static Future<void> saveTriviaLastSelectedIndex(int index) =>
+      _settingsBox.put(_triviaLastSelectedIndexKey, index);
+
+  /// Total acumulado de Gotas de Constancia ganadas respondiendo bien el
+  /// desafío de trivia — ver doc-comment de [HomeLogic.constancyDrops]
+  /// sobre por qué esta es la única excepción a "nunca un contador
+  /// guardado aparte".
+  static int readTriviaBonusDrops() =>
+      _settingsBox.get(_triviaBonusDropsKey) as int? ?? 0;
+
+  static Future<void> saveTriviaBonusDrops(int drops) =>
+      _settingsBox.put(_triviaBonusDropsKey, drops);
 
   /// Borra todo el estado local (útil para pruebas o "cerrar sesión" local).
   static Future<void> clearAll() async {

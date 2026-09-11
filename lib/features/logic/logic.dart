@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'package:edtech_tiktok/core/data/trivia_bank.dart';
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
@@ -16,6 +17,7 @@ import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
+import 'package:edtech_tiktok/core/model/trivia_question.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
 
 /// Estado y reglas de negocio del dashboard de hábitos.
@@ -83,6 +85,20 @@ class HomeLogic extends ChangeNotifier {
   /// local ya quedó sincronizada sin depender de un servidor externo.
   int _circlesUpdatedTick = 0;
 
+  /// Fecha (normalizada a medianoche) en la que se respondió el "Desafío
+  /// del día" (trivia) por última vez, o `null` si nunca se respondió uno.
+  /// Ver [hasAnsweredTodaysTrivia] y [answerTrivia].
+  DateTime? _triviaLastAnsweredDate;
+
+  /// Índice de la opción elegida en el desafío de hoy, solo válido cuando
+  /// [hasAnsweredTodaysTrivia] es `true` — se usa para mostrar el mismo
+  /// resultado si se reabre la pantalla el mismo día.
+  int? _triviaLastSelectedIndex;
+
+  /// Total acumulado de Gotas de Constancia ganadas por responder bien el
+  /// desafío de trivia — ver doc-comment de [constancyDrops].
+  int _triviaBonusDrops = 0;
+
   bool get hasUsername => _hasUsername;
   String get username => _username;
   DateTime? get memberSince => _memberSince;
@@ -129,12 +145,17 @@ class HomeLogic extends ChangeNotifier {
   /// en el Nivel 1 aunque el usuario no tenga racha todavía.
   int get userLevel => (overallStreakDays ~/ 7) + 1;
 
-  /// "Gotas de Constancia": moneda blanda del juego. Se derivan por completo
-  /// de datos reales (ver [HabitCircle.constancyDropsEarned]: 10 gotas por
-  /// check-in que escalan hasta x3 cuanto más larga sea la racha vigente ese
-  /// día, más un bono de 50 por cada hito de racha ya alcanzado), nunca de un
-  /// contador guardado aparte, para que no se pueda desincronizar de los
-  /// check-ins reales del usuario.
+  /// "Gotas de Constancia": moneda blanda del juego. Se derivan casi por
+  /// completo de datos reales (ver [HabitCircle.constancyDropsEarned]: 10
+  /// gotas por check-in que escalan hasta x3 cuanto más larga sea la racha
+  /// vigente ese día, más un bono de 50 por cada hito de racha ya
+  /// alcanzado), nunca de un contador guardado aparte que dependa de
+  /// check-ins, para que no se pueda desincronizar de ellos.
+  ///
+  /// La única excepción intencional es [_triviaBonusDrops]: sí es un
+  /// contador persistido, pero no reemplaza ni puede desincronizar nada de
+  /// check-ins — es una fuente de gotas totalmente aparte, ganada por
+  /// responder bien el "Desafío del día" (ver [answerTrivia]).
   int get constancyDrops {
     final totalDrops = _circles.fold<int>(
       0,
@@ -144,7 +165,54 @@ class HomeLogic extends ChangeNotifier {
     final milestonesReached = milestoneBonuses
         .where((m) => recordStreakDays >= m)
         .length;
-    return totalDrops + milestonesReached * 50;
+    return totalDrops + milestonesReached * 50 + _triviaBonusDrops;
+  }
+
+  /// Cuántas gotas otorga responder bien el desafío de trivia de hoy.
+  static const int triviaCorrectAnswerReward = 15;
+
+  /// Pregunta del "Desafío del día": misma para todos los usuarios que
+  /// abran la app ese día (como un Wordle), elegida de forma determinística
+  /// a partir de la fecha — no depende de red ni de qué preguntas ya
+  /// contestó este dispositivo. Insertar preguntas en medio de
+  /// [TriviaBank.questions] corre el índice de las que quedan detrás (ver
+  /// doc-comment de esa clase).
+  TriviaQuestion get todaysTrivia {
+    final daysSinceEpoch = CheckIn.today()
+        .difference(DateTime(2024, 1, 1))
+        .inDays;
+    final index = daysSinceEpoch % TriviaBank.questions.length;
+    return TriviaBank.questions[index];
+  }
+
+  /// `true` si ya se respondió el desafío de hoy — controla si la UI
+  /// muestra la pregunta o el resultado guardado ([triviaLastSelectedIndex]).
+  bool get hasAnsweredTodaysTrivia =>
+      _triviaLastAnsweredDate == CheckIn.today();
+
+  /// Índice de la opción elegida hoy, o `null` si todavía no se respondió.
+  int? get triviaLastSelectedIndex =>
+      hasAnsweredTodaysTrivia ? _triviaLastSelectedIndex : null;
+
+  /// Responde el desafío de hoy con la opción [selectedIndex]. Si ya se
+  /// había respondido hoy, no vuelve a otorgar la recompensa (evita
+  /// re-responder para farmear gotas) y solo confirma si esa vez fue
+  /// correcta. Retorna `true` si [selectedIndex] es la respuesta correcta.
+  bool answerTrivia(int selectedIndex) {
+    final question = todaysTrivia;
+    final isCorrect = selectedIndex == question.correctIndex;
+    if (hasAnsweredTodaysTrivia) return isCorrect;
+    _triviaLastAnsweredDate = CheckIn.today();
+    _triviaLastSelectedIndex = selectedIndex;
+    LocalStorageService.saveTriviaLastAnsweredDate(_triviaLastAnsweredDate!);
+    LocalStorageService.saveTriviaLastSelectedIndex(selectedIndex);
+    if (isCorrect) {
+      _triviaBonusDrops += triviaCorrectAnswerReward;
+      LocalStorageService.saveTriviaBonusDrops(_triviaBonusDrops);
+    }
+    _logAnalyticsEvent('trivia_answered', {'correct': isCorrect});
+    notifyListeners();
+    return isCorrect;
   }
 
   /// Fracción de días transcurridos en el mes actual (desde el día 1 hasta
@@ -172,6 +240,11 @@ class HomeLogic extends ChangeNotifier {
     _pendingAllyRequests = LocalStorageService.readAllyRequests();
     _allies = LocalStorageService.readAllies();
     _activityFeed = LocalStorageService.readActivityFeed();
+    _triviaLastAnsweredDate =
+        LocalStorageService.readTriviaLastAnsweredDate();
+    _triviaLastSelectedIndex =
+        LocalStorageService.readTriviaLastSelectedIndex();
+    _triviaBonusDrops = LocalStorageService.readTriviaBonusDrops();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';

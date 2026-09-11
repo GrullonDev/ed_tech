@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
+import 'package:edtech_tiktok/core/model/trivia_question.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/logic/logic.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 import 'package:edtech_tiktok/features/widgets/territory_map.dart';
@@ -31,6 +33,10 @@ class Dashboard extends StatelessWidget {
     required this.onOpenProfile,
     required this.onInviteMember,
     required this.allies,
+    required this.todaysTrivia,
+    required this.hasAnsweredTodaysTrivia,
+    required this.triviaLastSelectedIndex,
+    required this.onAnswerTrivia,
   });
 
   final String username;
@@ -53,6 +59,12 @@ class Dashboard extends StatelessWidget {
   final VoidCallback onOpenRachas;
   final VoidCallback onOpenProfile;
   final void Function(HabitCircle circle, String name) onInviteMember;
+
+  /// "Desafío del día" (ver `HomeLogic.todaysTrivia`).
+  final TriviaQuestion todaysTrivia;
+  final bool hasAnsweredTodaysTrivia;
+  final int? triviaLastSelectedIndex;
+  final bool Function(int selectedIndex) onAnswerTrivia;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +113,13 @@ class Dashboard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
+              _TriviaCard(
+                question: todaysTrivia,
+                answered: hasAnsweredTodaysTrivia,
+                selectedIndex: triviaLastSelectedIndex,
+                onAnswer: onAnswerTrivia,
+              ),
+              const SizedBox(height: AppSpacing.lg),
               _TodayCard(
                 habits: todayHabits,
                 completed: todayCompletedCount,
@@ -704,6 +723,199 @@ class _CountPill extends StatelessWidget {
             ?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
+  }
+}
+
+/// "Desafío del día": trivia de opción múltiple sobre hábitos/constancia
+/// (ver `HomeLogic.todaysTrivia`), la misma para todos los usuarios ese día.
+/// Antes de responder muestra las 4 opciones tocables; después, resalta la
+/// correcta (y la elegida, si falló) y muestra la explicación + si ganó
+/// gotas. Es [StatelessWidget]: todo el estado (si ya respondió, qué
+/// eligió) vive en [HomeLogic] y llega por props, así que sobrevive a que
+/// se cierre y reabra la app.
+class _TriviaCard extends StatelessWidget {
+  const _TriviaCard({
+    required this.question,
+    required this.answered,
+    required this.selectedIndex,
+    required this.onAnswer,
+  });
+
+  final TriviaQuestion question;
+  final bool answered;
+  final int? selectedIndex;
+  final bool Function(int selectedIndex) onAnswer;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final wasCorrect = answered && selectedIndex == question.correctIndex;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🧠', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  'Desafío del día',
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (!answered)
+                Text(
+                  '+${HomeLogic.triviaCorrectAnswerReward} gotas',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                )
+              else
+                Icon(
+                  wasCorrect
+                      ? Icons.check_circle_rounded
+                      : Icons.info_rounded,
+                  size: 18,
+                  color: wasCorrect ? AppColors.primary : AppColors.outline,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            question.question,
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (var i = 0; i < question.options.length; i++) ...[
+            _TriviaOption(
+              label: question.options[i],
+              state: _optionState(i, answered, selectedIndex, question),
+              onTap: answered ? null : () => onAnswer(i),
+            ),
+            if (i < question.options.length - 1)
+              const SizedBox(height: AppSpacing.xs),
+          ],
+          if (answered) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainer,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: Text(
+                question.explanation,
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static _TriviaOptionState _optionState(
+    int index,
+    bool answered,
+    int? selectedIndex,
+    TriviaQuestion question,
+  ) {
+    if (!answered) return _TriviaOptionState.pending;
+    if (index == question.correctIndex) return _TriviaOptionState.correct;
+    if (index == selectedIndex) return _TriviaOptionState.incorrect;
+    return _TriviaOptionState.disabled;
+  }
+}
+
+enum _TriviaOptionState { pending, correct, incorrect, disabled }
+
+class _TriviaOption extends StatelessWidget {
+  const _TriviaOption({
+    required this.label,
+    required this.state,
+    required this.onTap,
+  });
+
+  final String label;
+  final _TriviaOptionState state;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final (background, border, icon) = switch (state) {
+      _TriviaOptionState.pending => (
+        AppColors.surfaceContainer,
+        AppColors.outlineWhisper,
+        null,
+      ),
+      _TriviaOptionState.correct => (
+        AppColors.completedGlow,
+        AppColors.primary,
+        Icons.check_circle_rounded,
+      ),
+      _TriviaOptionState.incorrect => (
+        AppColors.error.withValues(alpha: 0.1),
+        AppColors.error,
+        Icons.cancel_rounded,
+      ),
+      _TriviaOptionState.disabled => (
+        AppColors.surfaceContainer,
+        AppColors.outlineWhisper,
+        null,
+      ),
+    };
+    final iconColor = state == _TriviaOptionState.correct
+        ? AppColors.primary
+        : AppColors.error;
+    final content = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: state == _TriviaOptionState.disabled
+                    ? AppColors.onSurfaceVariant
+                    : AppColors.onSurface,
+              ),
+            ),
+          ),
+          if (icon != null) Icon(icon, size: 18, color: iconColor),
+        ],
+      ),
+    );
+    final tapHandler = onTap;
+    return tapHandler == null
+        ? content
+        : GamePressable(onTap: tapHandler, child: content);
   }
 }
 

@@ -50,6 +50,7 @@ class ProfilePage extends StatelessWidget {
     required this.linkedProviderIds,
     required this.onLinkWithGoogle,
     required this.onLinkWithEmailPassword,
+    required this.onOpenGameTour,
   });
 
   final String username;
@@ -84,6 +85,11 @@ class ProfilePage extends StatelessWidget {
   /// mostrar en un SnackBar.
   final Future<String?> Function(String email, String password)
   onLinkWithEmailPassword;
+
+  /// Vuelve a mostrar el tour de "cómo se juega" (ver
+  /// `lib/features/widgets/game_tour.dart`), a pedido, sin que cuente como
+  /// la primera vez que lo ve el usuario.
+  final VoidCallback onOpenGameTour;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +191,15 @@ class ProfilePage extends StatelessWidget {
                               ],
                             ),
                           ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton.icon(
+                          onPressed: onOpenGameTour,
+                          icon: const Icon(
+                            Icons.help_outline_rounded,
+                            size: 16,
+                          ),
+                          label: const Text('¿Cómo funciona Racha Tribu?'),
                         ),
                       ],
                     ),

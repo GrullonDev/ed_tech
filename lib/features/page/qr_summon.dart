@@ -179,6 +179,7 @@ class _ScanTabState extends State<_ScanTab> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Stack(
       children: [
         MobileScanner(
@@ -209,7 +210,7 @@ class _ScanTabState extends State<_ScanTab> {
         Positioned(
           left: AppSpacing.lg,
           right: AppSpacing.lg,
-          bottom: AppSpacing.xl,
+          bottom: AppSpacing.xl + bottomInset,
           child: Column(
             children: [
               if (_resultMessage != null)

@@ -2,6 +2,12 @@ plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
+    // START: Crashlytics (firebase/PRODUCTS_PLAN.md, sección 1)
+    id("com.google.firebase.crashlytics")
+    // END: Crashlytics
+    // START: Performance Monitoring (firebase/PRODUCTS_PLAN.md, sección 2)
+    id("com.google.firebase.firebase-perf")
+    // END: Performance Monitoring
     // END: FlutterFire Configuration
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")

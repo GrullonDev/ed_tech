@@ -241,8 +241,8 @@ Lo único que sigue haciendo falta del lado de la app:
    queda nada que retirar ahí tampoco.
 
    Con esto, las Fases 1–5 de este plan quedan completas.
-7. **Fase 6 (en progreso — corte a Cloud Functions, plan Blaze)**: el
-   proyecto pasó a Blaze; el corte real tiene dos partes:
+7. **Fase 6 (corte a Cloud Functions, plan Blaze)**: el proyecto pasó a
+   Blaze; el corte real tuvo dos partes:
 
    - **Hecho**: `HomeLogic._recordCircleActivity()` ya no escribe
      `circles/{id}/activityEvents` desde el cliente (eso duplicaría el
@@ -257,20 +257,30 @@ Lo único que sigue haciendo falta del lado de la app:
      `firebase deploy --only functions,firestore:rules` — antes de
      mergear/publicar este cambio: si no, el feed de círculo se queda
      mudo (nadie escribe ahí) hasta que se desplieguen.
-   - **Pendiente, a propósito no se tocó todavía** (requiere pruebas
-     contra un proyecto real que este entorno no puede hacer): migrar
-     `HabitCircle.streakDays`/`.longestStreakDays`/
-     `.constancyDropsEarned`/`.freezesAvailable` — hoy calculados 100%
-     en el cliente sobre `checkIns` locales — a leer de
-     `circles/{id}/memberStats/{uid}` (que las Cloud Functions ya
-     recalculan en cada `checkIns`/escudo). Esto también implica dejar
-     de otorgar/consumir escudos desde el cliente
-     (`_grantFreezeIfMilestoneReached`, `_applyPendingStreakFreezes`) y
-     confiar en `maybeGrantShields`/`applyPendingShields` del servidor.
-     Tocar esto sin poder probarlo contra Firestore/Functions reales es
-     alto riesgo (podría desincronizar la racha que ve el usuario), así
-     que queda para cuando puedas confirmar que las Cloud Functions
-     están desplegadas y validar el resultado en un dispositivo real.
+   - **Hecho**: `HabitCircle` gana campos nullable
+     `remoteStreakDays`/`remoteLongestStreakDays`/`remoteDropsEarned`/
+     `remoteFreezesAvailable` (no persistidos en Hive). Los getters
+     públicos que ya usaba la UI (`streakDays`, `longestStreakDays`,
+     `constancyDropsEarned`, `freezesAvailable`) ahora devuelven el valor
+     remoto cuando existe y caen al cálculo local de siempre
+     (renombrado a `_local*`) mientras no haya llegado — ni un solo call
+     site de la UI cambió. `HomeLogic._watchCircleMemberStats(circle)`
+     escucha `circles/{id}/memberStats/{uid}` (documento que
+     `recomputeMemberStats` recalcula en cada `checkIns`/escudo) y
+     puebla esos campos `remote*`, con el mismo patrón de suscripción por
+     círculo que `_watchCircleActivityEvents` (mapa de
+     `StreamSubscription` por `circle.id`, cancelado en `dispose()`).
+     A propósito **no** se tocaron `_grantFreezeIfMilestoneReached` ni
+     `_applyPendingStreakFreezes` (los escudos locales): siguen
+     corriendo igual, porque `freezesAvailable` ya prioriza el valor
+     remoto en cuanto existe, así que su efecto solo se ve mientras no
+     hay sesión de Firebase o los datos remotos aún no llegaron — nunca
+     pueden desincronizar lo que el usuario ve. Este diseño
+     ("remoto gana, mismo contrato público") se eligió justamente porque
+     este entorno no puede compilar ni probar contra el proyecto real:
+     minimiza el riesgo de romper la racha visible si algo en
+     `memberStats` no coincide con lo esperado. Falta validar en un
+     dispositivo real (ver PR correspondiente para el plan de pruebas).
 
 Cada fase deja la app funcional y testeable de punta a punta antes de
 empezar la siguiente.

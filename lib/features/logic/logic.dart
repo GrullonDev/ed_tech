@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -238,10 +239,9 @@ class HomeLogic extends ChangeNotifier {
   /// Firestore si ya llegó al menos una vez ([_remoteTriviaQuestions]), o
   /// el banco local hardcodeado ([TriviaBank.questions]) mientras tanto —
   /// nunca vacío, así que siempre hay desafío del día.
-  List<TriviaQuestion> get _triviaPool =>
-      _remoteTriviaQuestions.isNotEmpty
-          ? _remoteTriviaQuestions
-          : TriviaBank.questions;
+  List<TriviaQuestion> get _triviaPool => _remoteTriviaQuestions.isNotEmpty
+      ? _remoteTriviaQuestions
+      : TriviaBank.questions;
 
   /// Pregunta del "Desafío del día": misma para todos los usuarios que
   /// abran la app ese día (como un Wordle), elegida de forma determinística
@@ -313,9 +313,7 @@ class HomeLogic extends ChangeNotifier {
     LocalStorageService.saveOpenedStreakCardMilestones(
       _openedStreakCardMilestones,
     );
-    _logAnalyticsEvent('streak_card_opened', {
-      'milestone_days': milestoneDays,
-    });
+    _logAnalyticsEvent('streak_card_opened', {'milestone_days': milestoneDays});
     notifyListeners();
   }
 
@@ -377,7 +375,7 @@ class HomeLogic extends ChangeNotifier {
       _pushActivityEvent(
         emoji: '🔮',
         message:
-            '¡Ganaste tu Predicción de Tribu sobre "${circle!.name}"! '
+            '¡Ganaste tu Predicción de Tribu sobre "${circle.name}"! '
             '+${predictionBetAmount * 2} gotas.',
       );
     } else {
@@ -524,8 +522,7 @@ class HomeLogic extends ChangeNotifier {
     _pendingAllyRequests = LocalStorageService.readAllyRequests();
     _allies = LocalStorageService.readAllies();
     _activityFeed = LocalStorageService.readActivityFeed();
-    _triviaLastAnsweredDate =
-        LocalStorageService.readTriviaLastAnsweredDate();
+    _triviaLastAnsweredDate = LocalStorageService.readTriviaLastAnsweredDate();
     _triviaLastSelectedIndex =
         LocalStorageService.readTriviaLastSelectedIndex();
     _triviaBonusDrops = LocalStorageService.readTriviaBonusDrops();
@@ -540,8 +537,7 @@ class HomeLogic extends ChangeNotifier {
     _wheelLastSpunDate = LocalStorageService.readWheelLastSpunDate();
     _wheelLastReward = LocalStorageService.readWheelLastReward();
     _wheelBonusDrops = LocalStorageService.readWheelBonusDrops();
-    _duelRewardedWeekMonday =
-        LocalStorageService.readDuelRewardedWeekMonday();
+    _duelRewardedWeekMonday = LocalStorageService.readDuelRewardedWeekMonday();
     _duelBonusDrops = LocalStorageService.readDuelBonusDrops();
 
     _hasUsername = savedUser != null;
@@ -1401,9 +1397,7 @@ class HomeLogic extends ChangeNotifier {
           });
     } catch (error, stackTrace) {
       if (kDebugMode) {
-        debugPrint(
-          'No se pudo reflejar el aliado por QR en Firestore: $error',
-        );
+        debugPrint('No se pudo reflejar el aliado por QR en Firestore: $error');
         debugPrintStack(stackTrace: stackTrace);
       }
     }

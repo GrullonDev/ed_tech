@@ -1296,7 +1296,11 @@ class HomeLogic extends ChangeNotifier {
             'status': 'pending',
             'sentAt': FieldValue.serverTimestamp(),
           });
-    } catch (_) {
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('No se pudo enviar la solicitud de aliado: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
       return false;
     }
     allyUsernameController.clear();
@@ -1326,11 +1330,10 @@ class HomeLogic extends ChangeNotifier {
   /// cuando hay sesión) y agrega al instante a ese username como aliado —
   /// sin pasar por el flujo de solicitud pendiente, ya que el escaneo
   /// presencial ya es la prueba de confianza. Si hay sesión de Firebase,
-  /// además escribe `allyRequests/{miUid}_{suUid}` con `status: 'accepted'`
-  /// directamente, para que el otro dispositivo (que escanea el escáner, no
-  /// al revés) también reciba el aliado vía [_watchIncomingAllyRequests].
-  /// Retorna el username agregado, o `null` si el código no es válido, es el
-  /// propio jugador, o ya era aliado.
+  /// además refleja el aliado en Firestore (ver [_mirrorScannedAlly]) para
+  /// que el otro dispositivo también lo reciba vía
+  /// [_watchIncomingAllyRequests]. Retorna el username agregado, o `null`
+  /// si el código no es válido, es el propio jugador, o ya era aliado.
   String? addAllyFromScannedCode(String code) {
     final parts = code.split(':');
     if (parts.length < 3 || parts[0] != 'RACHATRIBU') return null;
@@ -1347,25 +1350,63 @@ class HomeLogic extends ChangeNotifier {
       message: 'Invocaste a $scannedUsername como aliado.',
     );
     _logAnalyticsEvent('ally_request_accepted', {'via': 'qr'});
-    final uid = _firebaseUid;
-    if (uid != null) {
-      unawaited(
-        FirebaseFirestore.instance
-            .collection('allyRequests')
-            .doc('${uid}_$scannedPlayerId')
-            .set({
-              'fromUserId': uid,
-              'fromUsername': _username,
-              'toUserId': scannedPlayerId,
-              'toUsername': scannedUsername,
-              'status': 'accepted',
-              'sentAt': FieldValue.serverTimestamp(),
-            })
-            .catchError((_) {}),
-      );
-    }
+    unawaited(_mirrorScannedAlly(scannedPlayerId, scannedUsername));
     notifyListeners();
     return scannedUsername;
+  }
+
+  /// Refleja en Firestore el aliado agregado por QR en
+  /// [addAllyFromScannedCode], para que el otro dispositivo también lo
+  /// reciba vía [_watchIncomingAllyRequests] sin depender de quién escaneó
+  /// a quién.
+  ///
+  /// Si el otro usuario ya nos había enviado una solicitud pendiente
+  /// (`allyRequests/{scannedUid}_{miUid}`, ver [sendAllyRequest]), la
+  /// acepta directamente en vez de crear una nueva en la dirección
+  /// contraria: `firestore.rules` solo deja escribir `status: 'accepted'`
+  /// sobre un documento ya existente si uno es su `toUserId` — si en cambio
+  /// se intentara sobreescribir ese documento con
+  /// `allyRequests/{miUid}_{scannedUid}` (la dirección "al revés"), las
+  /// reglas lo rechazarían por permisos al no ser uno el `fromUserId`
+  /// original, y [addAllyFromScannedCode] se quedaría con el aliado
+  /// agregado solo en este dispositivo. Nunca lanza: sin sesión de
+  /// Firebase o sin red, el aliado ya quedó agregado localmente arriba,
+  /// que es la fuente de verdad mientras tanto.
+  Future<void> _mirrorScannedAlly(
+    String scannedPlayerId,
+    String scannedUsername,
+  ) async {
+    final uid = _firebaseUid;
+    if (uid == null) return;
+    try {
+      final reverseRef = FirebaseFirestore.instance
+          .collection('allyRequests')
+          .doc('${scannedPlayerId}_$uid');
+      final reverseSnapshot = await reverseRef.get();
+      if (reverseSnapshot.exists &&
+          reverseSnapshot.data()?['status'] == 'pending') {
+        await reverseRef.update({'status': 'accepted'});
+        return;
+      }
+      await FirebaseFirestore.instance
+          .collection('allyRequests')
+          .doc('${uid}_$scannedPlayerId')
+          .set({
+            'fromUserId': uid,
+            'fromUsername': _username,
+            'toUserId': scannedPlayerId,
+            'toUsername': scannedUsername,
+            'status': 'accepted',
+            'sentAt': FieldValue.serverTimestamp(),
+          });
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'No se pudo reflejar el aliado por QR en Firestore: $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
   }
 
   void rejectAllyRequest(AllyRequest request) {

@@ -113,22 +113,49 @@ cambia contrato de `HomeLogic` hacia la UI). Arranque de app y HTTP se
 miden automáticamente solo con agregar el package. Se agregó el primer
 trace manual sugerido, `circle_creation`, envolviendo
 `HomeLogic._mirrorCircleCreation` (con `trace.stop()` en un `finally`
-para que no quede colgado si falla por falta de red). Android: se agregó
-el plugin de Gradle `com.google.firebase.firebase-perf` en
-`android/settings.gradle.kts` y `android/app/build.gradle.kts` (mismo
-patrón que `google-services`/Crashlytics), recomendado para
-instrumentación automática de red en Android. **iOS no necesitó ningún
-plugin ni cambio de proyecto Xcode**: la instrumentación automática de
-red en iOS se hace por method swizzling dentro del propio SDK nativo de
-`firebase_performance`, sin el paso de bytecode-instrumentation que sí
-hace falta en Android — alcanza con que CocoaPods instale el pod
-`FirebasePerformance` (automático la primera vez que se corra `flutter
-build ios`/`flutter run` en un Mac, ver nota de `GoogleService-Info.plist`
-en la sección 1). **Falta activar Performance Monitoring para
-`rachatribu` en la consola** si no está ya activo, y agregar más traces
-manuales puntuales (2-3) si más adelante hace falta diagnosticar algo
-lento en particular — se dejó solo el ejemplo del plan para no ensanchar
-el cambio de más.
+para que no quede colgado si falla por falta de red). **iOS no necesitó
+ningún plugin ni cambio de proyecto Xcode**: la instrumentación
+automática de red en iOS se hace por method swizzling dentro del propio
+SDK nativo de `firebase_performance`, sin el paso de
+bytecode-instrumentation que sí hace falta en Android — alcanza con que
+CocoaPods instale el pod `FirebasePerformance` (automático la primera
+vez que se corra `flutter build ios`/`flutter run` en un Mac, ver nota
+de `GoogleService-Info.plist` en la sección 1). **Falta activar
+Performance Monitoring para `rachatribu` en la consola** si no está ya
+activo, y agregar más traces manuales puntuales (2-3) si más adelante
+hace falta diagnosticar algo lento en particular — se dejó solo el
+ejemplo del plan para no ensanchar el cambio de más.
+
+**Android — el plugin de Gradle se sacó, incompatible con AGP 9.x**: se
+había agregado `com.google.firebase.firebase-perf` (probado hasta
+`1.4.2`) en `android/settings.gradle.kts`/`android/app/build.gradle.kts`
+para la instrumentación automática de red. En la prueba real en
+dispositivo (Windows, `./gradlew clean` / `flutter run`), el build
+rompió por completo:
+
+```
+An exception occurred applying plugin request [id: 'com.google.firebase.firebase-perf']
+> Failed to apply plugin 'com.google.firebase.firebase-perf'.
+   > Could not create plugin of type 'FirebasePerfPlugin'.
+      > Could not generate a decorated class for type FirebasePerfPlugin.
+         > com/android/build/api/transform/Transform
+```
+
+Causa: ese plugin todavía depende de
+`com.android.build.api.transform.Transform`, una API que el Android
+Gradle Plugin eliminó por completo a partir de AGP 8 — y este proyecto
+usa AGP `9.1.0` (`android/settings.gradle.kts`, preexistente, no
+elegido para esta integración). Es un problema del lado de Firebase (el
+plugin todavía no se actualizó para AGP moderno), mismo tipo de
+incompatibilidad de ecosistema que ya se había visto con pnpm y el
+buildpack de Cloud Functions — no hay nada para arreglar del lado de la
+app. Se sacó el `id("com.google.firebase.firebase-perf")` de ambos
+archivos de Gradle; `firebase_performance` se queda en `pubspec.yaml` y
+sigue midiendo arranque de app y traces manuales (`circle_creation`)
+con normalidad — lo único que se pierde en Android es la instrumentación
+automática de peticiones HTTP/S, que dependía específicamente de ese
+plugin. Revisar si Firebase publica una versión del plugin compatible
+con AGP 9 más adelante y volver a agregarlo si aparece.
 
 ## 3. Remote Config (`firebase_remote_config`) — Hecho (parcial, a propósito)
 

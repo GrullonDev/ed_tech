@@ -19,6 +19,7 @@ class RachasPage extends StatelessWidget {
     required this.onCheckIn,
     required this.onOpenCircle,
     required this.onCreateCircle,
+    required this.onOpenGames,
     required this.onOpenProfile,
     required this.onOpenAgora,
   });
@@ -28,6 +29,7 @@ class RachasPage extends StatelessWidget {
   final ValueChanged<HabitCircle> onCheckIn;
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onCreateCircle;
+  final VoidCallback onOpenGames;
   final VoidCallback onOpenProfile;
   final VoidCallback onOpenAgora;
 
@@ -54,6 +56,7 @@ class RachasPage extends StatelessWidget {
         onCreateCircle: onCreateCircle,
         onOpenCircles: () =>
             Navigator.of(context).popUntil((route) => route.isFirst),
+        onOpenGames: onOpenGames,
         onOpenProfile: onOpenProfile,
       ),
       body: SafeArea(

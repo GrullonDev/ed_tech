@@ -46,6 +46,7 @@ class ProfilePage extends StatelessWidget {
     required this.onRejectAllyRequest,
     required this.onOpenCircle,
     required this.onOpenRachas,
+    required this.onOpenGames,
     required this.onCreateCircle,
     required this.onOpenQrSummon,
     required this.isAnonymousAccount,
@@ -71,6 +72,7 @@ class ProfilePage extends StatelessWidget {
   final ValueChanged<AllyRequest> onRejectAllyRequest;
   final ValueChanged<HabitCircle> onOpenCircle;
   final VoidCallback onOpenRachas;
+  final VoidCallback onOpenGames;
   final VoidCallback onCreateCircle;
   final VoidCallback onOpenQrSummon;
 
@@ -120,6 +122,7 @@ class ProfilePage extends StatelessWidget {
         onOpenCircles: () =>
             Navigator.of(context).popUntil((route) => route.isFirst),
         onOpenRachas: onOpenRachas,
+        onOpenGames: onOpenGames,
       ),
       body: SafeArea(
         bottom: false,

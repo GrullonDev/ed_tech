@@ -1,0 +1,52 @@
+name: Android → Firebase App Distribution
+
+# Manual: se dispara a mano desde la pestaña Actions cuando se quiere una
+# build de prueba en un dispositivo real (por ejemplo, para validar
+# Crashlytics/Performance Monitoring — ver firebase/PRODUCTS_PLAN.md,
+# secciones 1 y 2). No corre en cada push a propósito: cada corrida gasta
+# minutos de Actions y notifica a los testers, así que se deja como
+# decisión explícita en vez de automática.
+#
+# Requiere dos secrets del repo (Settings → Secrets and variables →
+# Actions):
+#   - FIREBASE_SERVICE_ACCOUNT_JSON: el JSON completo de una cuenta de
+#     servicio de Google Cloud con el rol "Firebase App Distribution
+#     Admin" en el proyecto rachatribu (ver guía en
+#     firebase/APP_DISTRIBUTION.md).
+#   - FIREBASE_APP_DISTRIBUTION_GROUPS: alias del grupo de testers en
+#     Firebase App Distribution (por ejemplo "testers"), separados por
+#     coma si hay más de uno. Ese grupo se crea una vez desde la consola
+#     (Release & Monitor → App Distribution → Testers y grupos) y ahí se
+#     agregan los emails de quienes van a probar.
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: "Notas de la release (qué se está probando)"
+        required: false
+        default: "Build de prueba manual (app-distribution-android.yml)."
+
+jobs:
+  build-and-distribute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: flutter build apk --release
+        run: flutter build apk --release
+
+      - name: Subir a Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: "1:315811589668:android:0fa5a262942581e48a72b1"
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          groups: ${{ secrets.FIREBASE_APP_DISTRIBUTION_GROUPS }}
+          file: build/app/outputs/flutter-apk/app-release.apk
+          releaseNotes: ${{ inputs.release_notes }}

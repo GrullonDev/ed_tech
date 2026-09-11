@@ -41,6 +41,12 @@ class Dashboard extends StatelessWidget {
     required this.pendingPredictionCircleId,
     required this.predictionBetAmount,
     required this.onPlacePrediction,
+    required this.hasSpunTodaysWheel,
+    required this.wheelLastReward,
+    required this.onSpinWheel,
+    required this.weeklyDuelUserTotal,
+    required this.weeklyDuelRivalTotal,
+    required this.hasWonWeeklyDuel,
   });
 
   final String username;
@@ -75,6 +81,16 @@ class Dashboard extends StatelessWidget {
   final String? pendingPredictionCircleId;
   final int predictionBetAmount;
   final bool Function(HabitCircle circle) onPlacePrediction;
+
+  /// "Ruleta diaria de gotas" (ver `HomeLogic.spinWheel`).
+  final bool hasSpunTodaysWheel;
+  final int? wheelLastReward;
+  final int Function() onSpinWheel;
+
+  /// "Duelo de Racha Semanal" (ver `HomeLogic.weeklyDuelUserTotal`).
+  final int weeklyDuelUserTotal;
+  final int weeklyDuelRivalTotal;
+  final bool hasWonWeeklyDuel;
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +156,18 @@ class Dashboard extends StatelessWidget {
                   onPlacePrediction: onPlacePrediction,
                 ),
               ],
+              const SizedBox(height: AppSpacing.lg),
+              _WheelCard(
+                hasSpun: hasSpunTodaysWheel,
+                lastReward: wheelLastReward,
+                onSpin: onSpinWheel,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _WeeklyDuelCard(
+                userTotal: weeklyDuelUserTotal,
+                rivalTotal: weeklyDuelRivalTotal,
+                won: hasWonWeeklyDuel,
+              ),
               const SizedBox(height: AppSpacing.lg),
               _TodayCard(
                 habits: todayHabits,
@@ -1044,6 +1072,201 @@ class _PredictionCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _WheelCard extends StatelessWidget {
+  const _WheelCard({
+    required this.hasSpun,
+    required this.lastReward,
+    required this.onSpin,
+  });
+
+  final bool hasSpun;
+  final int? lastReward;
+  final int Function() onSpin;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.card,
+      ),
+      child: Row(
+        children: [
+          const Text('🎰', style: TextStyle(fontSize: 28)),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ruleta diaria de gotas',
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  hasSpun
+                      ? '¡Ganaste $lastReward gotas! Volvé mañana.'
+                      : 'Un giro gratis por día. ¡Probá tu suerte!',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          if (hasSpun)
+            ElevatedButton(
+              onPressed: null,
+              child: Text('+$lastReward'),
+            )
+          else
+            GamePressable(
+              onTap: () => onSpin(),
+              child: ElevatedButton(
+                onPressed: () => onSpin(),
+                child: const Text('Girar'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyDuelCard extends StatelessWidget {
+  const _WeeklyDuelCard({
+    required this.userTotal,
+    required this.rivalTotal,
+    required this.won,
+  });
+
+  final int userTotal;
+  final int rivalTotal;
+  final bool won;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final maxTotal = [userTotal, rivalTotal, 1].reduce((a, b) => a > b ? a : b);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('⚔️', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  'Duelo de Racha Semanal',
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (won)
+                Icon(
+                  Icons.emoji_events_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            won
+                ? '¡Superaste a tu Racha Fantasma esta semana!'
+                : 'Superá el total de check-ins de tu mejor semana pasada.',
+            style: textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _DuelBar(
+            label: 'Vos',
+            value: userTotal,
+            maxValue: maxTotal,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _DuelBar(
+            label: 'Racha Fantasma',
+            value: rivalTotal,
+            maxValue: maxTotal,
+            color: AppColors.outline,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DuelBar extends StatelessWidget {
+  const _DuelBar({
+    required this.label,
+    required this.value,
+    required this.maxValue,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final int maxValue;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final fraction = maxValue == 0 ? 0.0 : value / maxValue;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              '$value',
+              style: textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: LinearProgressIndicator(
+            value: fraction.clamp(0.0, 1.0),
+            minHeight: 8,
+            backgroundColor: AppColors.surfaceContainer,
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      ],
     );
   }
 }

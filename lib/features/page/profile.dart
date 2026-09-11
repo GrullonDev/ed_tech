@@ -55,6 +55,7 @@ class ProfilePage extends StatelessWidget {
     required this.unlockedStreakCardMilestones,
     required this.pendingStreakCardMilestones,
     required this.onOpenStreakCard,
+    required this.onOpenGameTour,
   });
 
   final String username;
@@ -99,6 +100,11 @@ class ProfilePage extends StatelessWidget {
   /// "selladas" hasta que se tocan.
   final List<int> pendingStreakCardMilestones;
   final ValueChanged<int> onOpenStreakCard;
+
+  /// Vuelve a mostrar el tour de "cómo se juega" (ver
+  /// `lib/features/widgets/game_tour.dart`), a pedido, sin que cuente como
+  /// la primera vez que lo ve el usuario.
+  final VoidCallback onOpenGameTour;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +206,15 @@ class ProfilePage extends StatelessWidget {
                               ],
                             ),
                           ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton.icon(
+                          onPressed: onOpenGameTour,
+                          icon: const Icon(
+                            Icons.help_outline_rounded,
+                            size: 16,
+                          ),
+                          label: const Text('¿Cómo funciona Racha Tribu?'),
                         ),
                       ],
                     ),

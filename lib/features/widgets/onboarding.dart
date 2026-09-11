@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:firebase_remote_config/firebase_remote_config.dart';
+
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
@@ -12,6 +14,29 @@ class Onboarding extends StatelessWidget {
 
   final TextEditingController usernameController;
   final VoidCallback onContinue;
+
+  /// Titular por defecto, usado tanto como fallback si Remote Config no
+  /// llegó a activarse como valor por defecto que se declara en
+  /// `main.dart._initRemoteConfig` (así el parámetro `onboarding_headline`
+  /// de la consola de Firebase tiene, desde el día uno, el mismo texto que
+  /// ya se veía antes de esta integración).
+  static const defaultHeadline = 'Bienvenido a\nRacha Tribu';
+
+  /// Lee `onboarding_headline` de Remote Config (Fase "A/B Testing" de
+  /// `firebase/PRODUCTS_PLAN.md`, sección 3). Envuelto en try/catch porque
+  /// esta pantalla es lo primero que ve un usuario nuevo: si Firebase nunca
+  /// se inicializó (sin red, sin configurar), no debe romper el onboarding
+  /// — cae al mismo texto de siempre.
+  static String _headline() {
+    try {
+      final value = FirebaseRemoteConfig.instance.getString(
+        'onboarding_headline',
+      );
+      return value.isEmpty ? defaultHeadline : value;
+    } catch (_) {
+      return defaultHeadline;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +61,7 @@ class Onboarding extends StatelessWidget {
                   Image.asset(AppAssets.logo, width: 72, height: 72),
                   const SizedBox(height: AppSpacing.xl2),
                   Text(
-                    'Bienvenido a\nRacha Tribu',
+                    _headline(),
                     style: textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.02,

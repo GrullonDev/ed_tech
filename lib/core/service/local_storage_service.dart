@@ -35,6 +35,7 @@ class LocalStorageService {
   static const String _wheelBonusDropsKey = 'wheelBonusDrops';
   static const String _duelRewardedWeekMondayKey = 'duelRewardedWeekMonday';
   static const String _duelBonusDropsKey = 'duelBonusDrops';
+  static const String _hasSeenGameTourKey = 'hasSeenGameTour';
 
   static late Box<dynamic> _settingsBox;
   static late Box<dynamic> _circlesBox;
@@ -164,6 +165,17 @@ class LocalStorageService {
 
   static Future<void> saveTriviaBonusDrops(int drops) =>
       _settingsBox.put(_triviaBonusDropsKey, drops);
+
+  // ---- Tour de "cómo se juega" ----
+
+  /// `true` si el usuario ya vio el tour explicativo (ver
+  /// `lib/features/widgets/game_tour.dart`) — controla si `page/home.dart`
+  /// lo muestra automáticamente después del onboarding de username.
+  static bool readHasSeenGameTour() =>
+      _settingsBox.get(_hasSeenGameTourKey) as bool? ?? false;
+
+  static Future<void> saveHasSeenGameTour(bool value) =>
+      _settingsBox.put(_hasSeenGameTourKey, value);
 
   /// Caché local del banco de preguntas sincronizado desde Firestore (ver
   /// `HomeLogic._syncTriviaQuestions`, colección `triviaQuestions`). Vacío

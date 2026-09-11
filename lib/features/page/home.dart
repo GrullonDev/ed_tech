@@ -9,6 +9,7 @@ import 'package:edtech_tiktok/features/page/profile.dart';
 import 'package:edtech_tiktok/features/page/qr_summon.dart';
 import 'package:edtech_tiktok/features/page/rachas.dart';
 import 'package:edtech_tiktok/features/widgets/dashboard.dart';
+import 'package:edtech_tiktok/features/widgets/game_tour.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 import 'package:edtech_tiktok/features/widgets/onboarding.dart';
 
@@ -38,6 +39,9 @@ class _MyHomePageState extends State<MyHomePage> {
             usernameController: _logic.usernameController,
             onContinue: _logic.completeOnboarding,
           );
+        }
+        if (!_logic.hasSeenGameTour) {
+          return GameTour(onFinish: _logic.completeGameTour);
         }
         return Dashboard(
           username: _logic.username,
@@ -159,8 +163,22 @@ class _MyHomePageState extends State<MyHomePage> {
             linkedProviderIds: _logic.linkedProviderIds,
             onLinkWithGoogle: _logic.linkWithGoogle,
             onLinkWithEmailPassword: _logic.linkWithEmailPassword,
+            onOpenGameTour: _openGameTour,
           ),
         ),
+      ),
+    );
+  }
+
+  /// Vuelve a mostrar el tour de "cómo se juega" a pedido (botón en
+  /// `ProfilePage`), sin depender de `HomeLogic.hasSeenGameTour` — a
+  /// diferencia de la primera vez (justo después del onboarding), acá solo
+  /// cierra la pantalla al terminar en vez de desbloquear el dashboard.
+  void _openGameTour() {
+    Navigator.of(context).push(
+      GamePageRoute(
+        builder: (context) =>
+            GameTour(onFinish: () => Navigator.of(context).pop()),
       ),
     );
   }

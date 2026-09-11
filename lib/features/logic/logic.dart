@@ -122,6 +122,12 @@ class HomeLogic extends ChangeNotifier {
   /// Racha Semanal — ver doc-comment de [constancyDrops].
   int _duelBonusDrops = 0;
 
+  /// `true` si el usuario ya vio el tour de "cómo se juega" (ver
+  /// `lib/features/widgets/game_tour.dart` y [completeGameTour]) —
+  /// controla si `page/home.dart` lo muestra automáticamente justo
+  /// después de completar el onboarding de username.
+  bool _hasSeenGameTour = false;
+
   /// Banco de preguntas sincronizado desde Firestore (`triviaQuestions`,
   /// ver [_syncTriviaQuestions]), cacheado en Hive. Vacío hasta la primera
   /// sincronización exitosa (o si nunca hay red/sesión) — mientras esté
@@ -129,6 +135,7 @@ class HomeLogic extends ChangeNotifier {
   List<TriviaQuestion> _remoteTriviaQuestions = [];
 
   bool get hasUsername => _hasUsername;
+  bool get hasSeenGameTour => _hasSeenGameTour;
   String get username => _username;
   DateTime? get memberSince => _memberSince;
   String get playerId => _playerId;
@@ -396,6 +403,7 @@ class HomeLogic extends ChangeNotifier {
     _triviaLastSelectedIndex =
         LocalStorageService.readTriviaLastSelectedIndex();
     _triviaBonusDrops = LocalStorageService.readTriviaBonusDrops();
+    _hasSeenGameTour = LocalStorageService.readHasSeenGameTour();
     _remoteTriviaQuestions = LocalStorageService.readRemoteTriviaQuestions();
     _wheelLastSpunDate = LocalStorageService.readWheelLastSpunDate();
     _wheelLastReward = LocalStorageService.readWheelLastReward();
@@ -536,6 +544,18 @@ class HomeLogic extends ChangeNotifier {
     for (final circle in _circles) {
       _watchCircleActivityEvents(circle);
     }
+    notifyListeners();
+  }
+
+  /// Marca el tour de "cómo se juega" como visto — se llama al tocar
+  /// "Empezar" en su última página o "Omitir" en cualquier momento
+  /// (`page/home.dart` lo muestra automáticamente justo después de
+  /// [completeOnboarding] mientras [hasSeenGameTour] sea `false`, y
+  /// `ProfilePage` ofrece volver a abrirlo a mano después).
+  void completeGameTour() {
+    if (_hasSeenGameTour) return;
+    _hasSeenGameTour = true;
+    LocalStorageService.saveHasSeenGameTour(true);
     notifyListeners();
   }
 

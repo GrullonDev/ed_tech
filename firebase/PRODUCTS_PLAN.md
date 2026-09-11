@@ -196,25 +196,26 @@ pantalla.
   desde este entorno. Queda para cuando haya oportunidad de probarlo en
   un dispositivo real.
 
-**Pasos manuales pendientes para que funcione en dispositivo** (ninguno
-es código; ninguno se pudo verificar desde este entorno):
+**Pasos manuales** (ninguno se pudo verificar en un build real desde
+este entorno, pero los 3 primeros ya están hechos):
 
-- **Android**: registrar el SHA-1 (y SHA-256 para Play App Signing) del
-  certificado de firma en la consola de Firebase (Configuración del
-  proyecto → tu app Android → Agregar huella digital) — sin esto, Google
-  Sign-In falla en runtime aunque el código esté bien. Con la firma debug
-  actual (`android/app/build.gradle.kts`, "Signing with the debug keys
-  for now"), es el SHA-1 de esa keystore de debug.
-- **iOS**: agregar un `CFBundleURLTypes`/`CFBundleURLSchemes` a
-  `ios/Runner/Info.plist` con el `REVERSED_CLIENT_ID` del
-  `GoogleService-Info.plist` real (ver nota de este mismo archivo que
-  falta, sección 1) — sin esto, Google Sign-In no puede volver a la app
-  tras el login. `ios/Runner/Info.plist` hoy no tiene ningún
-  `CFBundleURLTypes` — confirmado al revisar el archivo.
-- **Consola de Firebase**: habilitar los proveedores Google y
-  Email/contraseña en Authentication → Sign-in method, si no están ya
-  habilitados (`signInAnonymously()` solo necesita el proveedor
-  Anónimo, que sí está activo desde la Fase 1).
+- **Android — Hecho**: SHA-1/SHA-256 de la keystore de debug registrados
+  en la consola de Firebase, y `android/app/google-services.json`
+  actualizado en el repo con el `oauth_client` real (antes venía con
+  `oauth_client: []`).
+- **iOS — Hecho**: `ios/Runner/GoogleService-Info.plist` agregado al
+  repo, y `ios/Runner/Info.plist` ya tiene el `CFBundleURLTypes` con el
+  `REVERSED_CLIENT_ID` de ese plist
+  (`com.googleusercontent.apps.315811589668-gg8g1d8btlqm9mj0ijtp1jnqputc0pb4`) —
+  sin esto, Google Sign-In no podía volver a la app tras el login.
+- **Consola de Firebase — Hecho**: proveedores Google y Email/contraseña
+  habilitados en Authentication → Sign-in method (`signInAnonymously()`
+  solo necesitaba el proveedor Anónimo, que ya estaba activo desde la
+  Fase 1).
+- **Pendiente**: compilar y probar en un dispositivo/simulador real
+  (Android ya se puede probar sin Mac; iOS necesita una Mac con Xcode
+  para `pod install` + `flutter build ios`/`flutter run`, algo que este
+  entorno no tiene).
 
 ## 7. Qué NO se incluye en este plan
 

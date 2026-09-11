@@ -1126,6 +1126,7 @@ class _WheelCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           if (hasSpun)
             ElevatedButton(
+              style: ElevatedButton.styleFrom(minimumSize: const Size(64, 40)),
               onPressed: null,
               child: Text('+$lastReward'),
             )
@@ -1133,6 +1134,9 @@ class _WheelCard extends StatelessWidget {
             GamePressable(
               onTap: () => onSpin(),
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(64, 40),
+                ),
                 onPressed: () => onSpin(),
                 child: const Text('Girar'),
               ),

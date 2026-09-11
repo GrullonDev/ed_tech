@@ -37,6 +37,10 @@ class Dashboard extends StatelessWidget {
     required this.hasAnsweredTodaysTrivia,
     required this.triviaLastSelectedIndex,
     required this.onAnswerTrivia,
+    required this.hasPendingPredictionToday,
+    required this.pendingPredictionCircleId,
+    required this.predictionBetAmount,
+    required this.onPlacePrediction,
     required this.hasSpunTodaysWheel,
     required this.wheelLastReward,
     required this.onSpinWheel,
@@ -71,6 +75,12 @@ class Dashboard extends StatelessWidget {
   final bool hasAnsweredTodaysTrivia;
   final int? triviaLastSelectedIndex;
   final bool Function(int selectedIndex) onAnswerTrivia;
+
+  /// "Predicción de Tribu" (ver `HomeLogic.placePrediction`).
+  final bool hasPendingPredictionToday;
+  final String? pendingPredictionCircleId;
+  final int predictionBetAmount;
+  final bool Function(HabitCircle circle) onPlacePrediction;
 
   /// "Ruleta diaria de gotas" (ver `HomeLogic.spinWheel`).
   final bool hasSpunTodaysWheel;
@@ -135,6 +145,17 @@ class Dashboard extends StatelessWidget {
                 selectedIndex: triviaLastSelectedIndex,
                 onAnswer: onAnswerTrivia,
               ),
+              if (circles.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _PredictionCard(
+                  circles: circles,
+                  hasPending: hasPendingPredictionToday,
+                  pendingCircleId: pendingPredictionCircleId,
+                  betAmount: predictionBetAmount,
+                  affordable: constancyDrops >= predictionBetAmount,
+                  onPlacePrediction: onPlacePrediction,
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               _WheelCard(
                 hasSpun: hasSpunTodaysWheel,
@@ -944,6 +965,114 @@ class _TriviaOption extends StatelessWidget {
     return tapHandler == null
         ? content
         : GamePressable(onTap: tapHandler, child: content);
+  }
+}
+
+class _PredictionCard extends StatelessWidget {
+  const _PredictionCard({
+    required this.circles,
+    required this.hasPending,
+    required this.pendingCircleId,
+    required this.betAmount,
+    required this.affordable,
+    required this.onPlacePrediction,
+  });
+
+  final List<HabitCircle> circles;
+  final bool hasPending;
+  final String? pendingCircleId;
+  final int betAmount;
+  final bool affordable;
+  final bool Function(HabitCircle circle) onPlacePrediction;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    HabitCircle? pendingCircle;
+    if (pendingCircleId != null) {
+      for (final circle in circles) {
+        if (circle.id == pendingCircleId) {
+          pendingCircle = circle;
+          break;
+        }
+      }
+    }
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🔮', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  'Predicción de Tribu',
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          if (hasPending && pendingCircle != null)
+            Text(
+              'Apostaste $betAmount gotas a que "${pendingCircle.name}" '
+              'logra el Círculo Perfecto hoy. El resultado se revela '
+              'mañana.',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            )
+          else ...[
+            Text(
+              'Apostá $betAmount gotas a que un círculo logra el Círculo '
+              'Perfecto hoy. Si acertás, duplicás la apuesta mañana.',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final circle in circles)
+                  if (affordable)
+                    GamePressable(
+                      onTap: () => onPlacePrediction(circle),
+                      child: ChoiceChip(
+                        label: Text(circle.name),
+                        selected: false,
+                        onSelected: (_) => onPlacePrediction(circle),
+                      ),
+                    )
+                  else
+                    ChoiceChip(
+                      label: Text(circle.name),
+                      selected: false,
+                      onSelected: null,
+                    ),
+              ],
+            ),
+            if (!affordable) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Te faltan gotas para apostar.',
+                style: textTheme.labelSmall?.copyWith(color: AppColors.error),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
   }
 }
 

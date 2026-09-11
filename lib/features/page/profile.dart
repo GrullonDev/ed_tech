@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/data/streak_cards.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/model/streak_card.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
@@ -50,6 +52,9 @@ class ProfilePage extends StatelessWidget {
     required this.linkedProviderIds,
     required this.onLinkWithGoogle,
     required this.onLinkWithEmailPassword,
+    required this.unlockedStreakCardMilestones,
+    required this.pendingStreakCardMilestones,
+    required this.onOpenStreakCard,
     required this.onOpenGameTour,
   });
 
@@ -85,6 +90,16 @@ class ProfilePage extends StatelessWidget {
   /// mostrar en un SnackBar.
   final Future<String?> Function(String email, String password)
   onLinkWithEmailPassword;
+
+  /// Hitos de racha ya desbloqueados (ver `HomeLogic.unlockedStreakCard
+  /// Milestones`) — la Carta de Racha correspondiente ya existe, abierta o
+  /// no.
+  final List<int> unlockedStreakCardMilestones;
+
+  /// Hitos desbloqueados cuya carta todavía no fue abierta — se muestran
+  /// "selladas" hasta que se tocan.
+  final List<int> pendingStreakCardMilestones;
+  final ValueChanged<int> onOpenStreakCard;
 
   /// Vuelve a mostrar el tour de "cómo se juega" (ver
   /// `lib/features/widgets/game_tour.dart`), a pedido, sin que cuente como
@@ -341,6 +356,35 @@ class ProfilePage extends StatelessWidget {
                     overallStreakDays: overallStreakDays,
                     recordStreakDays: recordStreakDays,
                     hasPerfectCircle: perfectCount > 0,
+                  ),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Row(
+                    children: [
+                      const Text('🃏', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          'Cartas de Racha',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Cada hito de racha te regala una carta sellada. '
+                    'Tocala para abrirla.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _StreakCardsGallery(
+                    unlockedMilestones: unlockedStreakCardMilestones,
+                    pendingMilestones: pendingStreakCardMilestones,
+                    onOpenCard: onOpenStreakCard,
                   ),
                   const SizedBox(height: AppSpacing.xl2),
                   Text(
@@ -1220,6 +1264,114 @@ class _MasteryTotem extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Grilla horizontal de Cartas de Racha (ver [StreakCards.all]). Cada carta
+/// puede estar bloqueada (hito todavía no alcanzado), sellada (hito
+/// alcanzado, esperando que se toque para revelarla) o abierta (ya
+/// revelada, muestra el texto de sabor completo).
+class _StreakCardsGallery extends StatelessWidget {
+  const _StreakCardsGallery({
+    required this.unlockedMilestones,
+    required this.pendingMilestones,
+    required this.onOpenCard,
+  });
+
+  final List<int> unlockedMilestones;
+  final List<int> pendingMilestones;
+  final ValueChanged<int> onOpenCard;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 168,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: StreakCards.all.length,
+        separatorBuilder: (context, index) =>
+            const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, index) {
+          final card = StreakCards.all[index];
+          final unlocked = unlockedMilestones.contains(card.milestoneDays);
+          final sealed = pendingMilestones.contains(card.milestoneDays);
+          return _StreakCardTile(
+            card: card,
+            unlocked: unlocked,
+            sealed: sealed,
+            onTap: sealed ? () => onOpenCard(card.milestoneDays) : null,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StreakCardTile extends StatelessWidget {
+  const _StreakCardTile({
+    required this.card,
+    required this.unlocked,
+    required this.sealed,
+    required this.onTap,
+  });
+
+  final StreakCard card;
+  final bool unlocked;
+  final bool sealed;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final content = Container(
+      width: 128,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(
+          color: unlocked ? AppColors.secondary : AppColors.outlineWhisper,
+        ),
+        boxShadow: unlocked ? AppShadows.card : null,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            sealed ? '🎁' : (unlocked ? card.emoji : '🔒'),
+            style: const TextStyle(fontSize: 36),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            sealed
+                ? '¡Nueva carta!'
+                : (unlocked ? card.title : '${card.milestoneDays} días'),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          if (sealed) ...[
+            const SizedBox(height: 2),
+            Text(
+              'Tocá para abrir',
+              style: textTheme.labelSmall?.copyWith(color: AppColors.primary),
+            ),
+          ] else if (!unlocked) ...[
+            const SizedBox(height: 2),
+            Text(
+              'Bloqueada',
+              style: textTheme.labelSmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+    return onTap == null
+        ? content
+        : GamePressable(onTap: onTap!, child: content);
   }
 }
 

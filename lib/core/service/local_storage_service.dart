@@ -30,6 +30,12 @@ class LocalStorageService {
   static const String _triviaLastAnsweredDateKey = 'triviaLastAnsweredDate';
   static const String _triviaLastSelectedIndexKey = 'triviaLastSelectedIndex';
   static const String _triviaBonusDropsKey = 'triviaBonusDrops';
+  static const String _openedStreakCardMilestonesKey =
+      'openedStreakCardMilestones';
+  static const String _predictionPendingCircleIdKey =
+      'predictionPendingCircleId';
+  static const String _predictionPendingDateKey = 'predictionPendingDate';
+  static const String _predictionNetDropsKey = 'predictionNetDrops';
   static const String _wheelLastSpunDateKey = 'wheelLastSpunDate';
   static const String _wheelLastRewardKey = 'wheelLastReward';
   static const String _wheelBonusDropsKey = 'wheelBonusDrops';
@@ -195,6 +201,52 @@ class LocalStorageService {
     await _triviaQuestionsBox.clear();
     await _triviaQuestionsBox.addAll(questions.map((q) => q.toMap()));
   }
+
+  // ---- Cartas de Racha coleccionables ----
+
+  /// Hitos (`StreakCard.milestoneDays`) cuya carta ya fue abierta — ver
+  /// `HomeLogic.openStreakCard`. Un hito desbloqueado que todavía no está
+  /// en esta lista se muestra "sellado" (pendiente de abrir).
+  static List<int> readOpenedStreakCardMilestones() => List<int>.from(
+    _settingsBox.get(_openedStreakCardMilestonesKey) as List? ?? [],
+  );
+
+  static Future<void> saveOpenedStreakCardMilestones(List<int> milestones) =>
+      _settingsBox.put(_openedStreakCardMilestonesKey, milestones);
+
+  // ---- Predicción de Tribu ----
+
+  /// ID del círculo sobre el que hay una predicción pendiente de resolver,
+  /// o `null` si no hay ninguna. Ver `HomeLogic.placePrediction`.
+  static String? readPredictionPendingCircleId() =>
+      _settingsBox.get(_predictionPendingCircleIdKey) as String?;
+
+  static Future<void> savePredictionPendingCircleId(String? circleId) =>
+      _settingsBox.put(_predictionPendingCircleIdKey, circleId);
+
+  /// Fecha (normalizada a medianoche) sobre la que se hizo la predicción
+  /// pendiente, o `null` si no hay ninguna.
+  static DateTime? readPredictionPendingDate() {
+    final raw = _settingsBox.get(_predictionPendingDateKey) as String?;
+    return raw == null ? null : DateTime.parse(raw);
+  }
+
+  static Future<void> savePredictionPendingDate(DateTime? date) =>
+      _settingsBox.put(
+        _predictionPendingDateKey,
+        date?.toIso8601String(),
+      );
+
+  /// Saldo neto (puede ser negativo) de Gotas de Constancia ganadas o
+  /// perdidas apostando en la Predicción de Tribu — misma excepción de
+  /// "contador persistido aparte" que [readTriviaBonusDrops], salvo que
+  /// este sí puede restar (ver doc-comment de
+  /// `HomeLogic.constancyDrops`).
+  static int readPredictionNetDrops() =>
+      _settingsBox.get(_predictionNetDropsKey) as int? ?? 0;
+
+  static Future<void> savePredictionNetDrops(int netDrops) =>
+      _settingsBox.put(_predictionNetDropsKey, netDrops);
 
   // ---- Ruleta diaria de gotas ----
 

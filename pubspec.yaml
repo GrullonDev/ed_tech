@@ -40,8 +40,10 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
   image_path: "assets/images/logo.png"
+  remove_alpha_ios: true
+  background_color_ios: "#FEF3C7"
 
 flutter:
 

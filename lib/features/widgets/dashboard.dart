@@ -222,14 +222,24 @@ void _showManageCirclesSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
     ),
-    builder: (sheetContext) => _ManageCirclesSheet(
-      circles: circles,
-      allies: allies,
-      onOpenCircle: (circle) {
-        Navigator.of(sheetContext).pop();
-        onOpenCircle(circle);
-      },
-      onInviteMember: onInviteMember,
+    // La hoja es un StatelessWidget que recibe una foto fija de
+    // circles/allies al abrirse: sin este StatefulBuilder, tocar "Agregar"
+    // sí persiste el aliado en HomeLogic (ver onInviteMember), pero la hoja
+    // nunca se reconstruye para reflejarlo, así que el botón parece no
+    // hacer nada hasta cerrarla y volver a abrirla.
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (sheetContext, setSheetState) => _ManageCirclesSheet(
+        circles: circles,
+        allies: allies,
+        onOpenCircle: (circle) {
+          Navigator.of(sheetContext).pop();
+          onOpenCircle(circle);
+        },
+        onInviteMember: (circle, name) {
+          onInviteMember(circle, name);
+          setSheetState(() {});
+        },
+      ),
     ),
   );
 }

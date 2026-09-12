@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:edtech_tiktok/app.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
@@ -15,7 +16,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorageService.init();
   await _initFirebase();
-  runApp(const MyApp());
+  await LiquidGlassWidgets.initialize();
+  runApp(LiquidGlassWidgets.wrap(child: const MyApp()));
 }
 
 /// Inicializa Firebase Core y, si tuvo éxito, cada producto por separado

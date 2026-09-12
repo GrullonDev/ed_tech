@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -85,13 +86,8 @@ class _MyCodeTab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
+            GlassCard(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                boxShadow: AppShadows.card,
-              ),
               child: QrImageView(
                 data: qrPayload,
                 size: 220,
@@ -220,34 +216,31 @@ class _ScanTabState extends State<_ScanTab> {
                   curve: Curves.elasticOut,
                   builder: (context, value, child) =>
                       Transform.scale(scale: value, child: child),
-                  child: Container(
+                  child: SizedBox(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      boxShadow: AppShadows.card,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _isSuccess ? '🔥🤝' : '⚠️',
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            _resultMessage!,
-                            style: textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: _isSuccess
-                                  ? AppColors.primary
-                                  : AppColors.error,
+                    child: GlassCard(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _isSuccess ? '🔥🤝' : '⚠️',
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              _resultMessage!,
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: _isSuccess
+                                    ? AppColors.primary
+                                    : AppColors.error,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

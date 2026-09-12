@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
@@ -72,9 +74,8 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
     final previewEmoji = _kCategoryOptions[category] ?? '⭐';
     final canSubmit = name.isNotEmpty;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Crear círculo')),
+    return GlassScaffold(
+      appBar: const GlassAppBar(title: Text('Crear círculo')),
       body: AppMaxWidth(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -140,18 +141,12 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
             const SizedBox(height: AppSpacing.xl2),
             SizedBox(
               width: double.infinity,
-              child: canSubmit
-                  ? GamePressable(
-                      onTap: _submit,
-                      child: ElevatedButton(
-                        onPressed: _submit,
-                        child: const Text('Crear círculo'),
-                      ),
-                    )
-                  : ElevatedButton(
-                      onPressed: null,
-                      child: const Text('Crear círculo'),
-                    ),
+              child: GlassButton(
+                onTap: _submit,
+                enabled: canSubmit,
+                label: 'Crear círculo',
+                icon: const Icon(Icons.add_circle_outlined),
+              ),
             ),
           ],
         ),

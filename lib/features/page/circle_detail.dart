@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
@@ -22,20 +24,16 @@ class CircleDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(circle.name, overflow: TextOverflow.ellipsis)),
+    return GlassScaffold(
+      appBar: GlassAppBar(
+        title: Text(circle.name, overflow: TextOverflow.ellipsis),
+      ),
       body: AppMaxWidth(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            Container(
+            GlassCard(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                boxShadow: AppShadows.card,
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

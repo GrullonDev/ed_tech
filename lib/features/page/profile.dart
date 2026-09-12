@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/data/streak_cards.dart';
@@ -52,6 +54,7 @@ class ProfilePage extends StatelessWidget {
     required this.isAnonymousAccount,
     required this.linkedProviderIds,
     required this.onLinkWithGoogle,
+    required this.onLinkWithApple,
     required this.onLinkWithEmailPassword,
     required this.unlockedStreakCardMilestones,
     required this.pendingStreakCardMilestones,
@@ -87,6 +90,10 @@ class ProfilePage extends StatelessWidget {
   /// Retorna `null` si se vinculó con éxito, o un mensaje de error para
   /// mostrar en un SnackBar.
   final Future<String?> Function() onLinkWithGoogle;
+
+  /// Retorna `null` si se vinculó con éxito, o un mensaje de error para
+  /// mostrar en un SnackBar.
+  final Future<String?> Function() onLinkWithApple;
 
   /// Retorna `null` si se vinculó con éxito, o un mensaje de error para
   /// mostrar en un SnackBar.
@@ -227,6 +234,7 @@ class ProfilePage extends StatelessWidget {
                     _AccountLinkingSection(
                       linkedProviderIds: linkedProviderIds,
                       onLinkWithGoogle: onLinkWithGoogle,
+                      onLinkWithApple: onLinkWithApple,
                       onLinkWithEmailPassword: onLinkWithEmailPassword,
                     ),
                   ],
@@ -452,11 +460,13 @@ class _AccountLinkingSection extends StatelessWidget {
   const _AccountLinkingSection({
     required this.linkedProviderIds,
     required this.onLinkWithGoogle,
+    required this.onLinkWithApple,
     required this.onLinkWithEmailPassword,
   });
 
   final List<String> linkedProviderIds;
   final Future<String?> Function() onLinkWithGoogle;
+  final Future<String?> Function() onLinkWithApple;
   final Future<String?> Function(String email, String password)
   onLinkWithEmailPassword;
 
@@ -464,8 +474,16 @@ class _AccountLinkingSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final googleLinked = linkedProviderIds.contains('google.com');
+    final appleLinked = linkedProviderIds.contains('apple.com');
     final emailLinked = linkedProviderIds.contains('password');
-    if (googleLinked && emailLinked) return const SizedBox.shrink();
+    // En iOS, Apple exige que "Sign in with Apple" esté disponible si se
+    // ofrece otro inicio de sesión social (Google incluido); por eso ahí se
+    // muestra primero Apple y también se deja Google como alternativa. En
+    // Android no existe Sign in with Apple, así que solo se ofrece Google.
+    final showApple = Platform.isIOS;
+    final allRelevantLinked =
+        googleLinked && emailLinked && (appleLinked || !showApple);
+    if (allRelevantLinked) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -503,6 +521,17 @@ class _AccountLinkingSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
+          if (showApple && !appleLinked)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _linkWithApple(context),
+                icon: const Icon(Icons.apple, size: 20),
+                label: const Text('Continuar con Apple'),
+              ),
+            ),
+          if (showApple && !appleLinked && !googleLinked)
+            const SizedBox(height: AppSpacing.sm),
           if (!googleLinked)
             SizedBox(
               width: double.infinity,
@@ -532,6 +561,12 @@ class _AccountLinkingSection extends StatelessWidget {
     final error = await onLinkWithGoogle();
     if (!context.mounted) return;
     _showResult(context, error, successMessage: 'Cuenta de Google vinculada.');
+  }
+
+  Future<void> _linkWithApple(BuildContext context) async {
+    final error = await onLinkWithApple();
+    if (!context.mounted) return;
+    _showResult(context, error, successMessage: 'Cuenta de Apple vinculada.');
   }
 
   void _openEmailPasswordSheet(BuildContext context) {

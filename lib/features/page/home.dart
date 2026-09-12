@@ -188,6 +188,7 @@ class _MyHomePageState extends State<MyHomePage> {
             isAnonymousAccount: _logic.isAnonymousAccount,
             linkedProviderIds: _logic.linkedProviderIds,
             onLinkWithGoogle: _logic.linkWithGoogle,
+            onLinkWithApple: _logic.linkWithApple,
             onLinkWithEmailPassword: _logic.linkWithEmailPassword,
             unlockedStreakCardMilestones: _logic.unlockedStreakCardMilestones,
             pendingStreakCardMilestones: _logic.pendingStreakCardMilestones,

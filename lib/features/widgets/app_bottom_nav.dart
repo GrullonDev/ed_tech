@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 
 /// Pestaña actualmente activa, para resaltarla en [AppBottomNav].
-enum AppTab { circles, rachas, profile }
+enum AppTab { circles, rachas, games, profile }
 
 /// Barra de navegación inferior flotante en forma de píldora. El botón "+"
 /// vive dentro de la misma barra (no como FAB con muesca). Cada pantalla que
@@ -16,6 +16,7 @@ class AppBottomNav extends StatelessWidget {
     required this.onCreateCircle,
     this.onOpenCircles,
     this.onOpenRachas,
+    this.onOpenGames,
     this.onOpenProfile,
   });
 
@@ -23,6 +24,7 @@ class AppBottomNav extends StatelessWidget {
   final VoidCallback onCreateCircle;
   final VoidCallback? onOpenCircles;
   final VoidCallback? onOpenRachas;
+  final VoidCallback? onOpenGames;
   final VoidCallback? onOpenProfile;
 
   /// Alto de la píldora de navegación en sí (sin contar el margen inferior
@@ -74,6 +76,12 @@ class AppBottomNav extends StatelessWidget {
               onTap: onOpenRachas,
             ),
             _AddButton(onTap: onCreateCircle),
+            _NavItem(
+              icon: Icons.sports_esports_rounded,
+              label: 'Juegos',
+              selected: currentTab == AppTab.games,
+              onTap: onOpenGames,
+            ),
             _NavItem(
               icon: Icons.emoji_events_rounded,
               label: 'Perfil',

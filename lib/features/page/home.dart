@@ -5,6 +5,7 @@ import 'package:edtech_tiktok/features/logic/logic.dart';
 import 'package:edtech_tiktok/features/page/agora.dart';
 import 'package:edtech_tiktok/features/page/circle_detail.dart';
 import 'package:edtech_tiktok/features/page/create_habit.dart';
+import 'package:edtech_tiktok/features/page/games.dart';
 import 'package:edtech_tiktok/features/page/profile.dart';
 import 'package:edtech_tiktok/features/page/qr_summon.dart';
 import 'package:edtech_tiktok/features/page/rachas.dart';
@@ -61,23 +62,10 @@ class _MyHomePageState extends State<MyHomePage> {
           onAddTodayHabit: _logic.addTodayHabit,
           onOpenCircle: _openCircleDetail,
           onOpenRachas: _openRachas,
+          onOpenGames: _openGames,
           onOpenProfile: _openProfile,
           onInviteMember: _logic.addMemberToCircle,
           allies: _logic.allies,
-          todaysTrivia: _logic.todaysTrivia,
-          hasAnsweredTodaysTrivia: _logic.hasAnsweredTodaysTrivia,
-          triviaLastSelectedIndex: _logic.triviaLastSelectedIndex,
-          onAnswerTrivia: _logic.answerTrivia,
-          hasPendingPredictionToday: _logic.hasPendingPredictionToday,
-          pendingPredictionCircleId: _logic.pendingPredictionCircleId,
-          predictionBetAmount: HomeLogic.predictionBetAmount,
-          onPlacePrediction: _logic.placePrediction,
-          hasSpunTodaysWheel: _logic.hasSpunTodaysWheel,
-          wheelLastReward: _logic.wheelLastReward,
-          onSpinWheel: _logic.spinWheel,
-          weeklyDuelUserTotal: _logic.weeklyDuelUserTotal,
-          weeklyDuelRivalTotal: _logic.weeklyDuelRivalTotal,
-          hasWonWeeklyDuel: _logic.hasWonWeeklyDuel,
         );
       },
     );
@@ -110,8 +98,41 @@ class _MyHomePageState extends State<MyHomePage> {
             onCheckIn: _logic.toggleCheckIn,
             onOpenCircle: _openCircleDetail,
             onCreateCircle: _openCreateHabit,
+            onOpenGames: _openGames,
             onOpenProfile: _openProfile,
             onOpenAgora: _openAgora,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openGames() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).push(
+      GamePageRoute(
+        builder: (context) => ListenableBuilder(
+          listenable: _logic,
+          builder: (context, _) => GamesPage(
+            circles: _logic.circles,
+            onCreateCircle: _openCreateHabit,
+            onOpenRachas: _openRachas,
+            onOpenProfile: _openProfile,
+            todaysTrivia: _logic.todaysTrivia,
+            hasAnsweredTodaysTrivia: _logic.hasAnsweredTodaysTrivia,
+            triviaLastSelectedIndex: _logic.triviaLastSelectedIndex,
+            onAnswerTrivia: _logic.answerTrivia,
+            hasSpunTodaysWheel: _logic.hasSpunTodaysWheel,
+            wheelLastReward: _logic.wheelLastReward,
+            onSpinWheel: _logic.spinWheel,
+            weeklyDuelUserTotal: _logic.weeklyDuelUserTotal,
+            weeklyDuelRivalTotal: _logic.weeklyDuelRivalTotal,
+            hasWonWeeklyDuel: _logic.hasWonWeeklyDuel,
+            hasPendingPredictionToday: _logic.hasPendingPredictionToday,
+            pendingPredictionCircleId: _logic.pendingPredictionCircleId,
+            predictionBetAmount: HomeLogic.predictionBetAmount,
+            constancyDrops: _logic.constancyDrops,
+            onPlacePrediction: _logic.placePrediction,
           ),
         ),
       ),
@@ -161,11 +182,13 @@ class _MyHomePageState extends State<MyHomePage> {
             onRejectAllyRequest: _logic.rejectAllyRequest,
             onOpenCircle: _openCircleDetail,
             onOpenRachas: _openRachas,
+            onOpenGames: _openGames,
             onCreateCircle: _openCreateHabit,
             onOpenQrSummon: _openQrSummon,
             isAnonymousAccount: _logic.isAnonymousAccount,
             linkedProviderIds: _logic.linkedProviderIds,
             onLinkWithGoogle: _logic.linkWithGoogle,
+            onLinkWithApple: _logic.linkWithApple,
             onLinkWithEmailPassword: _logic.linkWithEmailPassword,
             unlockedStreakCardMilestones: _logic.unlockedStreakCardMilestones,
             pendingStreakCardMilestones: _logic.pendingStreakCardMilestones,

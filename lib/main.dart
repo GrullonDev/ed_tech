@@ -20,14 +20,18 @@ void main() async {
   runApp(LiquidGlassWidgets.wrap(child: const MyApp()));
 }
 
+/// Inicializa Firebase Core y, si tuvo éxito, cada producto por separado
+/// (Crashlytics, Performance Monitoring, Remote Config) a través de
+/// [_runFirebaseStep]. Antes los tres quedaban en el mismo try/catch que
+/// `Firebase.initializeApp`, así que un fallo en cualquiera de ellos (por
+/// ejemplo Remote Config sin red) se reportaba como "Firebase no se pudo
+/// inicializar" — un mensaje engañoso cuando Firebase Core sí había
+/// arrancado bien — y de paso salteaba los pasos siguientes sin necesidad.
 Future<void> _initFirebase() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await _initCrashlytics();
-    await _initPerformanceMonitoring();
-    await _initRemoteConfig();
   } catch (error, stackTrace) {
     if (kDebugMode) {
       debugPrint(
@@ -35,15 +39,40 @@ Future<void> _initFirebase() async {
       );
       debugPrintStack(stackTrace: stackTrace);
     }
+    return;
+  }
+  await _runFirebaseStep('Crashlytics', _initCrashlytics);
+  await _runFirebaseStep(
+    'Performance Monitoring',
+    _initPerformanceMonitoring,
+  );
+  await _runFirebaseStep('Remote Config', _initRemoteConfig);
+}
+
+/// Corre un paso de inicialización que depende de que
+/// [Firebase.initializeApp] ya haya tenido éxito. Cada paso es
+/// independiente de los demás: si uno falla (ver doc-comment de
+/// [_initFirebase]), los otros igual se intentan, y el mensaje de debug
+/// dice exactamente cuál fue.
+Future<void> _runFirebaseStep(
+  String name,
+  Future<void> Function() step,
+) async {
+  try {
+    await step();
+  } catch (error, stackTrace) {
+    if (kDebugMode) {
+      debugPrint('No se pudo inicializar $name, continuando sin él: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 }
 
 /// Reporta crashes a Crashlytics (Fase "Release Monitoring" de
 /// `firebase/PRODUCTS_PLAN.md`). Solo se llama cuando
-/// `Firebase.initializeApp` ya tuvo éxito, así que no necesita su propio
-/// try/catch por falta de Firebase — pero cualquier error inesperado acá
-/// tampoco debe tumbar la app, de ahí que quede dentro del try/catch de
-/// [_initFirebase].
+/// `Firebase.initializeApp` ya tuvo éxito, vía [_runFirebaseStep] — un
+/// fallo acá tampoco tumba la app ni impide que Performance Monitoring o
+/// Remote Config se intenten igual.
 Future<void> _initCrashlytics() async {
   await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
     !kDebugMode,
@@ -60,9 +89,9 @@ Future<void> _initCrashlytics() async {
 /// solo con agregar `firebase_performance` ya empieza a recolectar, sin
 /// tocar `HomeLogic` ni la UI. Deshabilitado en debug por el mismo motivo
 /// que Crashlytics: no ensuciar la consola con datos de desarrollo local.
-/// Solo se llama tras un `Firebase.initializeApp` exitoso, dentro del
-/// mismo try/catch de [_initFirebase], así que un fallo acá tampoco tumba
-/// la app.
+/// Solo se llama tras un `Firebase.initializeApp` exitoso, vía
+/// [_runFirebaseStep], así que un fallo acá tampoco tumba la app ni impide
+/// que Remote Config se intente igual.
 Future<void> _initPerformanceMonitoring() async {
   await FirebasePerformance.instance.setPerformanceCollectionEnabled(
     !kDebugMode,
@@ -77,8 +106,7 @@ Future<void> _initPerformanceMonitoring() async {
 /// exactamente igual que antes. `fetchAndActivate` se espera acá (una sola
 /// vez, antes de `runApp`) para que la primera pantalla ya tenga el valor
 /// activado si llegó a tiempo — nunca bloquea más allá del timeout
-/// configurado, y un fallo tampoco tumba la app (mismo try/catch de
-/// [_initFirebase]).
+/// configurado, y un fallo tampoco tumba la app (ver [_runFirebaseStep]).
 Future<void> _initRemoteConfig() async {
   final remoteConfig = FirebaseRemoteConfig.instance;
   await remoteConfig.setConfigSettings(

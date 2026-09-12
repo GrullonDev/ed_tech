@@ -4,19 +4,31 @@ name: Android → Firebase App Distribution
 # se puede correr a mano desde la pestaña Actions cuando se quiere elegir
 # unas notas de release específicas.
 #
-# Número de build: en vez de depender de editar `version: X.Y.Z+BUILD` en
-# pubspec.yaml a mano antes de cada release, se usa
-# `github.run_number` (un contador que GitHub incrementa solo en cada
-# corrida de este workflow, nunca se repite ni retrocede) vía
-# `--build-number` al compilar. El `X.Y.Z` de pubspec.yaml sigue siendo
-# manual — ese sí es una decisión humana de qué versión "semántica" es.
+# Versionado 100% automático:
+#   - Patch (el "Z" de X.Y.Z en pubspec.yaml): este workflow lo sube en 1
+#     en cada corrida exitosa (ver paso "Sube el patch de la versión") y
+#     commitea el cambio de vuelta a `develop` con "[skip ci]" en el
+#     mensaje — GitHub no vuelve a disparar ningún workflow para ese
+#     commit, así que no hay loop infinito. Major/minor siguen siendo
+#     decisión manual (editarlos a mano en pubspec.yaml cuando corresponda
+#     un cambio más grande).
+#   - Build number: `github.run_number`, un contador que GitHub
+#     incrementa solo en cada corrida de este workflow (nunca se repite
+#     ni retrocede), pasado vía `--build-number` al compilar.
+#   - Después de subir a App Distribution, el mismo workflow actualiza
+#     los parámetros `latest_android_build_number` y
+#     `update_download_url` en Remote Config, para que el diálogo de
+#     "nueva versión disponible" de la app (`HomeLogic._checkForUpdate`)
+#     se active solo, sin tocar la consola de Firebase a mano — ver
+#     firebase/APP_DISTRIBUTION.md.
 #
 # Requiere dos secrets del repo (Settings → Secrets and variables →
 # Actions):
 #   - FIREBASE_SERVICE_ACCOUNT_JSON: el JSON completo de una cuenta de
-#     servicio de Google Cloud con el rol "Firebase App Distribution
-#     Admin" en el proyecto rachatribu (ver guía en
-#     firebase/APP_DISTRIBUTION.md).
+#     servicio de Google Cloud con los roles **"Firebase App
+#     Distribution Admin"** y **"Firebase Remote Config Admin"** en el
+#     proyecto rachatribu (ver guía en firebase/APP_DISTRIBUTION.md) —
+#     el segundo rol es el que hace falta para el paso de Remote Config.
 #   - FIREBASE_APP_DISTRIBUTION_GROUPS: alias del grupo de testers en
 #     Firebase App Distribution (por ejemplo "testers"), separados por
 #     coma si hay más de uno. Ese grupo se crea una vez desde la consola
@@ -33,11 +45,27 @@ on:
         required: false
         default: "Build de prueba manual (app-distribution-android.yml)."
 
+permissions:
+  contents: write
+
 jobs:
   build-and-distribute:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Sube el patch de la versión en pubspec.yaml
+        id: bump
+        run: |
+          set -euo pipefail
+          CURRENT=$(grep -m1 '^version:' pubspec.yaml | sed 's/^version:[[:space:]]*//')
+          MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT" | cut -d. -f3)
+          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+          sed -i "s/^version:[[:space:]]*.*/version: $NEW_VERSION/" pubspec.yaml
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Versión: $CURRENT -> $NEW_VERSION"
 
       # android/app/build.gradle.kts pide JDK 21 (sourceCompatibility /
       # jvmTarget = VERSION_21) — el JDK por defecto de ubuntu-latest es más
@@ -58,6 +86,7 @@ jobs:
         run: flutter build apk --release --build-number=${{ github.run_number }}
 
       - name: Subir a Firebase App Distribution
+        id: upload
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: "1:315811589668:android:0fa5a262942581e48a72b1"
@@ -65,3 +94,49 @@ jobs:
           groups: ${{ secrets.FIREBASE_APP_DISTRIBUTION_GROUPS }}
           file: build/app/outputs/flutter-apk/app-release.apk
           releaseNotes: "${{ github.event_name == 'workflow_dispatch' && inputs.release_notes || format('Build automática (push a develop) — build {0}: {1}', github.run_number, github.event.head_commit.message) }}"
+
+      # Sin esto, el diálogo "hay una nueva versión" de la app (Remote
+      # Config) hay que activarlo a mano en la consola después de cada
+      # release — ver firebase/APP_DISTRIBUTION.md. continue-on-error
+      # porque un fallo acá (p. ej. falta el rol de Remote Config Admin
+      # en el service account) no debería tumbar un release que a los
+      # testers ya les llegó bien.
+      - name: Actualiza Remote Config (diálogo de nueva versión)
+        continue-on-error: true
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          echo "$SA_JSON" > /tmp/sa.json
+          gcloud auth activate-service-account --key-file=/tmp/sa.json
+          TOKEN=$(gcloud auth print-access-token)
+          rm -f /tmp/sa.json
+
+          RESPONSE=$(curl -sS -D /tmp/rc_headers.txt \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig")
+          ETAG=$(grep -i '^etag:' /tmp/rc_headers.txt | sed 's/[Ee][Tt][Aa][Gg]:[[:space:]]*//' | tr -d '\r')
+
+          echo "$RESPONSE" | jq \
+            --arg build "${{ github.run_number }}" \
+            --arg url "${{ steps.upload.outputs.TESTING_URI }}" \
+            '.parameters.latest_android_build_number.defaultValue.value = $build
+             | .parameters.update_download_url.defaultValue.value = $url' \
+            > /tmp/rc_updated.json
+
+          curl -sS -X PUT \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json; UTF-8" \
+            -H "If-Match: $ETAG" \
+            -d @/tmp/rc_updated.json \
+            "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig"
+
+      - name: Commitea el bump de versión de vuelta a develop
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "chore: sube versión a ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git push origin HEAD:develop

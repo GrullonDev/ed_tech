@@ -29,8 +29,11 @@ workflow cuando se quieren notas de release específicas.
    - Consola de Google Cloud del proyecto `rachatribu` → IAM y
      administración → Cuentas de servicio → Crear cuenta de servicio.
    - Nombre sugerido: `github-actions-app-distribution`.
-   - Rol: **Firebase App Distribution Admin** (buscar ese nombre exacto
-     en el selector de roles).
+   - Roles: **Firebase App Distribution Admin** y **Firebase Remote
+     Config Admin** (buscar esos dos nombres exactos en el selector de
+     roles — "Agregar otro rol" para el segundo si la cuenta ya existe).
+     El segundo rol es el que necesita el paso que actualiza Remote
+     Config después de cada release (ver más abajo).
    - Crear una clave JSON para esa cuenta (Acciones → Administrar
      claves → Agregar clave → JSON) y descargarla.
 2. **Grupo de testers en Firebase App Distribution**:
@@ -54,16 +57,20 @@ la release → Run workflow. En ambos casos, los testers del grupo reciben
 un email con el link para instalar el APK desde la app de Firebase App
 Distribution (o directo el APK) en su dispositivo.
 
-### Número de build automático
+### Versionado automático
 
-El build number (lo que se ve entre paréntesis en la lista de releases
-de App Distribution, ej. "1.0.3 (7)") ya no depende de editar
-`version: X.Y.Z+BUILD` a mano en `pubspec.yaml` antes de cada release —
-el workflow lo pasa con `--build-number=${{ github.run_number }}`,
-el contador de corridas de GitHub Actions para este workflow (nunca se
-repite ni retrocede, sin importar si la corrida fue automática o
-manual). El `X.Y.Z` de `pubspec.yaml` sigue siendo una decisión manual
-— es la versión "semántica" que sí elige una persona.
+- **Build number** (lo que se ve entre paréntesis en la lista de
+  releases de App Distribution, ej. "1.0.3 (7)"): el workflow lo pasa
+  con `--build-number=${{ github.run_number }}`, el contador de
+  corridas de GitHub Actions para este workflow (nunca se repite ni
+  retrocede, sin importar si la corrida fue automática o manual).
+- **Patch** (el "Z" de `X.Y.Z` en `pubspec.yaml`): el workflow lo sube
+  en 1 en cada corrida exitosa (paso "Sube el patch de la versión") y
+  commitea el cambio de vuelta a `develop` con `[skip ci]` en el
+  mensaje — ese commit no vuelve a disparar el workflow. Major/minor
+  siguen siendo decisión manual: editarlos a mano en `pubspec.yaml`
+  cuando corresponda un cambio más grande (el workflow solo toca el
+  último número).
 
 ### Firma consistente entre builds
 
@@ -85,25 +92,29 @@ poder instalar la siguiente.
 La app (ver `HomeLogic._checkForUpdate` en `lib/features/logic/logic.dart`)
 compara su propio build number contra dos parámetros de Remote Config, y
 si el remoto es mayor, muestra un diálogo "Hay una nueva versión
-disponible" con un botón que abre el link de descarga. Después de subir
-un release nuevo con el workflow, para que el diálogo se active hay que
-actualizar esos dos parámetros en Firebase Console → Remote Config:
+disponible" con un botón que abre el link de descarga.
 
-- `latest_android_build_number` (número): el build number del release
-  recién subido — es el número entre paréntesis que muestra la lista de
-  releases en App Distribution (ver "Número de build automático" arriba;
-  también es el mismo número que aparece como "run #N" en la pestaña
-  Actions de esa corrida).
-- `update_download_url` (string): el link de descarga del release. Se
-  consigue en Firebase Console → Release & Monitor → App Distribution →
-  abrir el release recién subido → "Copiar link" (o el link público del
-  grupo de testers).
+Esto ya es automático: el paso "Actualiza Remote Config" del workflow
+sube estos dos parámetros después de cada build exitoso (requiere el rol
+**Firebase Remote Config Admin** en la cuenta de servicio — ver arriba):
 
-Publicar los cambios en Remote Config (botón "Publicar cambios") para que
-tomen efecto — Remote Config los cachea hasta 1 hora
-(`minimumFetchInterval` en `main.dart`), así que un tester puede tardar
-hasta esa ventana en ver el diálogo tras reabrir la app, salvo que la
-sesión de Remote Config todavía no haya hecho su primer fetch.
+- `latest_android_build_number` (número): el `github.run_number` de esa
+  corrida.
+- `update_download_url` (string): el `TESTING_URI` que devuelve el paso
+  de subida a App Distribution (el link persistente para testers, no el
+  de descarga directa que expira en 1 hora).
+
+Es `continue-on-error`, así que si falla (por ejemplo si a la cuenta de
+servicio le falta el rol de Remote Config) el release igual les llega a
+los testers — solo no se activa el diálogo hasta la próxima corrida
+exitosa, o hasta que se actualicen esos parámetros a mano en Firebase
+Console → Remote Config.
+
+Publicar los cambios en Remote Config tarda en tomar efecto — Remote
+Config los cachea hasta 1 hora (`minimumFetchInterval` en `main.dart`),
+así que un tester puede tardar hasta esa ventana en ver el diálogo tras
+reabrir la app, salvo que la sesión de Remote Config todavía no haya
+hecho su primer fetch.
 
 ## iOS: manual, en tu Mac (por ahora)
 

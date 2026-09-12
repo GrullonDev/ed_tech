@@ -873,7 +873,17 @@ class HomeLogic extends ChangeNotifier {
   /// `uid` de Firebase si el Auth anónimo de [completeOnboarding] tuvo
   /// éxito, o `null` si la app sigue en modo 100% local. Se usa como
   /// guardia para no intentar escribir en Firestore cuando no hay sesión.
-  String? get _firebaseUid => FirebaseAuth.instance.currentUser?.uid;
+  String? get _firebaseUid {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // Ignorado a propósito: si Firebase no llegó a inicializarse (sin
+      // red, o cualquier otro fallo — ver doc-comment de `_initFirebase`
+      // en main.dart), todo lo que depende de este getter debe seguir
+      // funcionando en modo 100% local en vez de crashear la app entera.
+      return null;
+    }
+  }
 
   /// Trae el banco de preguntas del "Desafío del día" desde la colección
   /// `triviaQuestions` de Firestore (ver `firebase/FIRESTORE_SCHEMA.md`),

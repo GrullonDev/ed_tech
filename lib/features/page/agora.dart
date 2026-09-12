@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 
 /// "El Gran Ágora Tribal": reemplaza las notificaciones de texto simples
@@ -43,13 +42,8 @@ class AgoraPage extends StatelessWidget {
     final ranked = [...circles]
       ..sort((a, b) => b.streakDays.compareTo(a.streakDays));
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text('El Gran Ágora Tribal'),
-      ),
+    return AdaptiveGlassScaffold(
+      title: const Text('El Gran Ágora Tribal'),
       body: SafeArea(
         child: AppMaxWidth(
           child: ListView(
@@ -120,13 +114,8 @@ class _ActivityFeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     if (events.isEmpty) {
-      return Container(
+      return AdaptiveGlassOutlinedCard(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(color: AppColors.outlineWhisper),
-        ),
         child: Text(
           'Todavía no hay actividad. Haz tu primer check-in para encender '
           'el feed de la tribu.',
@@ -136,7 +125,7 @@ class _ActivityFeedCard extends StatelessWidget {
         ),
       );
     }
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Column(
         children: [
@@ -217,7 +206,7 @@ class _AddAllySectionState extends State<_AddAllySection> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,7 +370,7 @@ class _TribalBonfireCard extends StatelessWidget {
     final intensity = (streak / 30).clamp(0.15, 1.0);
     final fireSize = 44 + intensity * 30;
 
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,7 +523,7 @@ class _LeaderboardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Column(
         children: [

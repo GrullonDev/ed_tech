@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 
 /// "Invocar por QR": emula la sensación de un juego multijugador local.
@@ -43,22 +43,17 @@ class _QrSummonPageState extends State<QrSummonPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text('Invocar por QR'),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.onSurfaceVariant,
-          indicatorColor: AppColors.primary,
-          tabs: const [
-            Tab(text: 'Mi Código'),
-            Tab(text: 'Escanear'),
-          ],
-        ),
+    return AdaptiveGlassScaffold(
+      title: const Text('Invocar por QR'),
+      bottom: TabBar(
+        controller: _tabController,
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.onSurfaceVariant,
+        indicatorColor: AppColors.primary,
+        tabs: const [
+          Tab(text: 'Mi Código'),
+          Tab(text: 'Escanear'),
+        ],
       ),
       body: TabBarView(
         controller: _tabController,
@@ -86,7 +81,7 @@ class _MyCodeTab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            GlassCard(
+            AdaptiveGlassCard(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: QrImageView(
                 data: qrPayload,
@@ -218,7 +213,7 @@ class _ScanTabState extends State<_ScanTab> {
                       Transform.scale(scale: value, child: child),
                   child: SizedBox(
                     width: double.infinity,
-                    child: GlassCard(
+                    child: AdaptiveGlassCard(
                       padding: const EdgeInsets.all(AppSpacing.md),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

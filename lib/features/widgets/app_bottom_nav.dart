@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 
 /// Pestaña actualmente activa, para resaltarla en [AppBottomNav].
 enum AppTab { circles, rachas, games, profile }
@@ -52,14 +53,10 @@ class AppBottomNav extends StatelessWidget {
         AppSpacing.lg,
         bottomMargin,
       ),
-      child: Container(
+      child: AdaptiveGlassCard(
         height: barHeight,
+        radius: AppRadius.pill,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          boxShadow: AppShadows.card,
-        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

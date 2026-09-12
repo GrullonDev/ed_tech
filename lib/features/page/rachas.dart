@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 import 'package:edtech_tiktok/features/widgets/ritual_path.dart';
@@ -344,7 +343,7 @@ class _WeekCard extends StatelessWidget {
     final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
     const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [

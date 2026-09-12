@@ -4,6 +4,7 @@ import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/trivia_question.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 
 /// Tarjetas de los juegos de "Racha Tribu" (ver `page/games.dart`): el
@@ -29,13 +30,8 @@ class TriviaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final wasCorrect = answered && selectedIndex == question.correctIndex;
-    return Container(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppShadows.card,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -228,13 +224,8 @@ class PredictionCard extends StatelessWidget {
         }
       }
     }
-    return Container(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppShadows.card,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -330,13 +321,8 @@ class WheelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Container(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppShadows.card,
-      ),
       child: Row(
         children: [
           const Text('🎰', style: TextStyle(fontSize: 28)),
@@ -403,13 +389,8 @@ class WeeklyDuelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final maxTotal = [userTotal, rivalTotal, 1].reduce((a, b) => a > b ? a : b);
-    return Container(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppShadows.card,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

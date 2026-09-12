@@ -42,6 +42,7 @@ class LocalStorageService {
   static const String _duelRewardedWeekMondayKey = 'duelRewardedWeekMonday';
   static const String _duelBonusDropsKey = 'duelBonusDrops';
   static const String _hasSeenGameTourKey = 'hasSeenGameTour';
+  static const String _liquidGlassEnabledKey = 'liquidGlassEnabled';
 
   static late Box<dynamic> _settingsBox;
   static late Box<dynamic> _circlesBox;
@@ -182,6 +183,19 @@ class LocalStorageService {
 
   static Future<void> saveHasSeenGameTour(bool value) =>
       _settingsBox.put(_hasSeenGameTourKey, value);
+
+  // ---- Preferencia visual "Liquid Glass" ----
+
+  /// `true` (default) si la app debe renderizar las tarjetas/superficies con
+  /// el efecto "Liquid Glass" (`liquid_glass_widgets`); `false` si el usuario
+  /// lo desactivó desde el switch en Perfil (ver `HomeLogic.liquidGlass
+  /// Enabled`), en cuyo caso las mismas superficies caen a su estilo plano
+  /// original — misma disponibilidad en Android e iOS.
+  static bool readLiquidGlassEnabled() =>
+      _settingsBox.get(_liquidGlassEnabledKey) as bool? ?? true;
+
+  static Future<void> saveLiquidGlassEnabled(bool value) =>
+      _settingsBox.put(_liquidGlassEnabledKey, value);
 
   /// Caché local del banco de preguntas sincronizado desde Firestore (ver
   /// `HomeLogic._syncTriviaQuestions`, colección `triviaQuestions`). Vacío

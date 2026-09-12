@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -10,7 +11,9 @@ import 'package:crypto/crypto.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_performance/firebase_performance.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:edtech_tiktok/core/data/trivia_bank.dart';
@@ -138,6 +141,18 @@ class HomeLogic extends ChangeNotifier {
   /// [setLiquidGlassEnabled]), disponible tanto en Android como en iOS.
   bool _liquidGlassEnabled = true;
 
+  /// `true` si Remote Config publicó un `latest_android_build_number` mayor
+  /// al build number instalado (ver [_checkForUpdate]) — controla si se
+  /// muestra el diálogo "Hay una nueva versión disponible" (Fase App
+  /// Distribution, `firebase/APP_DISTRIBUTION.md`). Solo aplica a Android:
+  /// iOS no tiene todavía un flujo de instalación de prueba fuera de Xcode.
+  bool _hasUpdateAvailable = false;
+
+  /// Link de descarga (el de la app de Firebase App Distribution) para el
+  /// diálogo de actualización — viene de Remote Config junto con el build
+  /// number, para poder cambiarlo sin publicar una nueva versión.
+  String _updateDownloadUrl = '';
+
   /// Banco de preguntas sincronizado desde Firestore (`triviaQuestions`,
   /// ver [_syncTriviaQuestions]), cacheado en Hive. Vacío hasta la primera
   /// sincronización exitosa (o si nunca hay red/sesión) — mientras esté
@@ -164,6 +179,8 @@ class HomeLogic extends ChangeNotifier {
   bool get hasUsername => _hasUsername;
   bool get hasSeenGameTour => _hasSeenGameTour;
   bool get liquidGlassEnabled => _liquidGlassEnabled;
+  bool get hasUpdateAvailable => _hasUpdateAvailable;
+  String get updateDownloadUrl => _updateDownloadUrl;
   String get username => _username;
   DateTime? get memberSince => _memberSince;
   String get playerId => _playerId;
@@ -575,6 +592,7 @@ class HomeLogic extends ChangeNotifier {
     _watchOutgoingAllyRequests();
     _updatePrimaryCategoryUserProperty();
     unawaited(_syncTriviaQuestions());
+    unawaited(_checkForUpdate());
     notifyListeners();
   }
 
@@ -709,6 +727,41 @@ class HomeLogic extends ChangeNotifier {
     _liquidGlassEnabled = value;
     LocalStorageService.saveLiquidGlassEnabled(value);
     GlassThemeController.enabled.value = value;
+    notifyListeners();
+  }
+
+  /// Compara el build number instalado contra `latest_android_build_number`
+  /// de Remote Config para avisar de una nueva versión en Firebase App
+  /// Distribution (ver `firebase/APP_DISTRIBUTION.md`: subir esa clave y
+  /// `update_download_url` ahí después de cada release manual). No usa
+  /// `fetchAndActivate` acá — ya se llamó una vez en `main()` antes de
+  /// `runApp` (ver `_initRemoteConfig`); esto solo lee lo ya activado.
+  /// Falla en silencio sin red o si Firebase no se inicializó: el aviso
+  /// simplemente no aparece esa sesión.
+  Future<void> _checkForUpdate() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final remoteConfig = FirebaseRemoteConfig.instance;
+      final latestBuildNumber = remoteConfig.getInt(
+        'latest_android_build_number',
+      );
+      if (latestBuildNumber <= 0) return;
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
+      if (latestBuildNumber <= currentBuildNumber) return;
+      _updateDownloadUrl = remoteConfig.getString('update_download_url');
+      _hasUpdateAvailable = true;
+      notifyListeners();
+    } catch (_) {
+      // Ignorado a propósito: ver doc-comment.
+    }
+  }
+
+  /// Cierra el diálogo de actualización por esta sesión sin descargar nada
+  /// (botón "Ahora no") — vuelve a aparecer en el próximo arranque de la
+  /// app mientras `latest_android_build_number` siga siendo mayor.
+  void dismissUpdateBanner() {
+    _hasUpdateAvailable = false;
     notifyListeners();
   }
 

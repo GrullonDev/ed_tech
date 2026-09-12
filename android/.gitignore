@@ -12,3 +12,9 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Excepción a propósito: app/debug.keystore es fijo y commiteado para que
+# todas las builds (CI y locales) firmen release con la misma clave de
+# debug — ver signingConfigs.debug en app/build.gradle.kts. No protege nada
+# sensible, así que es seguro tenerlo en el repo.
+!app/debug.keystore

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
 import 'package:edtech_tiktok/features/page/agora.dart';
@@ -24,10 +26,73 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final HomeLogic _logic = HomeLogic();
 
+  /// Evita reabrir el diálogo de actualización en cada `notifyListeners()`
+  /// posterior (check-ins, hábitos, etc.) — una vez que el usuario lo vio
+  /// (lo cierre con "Actualizar" o "Ahora no"), no vuelve a aparecer hasta
+  /// el próximo arranque de la app.
+  bool _updateDialogShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _logic.addListener(_maybeShowUpdateDialog);
+  }
+
   @override
   void dispose() {
+    _logic.removeListener(_maybeShowUpdateDialog);
     _logic.dispose();
     super.dispose();
+  }
+
+  void _maybeShowUpdateDialog() {
+    if (_updateDialogShown || !_logic.hasUpdateAvailable) return;
+    _updateDialogShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showUpdateDialog();
+    });
+  }
+
+  /// Diálogo "Hay una nueva versión disponible" (Fase App Distribution,
+  /// `firebase/APP_DISTRIBUTION.md`) — dispara cuando `HomeLogic` detecta
+  /// que Remote Config publicó un `latest_android_build_number` mayor al
+  /// build instalado. "Actualizar" abre el link de descarga de Firebase
+  /// App Distribution en el navegador/la app de App Distribution;
+  /// "Ahora no" solo cierra el diálogo por esta sesión.
+  Future<void> _showUpdateDialog() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hay una nueva versión disponible'),
+        content: const Text(
+          'Actualiza Racha Tribu para tener las últimas mejoras y '
+          'correcciones.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _logic.dismissUpdateBanner();
+            },
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              _logic.dismissUpdateBanner();
+              final url = _logic.updateDownloadUrl;
+              if (url.isEmpty) return;
+              final uri = Uri.tryParse(url);
+              if (uri != null) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

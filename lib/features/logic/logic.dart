@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:edtech_tiktok/core/data/trivia_bank.dart';
 import 'package:edtech_tiktok/core/model/activity_event.dart';
@@ -897,6 +900,59 @@ class HomeLogic extends ChangeNotifier {
     } catch (_) {
       return 'No se pudo vincular con Google. Intenta de nuevo.';
     }
+  }
+
+  /// Vincula la cuenta anónima actual con una cuenta real de Apple (Sign in
+  /// with Apple), mismo criterio de "no perder el `uid`" que [linkWithGoogle].
+  /// Genera un `nonce` aleatorio y lo manda hasheado (SHA-256) en la
+  /// solicitud a Apple; Firebase valida que el `identityToken` devuelto
+  /// corresponda al nonce original en texto plano, como exige el flujo de
+  /// Sign in with Apple. Retorna `null` si se vinculó con éxito (o si el
+  /// usuario canceló el diálogo de Apple, que no es un error), o un mensaje
+  /// listo para mostrar en la UI si falló.
+  Future<String?> linkWithApple() async {
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+      final credential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+        accessToken: appleCredential.authorizationCode,
+      );
+      await FirebaseAuth.instance.currentUser!.linkWithCredential(credential);
+      notifyListeners();
+      return null;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return null;
+      return 'No se pudo vincular con Apple. Intenta de nuevo.';
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'credential-already-in-use') {
+        return 'Esa cuenta de Apple ya está vinculada a otro usuario de '
+            'Racha Tribu.';
+      }
+      return 'No se pudo vincular con Apple. Intenta de nuevo.';
+    } catch (_) {
+      return 'No se pudo vincular con Apple. Intenta de nuevo.';
+    }
+  }
+
+  /// Genera una cadena aleatoria criptográficamente segura para usar como
+  /// `nonce` en [linkWithApple], como exige el flujo de Sign in with Apple.
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   /// Vincula la cuenta anónima actual con un email/contraseña reales, mismo

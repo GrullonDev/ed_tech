@@ -15,17 +15,20 @@ import 'package:edtech_tiktok/core/model/trivia_question.dart';
 abstract final class TriviaBank {
   static const List<TriviaQuestion> questions = [
     TriviaQuestion(
-      question: '¿Cuánto tiempo suele tardar en formarse un hábito nuevo, '
+      question:
+          '¿Cuánto tiempo suele tardar en formarse un hábito nuevo, '
           'según los estudios más citados sobre el tema?',
       options: ['3 días', '21 días exactos', 'Entre 2 y 3 meses', '1 año'],
       correctIndex: 2,
-      explanation: 'El famoso "21 días" es un mito. Investigaciones como la '
+      explanation:
+          'El famoso "21 días" es un mito. Investigaciones como la '
           'de Phillippa Lally (2009) encontraron que automatizar un hábito '
           'toma en promedio 66 días, con un rango real de 18 a 254 según la '
           'persona y el hábito.',
     ),
     TriviaQuestion(
-      question: '¿Qué es más efectivo para sostener un hábito a largo '
+      question:
+          '¿Qué es más efectivo para sostener un hábito a largo '
           'plazo?',
       options: [
         'Depender solo de la fuerza de voluntad',
@@ -34,12 +37,14 @@ abstract final class TriviaBank {
         'Castigarte si fallás un día',
       ],
       correctIndex: 1,
-      explanation: 'La fuerza de voluntad se agota durante el día. Diseñar '
+      explanation:
+          'La fuerza de voluntad se agota durante el día. Diseñar '
           'el entorno para que el hábito sea la opción más fácil (dejar la '
           'ropa de gimnasio lista, por ejemplo) funciona mejor y dura más.',
     ),
     TriviaQuestion(
-      question: '¿Qué pasa si fallás un día en tu racha y la retomás al '
+      question:
+          '¿Qué pasa si fallás un día en tu racha y la retomás al '
           'día siguiente, según la investigación sobre hábitos?',
       options: [
         'Tenés que empezar de cero mentalmente',
@@ -48,13 +53,15 @@ abstract final class TriviaBank {
         'Es mejor no volver a intentarlo esa semana',
       ],
       correctIndex: 1,
-      explanation: 'Lally y su equipo encontraron que fallar un día '
+      explanation:
+          'Lally y su equipo encontraron que fallar un día '
           'ocasional no tiene un impacto medible en la formación del '
           'hábito a largo plazo — lo que sí importa es no dejar que un día '
           'se convierta en muchos.',
     ),
     TriviaQuestion(
-      question: '¿Cuál de estas es una señal ("cue") típica que dispara un '
+      question:
+          '¿Cuál de estas es una señal ("cue") típica que dispara un '
           'hábito automático?',
       options: [
         'Un lugar u hora específica del día',
@@ -63,13 +70,15 @@ abstract final class TriviaBank {
         'Ninguna, los hábitos son al azar',
       ],
       correctIndex: 0,
-      explanation: 'Los hábitos siguen un ciclo de señal → rutina → '
+      explanation:
+          'Los hábitos siguen un ciclo de señal → rutina → '
           'recompensa. Anclar un hábito nuevo a un lugar u hora fija (ej. '
           '"después de lavarme los dientes") es una de las técnicas más '
           'efectivas para automatizarlo.',
     ),
     TriviaQuestion(
-      question: '¿Qué beneficio real tiene hacer un hábito en grupo o con '
+      question:
+          '¿Qué beneficio real tiene hacer un hábito en grupo o con '
           'un aliado, comparado con hacerlo en solitario?',
       options: [
         'Ninguno medible',
@@ -78,25 +87,30 @@ abstract final class TriviaBank {
         'Lo hace más lento de formar',
       ],
       correctIndex: 1,
-      explanation: 'La responsabilidad social (que alguien más sepa si '
+      explanation:
+          'La responsabilidad social (que alguien más sepa si '
           'cumpliste o no) es uno de los refuerzos más estudiados para '
           'sostener un hábito — de ahí el valor real de una "tribu".',
     ),
     TriviaQuestion(
-      question: '¿Cuántos vasos de agua al día se recomiendan '
+      question:
+          '¿Cuántos vasos de agua al día se recomiendan '
           'generalmente para un adulto promedio?',
       options: ['2', '4', '8', '15'],
       correctIndex: 2,
-      explanation: 'La recomendación general más citada es de unos 8 vasos '
+      explanation:
+          'La recomendación general más citada es de unos 8 vasos '
           '(~2 litros) al día, aunque varía según el peso, el clima y la '
           'actividad física de cada persona.',
     ),
     TriviaQuestion(
-      question: '¿Cuántas horas de sueño se recomiendan para un adulto '
+      question:
+          '¿Cuántas horas de sueño se recomiendan para un adulto '
           'promedio?',
       options: ['4-5 horas', '6-9 horas', '10-12 horas', 'No importa'],
       correctIndex: 1,
-      explanation: 'La National Sleep Foundation recomienda entre 7 y 9 '
+      explanation:
+          'La National Sleep Foundation recomienda entre 7 y 9 '
           'horas para la mayoría de los adultos, con un rango aceptable de '
           '6 a 9 según la persona.',
     ),
@@ -109,12 +123,14 @@ abstract final class TriviaBank {
         'Un tipo de ejercicio físico',
       ],
       correctIndex: 1,
-      explanation: 'La técnica (popularizada por BJ Fogg y James Clear) '
+      explanation:
+          'La técnica (popularizada por BJ Fogg y James Clear) '
           'consiste en usar un hábito ya automático como disparador del '
           'nuevo: "después de [hábito existente], voy a [hábito nuevo]".',
     ),
     TriviaQuestion(
-      question: '¿Qué efecto tiene escribir o registrar tus hábitos en '
+      question:
+          '¿Qué efecto tiene escribir o registrar tus hábitos en '
           'vez de solo tenerlos en mente?',
       options: [
         'Ninguno',
@@ -123,7 +139,8 @@ abstract final class TriviaBank {
         'Solo sirve para hábitos financieros',
       ],
       correctIndex: 1,
-      explanation: 'El simple acto de registrar (como hacer check-in en un '
+      explanation:
+          'El simple acto de registrar (como hacer check-in en un '
           'círculo) aumenta la conciencia del comportamiento, un efecto '
           'bien documentado en programas de cambio de hábitos.',
     ),
@@ -136,12 +153,14 @@ abstract final class TriviaBank {
         'Cambiar 5 hábitos a la vez para aprovechar el impulso',
       ],
       correctIndex: 0,
-      explanation: 'Empezar chico (2 minutos de meditación en vez de 30) '
+      explanation:
+          'Empezar chico (2 minutos de meditación en vez de 30) '
           'baja la fricción inicial y facilita sostenerlo — se puede '
           'escalar después de que ya es automático.',
     ),
     TriviaQuestion(
-      question: '¿Qué mide en realidad una "racha" (streak) en una app de '
+      question:
+          '¿Qué mide en realidad una "racha" (streak) en una app de '
           'hábitos?',
       options: [
         'Cuántos amigos tenés',
@@ -150,21 +169,25 @@ abstract final class TriviaBank {
         'El nivel de dificultad del hábito',
       ],
       correctIndex: 1,
-      explanation: 'Una racha cuenta días consecutivos de cumplimiento — '
+      explanation:
+          'Una racha cuenta días consecutivos de cumplimiento — '
           'es una de las métricas más motivadoras porque hace visible el '
           'costo de romperla justo cuando más vale la pena mantenerla.',
     ),
     TriviaQuestion(
-      question: '¿Cuál de estas frutas/verduras tiene más vitamina C por '
+      question:
+          '¿Cuál de estas frutas/verduras tiene más vitamina C por '
           'porción?',
       options: ['Manzana', 'Pimiento rojo', 'Plátano/banana', 'Papa'],
       correctIndex: 1,
-      explanation: 'El pimiento (morrón) rojo tiene incluso más vitamina C '
+      explanation:
+          'El pimiento (morrón) rojo tiene incluso más vitamina C '
           'por gramo que una naranja — una de las fuentes más '
           'subestimadas.',
     ),
     TriviaQuestion(
-      question: '¿Qué tipo de meta suele funcionar mejor para sostener la '
+      question:
+          '¿Qué tipo de meta suele funcionar mejor para sostener la '
           'motivación a largo plazo?',
       options: [
         'Metas basadas en identidad ("soy alguien que hace ejercicio")',
@@ -173,7 +196,8 @@ abstract final class TriviaBank {
         'Cambiar la meta cada semana',
       ],
       correctIndex: 0,
-      explanation: 'James Clear (Hábitos Atómicos) argumenta que los '
+      explanation:
+          'James Clear (Hábitos Atómicos) argumenta que los '
           'cambios de identidad ("soy una persona constante") sostienen '
           'más la motivación que solo perseguir un resultado numérico.',
     ),
@@ -186,13 +210,15 @@ abstract final class TriviaBank {
         'La velocidad a la que se olvida un hábito',
       ],
       correctIndex: 1,
-      explanation: 'Fricción es cualquier obstáculo entre vos y el hábito: '
+      explanation:
+          'Fricción es cualquier obstáculo entre vos y el hábito: '
           'buscar la ropa de gimnasio, abrir 3 apps para anotar algo, etc. '
           'Reducirla es una de las palancas más efectivas para sostener '
           'un hábito.',
     ),
     TriviaQuestion(
-      question: 'Además del movimiento físico, ¿qué otro beneficio real '
+      question:
+          'Además del movimiento físico, ¿qué otro beneficio real '
           'tiene el ejercicio regular?',
       options: [
         'Ninguno fuera de lo físico',
@@ -201,7 +227,8 @@ abstract final class TriviaBank {
         'Empeora la calidad del sueño',
       ],
       correctIndex: 1,
-      explanation: 'El ejercicio libera endorfinas y reduce cortisol '
+      explanation:
+          'El ejercicio libera endorfinas y reduce cortisol '
           '(la hormona del estrés), con efectos positivos documentados en '
           'el ánimo incluso con rutinas moderadas y cortas.',
     ),
@@ -214,12 +241,14 @@ abstract final class TriviaBank {
         'Se vuelve imposible de romper',
       ],
       correctIndex: 1,
-      explanation: 'A medida que se repite, el cerebro delega el '
+      explanation:
+          'A medida que se repite, el cerebro delega el '
           'comportamiento a circuitos más automáticos (ganglios basales), '
           'lo que baja el esfuerzo consciente necesario para sostenerlo.',
     ),
     TriviaQuestion(
-      question: '¿Qué rol cumple la recompensa inmediata en un hábito '
+      question:
+          '¿Qué rol cumple la recompensa inmediata en un hábito '
           'nuevo?',
       options: [
         'Ninguno, las recompensas son innecesarias',
@@ -228,13 +257,15 @@ abstract final class TriviaBank {
         'Hace que el hábito se vuelva adictivo siempre',
       ],
       correctIndex: 1,
-      explanation: 'El cerebro aprende por refuerzo: una recompensa '
+      explanation:
+          'El cerebro aprende por refuerzo: una recompensa '
           'inmediata (aunque sea pequeña, como ver tu racha subir) ayuda a '
           'consolidar el comportamiento mucho más que un beneficio lejano '
           'en el tiempo.',
     ),
     TriviaQuestion(
-      question: '¿Cuál de estas es considerada una técnica de respiración '
+      question:
+          '¿Cuál de estas es considerada una técnica de respiración '
           'para reducir el estrés en el momento?',
       options: [
         'Respiración 4-7-8',
@@ -243,12 +274,14 @@ abstract final class TriviaBank {
         'No existe ninguna técnica probada',
       ],
       correctIndex: 0,
-      explanation: 'La técnica 4-7-8 (inhalar 4 segundos, sostener 7, '
+      explanation:
+          'La técnica 4-7-8 (inhalar 4 segundos, sostener 7, '
           'exhalar 8) es una de las más recomendadas para activar el '
           'sistema nervioso parasimpático y bajar el estrés rápido.',
     ),
     TriviaQuestion(
-      question: '¿Qué significa realmente "constancia" a diferencia de '
+      question:
+          '¿Qué significa realmente "constancia" a diferencia de '
           '"perfección"?',
       options: [
         'Nunca fallar ni un solo día',
@@ -257,12 +290,14 @@ abstract final class TriviaBank {
         'Cambiar de hábito apenas se pone difícil',
       ],
       correctIndex: 1,
-      explanation: 'La constancia no es no fallar nunca — es la capacidad '
+      explanation:
+          'La constancia no es no fallar nunca — es la capacidad '
           'de retomar el hábito después de un tropiezo, sin que eso se '
           'convierta en abandono total.',
     ),
     TriviaQuestion(
-      question: '¿Qué es más probable que ayude a mantener un hábito de '
+      question:
+          '¿Qué es más probable que ayude a mantener un hábito de '
           'lectura?',
       options: [
         'Ponerte la meta de "leer 1 hora todos los días" desde el día 1',
@@ -271,12 +306,14 @@ abstract final class TriviaBank {
         'Leer solo cuando estés muy motivado',
       ],
       correctIndex: 1,
-      explanation: 'Hacer visible el disparador (el libro a la vista) '
+      explanation:
+          'Hacer visible el disparador (el libro a la vista) '
           'reduce la fricción y aumenta la probabilidad de que el hábito '
           'ocurra sin depender de la fuerza de voluntad.',
     ),
     TriviaQuestion(
-      question: '¿Qué tan importante es el sueño para consolidar hábitos '
+      question:
+          '¿Qué tan importante es el sueño para consolidar hábitos '
           'y memoria?',
       options: [
         'Nada importante',
@@ -285,12 +322,14 @@ abstract final class TriviaBank {
         'Dormir más de 6 horas es contraproducente',
       ],
       correctIndex: 1,
-      explanation: 'Durante el sueño el cerebro consolida memoria y '
+      explanation:
+          'Durante el sueño el cerebro consolida memoria y '
           'aprendizajes recientes — dormir mal afecta directamente la '
           'capacidad de sostener cualquier cambio de comportamiento.',
     ),
     TriviaQuestion(
-      question: '¿Qué es un "hito" (milestone) en el contexto de una '
+      question:
+          '¿Qué es un "hito" (milestone) en el contexto de una '
           'racha de hábitos?',
       options: [
         'Un error que rompe la racha',
@@ -299,12 +338,14 @@ abstract final class TriviaBank {
         'Un tipo de notificación push',
       ],
       correctIndex: 1,
-      explanation: 'Los hitos marcan puntos de progreso reconocibles '
+      explanation:
+          'Los hitos marcan puntos de progreso reconocibles '
           '(una semana, tres semanas, un mes) que ayudan a mantener la '
           'motivación visible en el camino largo.',
     ),
     TriviaQuestion(
-      question: '¿Qué efecto tiene compartir tu progreso con otras '
+      question:
+          '¿Qué efecto tiene compartir tu progreso con otras '
           'personas (como en un círculo)?',
       options: [
         'Ninguno comprobado',
@@ -313,12 +354,14 @@ abstract final class TriviaBank {
         'Reduce la motivación siempre',
       ],
       correctIndex: 1,
-      explanation: 'Saber que otra persona puede ver tu progreso (o su '
+      explanation:
+          'Saber que otra persona puede ver tu progreso (o su '
           'ausencia) activa mecanismos de responsabilidad social que '
           'muchos estudios asocian con mayor adherencia a los hábitos.',
     ),
     TriviaQuestion(
-      question: '¿Qué tan seguido se recomienda hacer pausas activas si '
+      question:
+          '¿Qué tan seguido se recomienda hacer pausas activas si '
           'pasás muchas horas sentado?',
       options: [
         'Nunca hace falta',
@@ -327,12 +370,14 @@ abstract final class TriviaBank {
         'Solo los fines de semana',
       ],
       correctIndex: 1,
-      explanation: 'Estudios sobre comportamiento sedentario recomiendan '
+      explanation:
+          'Estudios sobre comportamiento sedentario recomiendan '
           'romper el tiempo sentado cada 30-60 minutos con al menos un par '
           'de minutos de pie o caminando.',
     ),
     TriviaQuestion(
-      question: '¿Qué significa que un hábito sea "atómico", según el '
+      question:
+          '¿Qué significa que un hábito sea "atómico", según el '
           'término popularizado por James Clear?',
       options: [
         'Que es explosivo y peligroso',
@@ -341,12 +386,14 @@ abstract final class TriviaBank {
         'Que solo se puede hacer una vez',
       ],
       correctIndex: 1,
-      explanation: '"Atómico" se refiere a algo pequeño (como un átomo) '
+      explanation:
+          '"Atómico" se refiere a algo pequeño (como un átomo) '
           'pero que es la unidad básica de un sistema mayor — pequeños '
           'hábitos diarios que, sumados, generan cambios grandes.',
     ),
     TriviaQuestion(
-      question: '¿Qué es la "regla de los dos minutos" para empezar un '
+      question:
+          '¿Qué es la "regla de los dos minutos" para empezar un '
           'hábito nuevo?',
       options: [
         'Solo podés practicar el hábito 2 minutos por semana',
@@ -355,13 +402,15 @@ abstract final class TriviaBank {
         'Hacer 2 minutos de descanso después de cada hábito',
       ],
       correctIndex: 1,
-      explanation: 'Popularizada por James Clear: "leer 30 páginas" se '
+      explanation:
+          'Popularizada por James Clear: "leer 30 páginas" se '
           'vuelve "leer 1 página", "correr 5km" se vuelve "ponerme las '
           'zapatillas". Bajar el umbral de entrada es lo que hace que un '
           'hábito realmente empiece.',
     ),
     TriviaQuestion(
-      question: '¿Qué le pasa a la motivación a lo largo del tiempo, '
+      question:
+          '¿Qué le pasa a la motivación a lo largo del tiempo, '
           'comparada con la constancia de un sistema o rutina?',
       options: [
         'La motivación es más estable que un sistema',
@@ -371,13 +420,15 @@ abstract final class TriviaBank {
         'La motivación siempre aumenta con el tiempo',
       ],
       correctIndex: 1,
-      explanation: 'Depender solo de "sentirse motivado" falla porque la '
+      explanation:
+          'Depender solo de "sentirse motivado" falla porque la '
           'motivación varía día a día. Un sistema (hora fija, entorno '
           'preparado) sostiene el hábito incluso los días de baja '
           'motivación.',
     ),
     TriviaQuestion(
-      question: '¿Qué beneficio comprobado tiene pasar tiempo al aire '
+      question:
+          '¿Qué beneficio comprobado tiene pasar tiempo al aire '
           'libre / luz solar por la mañana?',
       options: [
         'Ninguno relevante',
@@ -386,12 +437,14 @@ abstract final class TriviaBank {
         'Empeora la calidad del sueño',
       ],
       correctIndex: 1,
-      explanation: 'La exposición a luz natural por la mañana ayuda a '
+      explanation:
+          'La exposición a luz natural por la mañana ayuda a '
           'sincronizar el reloj biológico interno, lo que mejora la '
           'calidad del sueño esa misma noche.',
     ),
     TriviaQuestion(
-      question: '¿Qué es más sostenible al elegir una rutina de '
+      question:
+          '¿Qué es más sostenible al elegir una rutina de '
           'ejercicio nueva?',
       options: [
         'Elegir la rutina más de moda, aunque no te guste',
@@ -400,13 +453,15 @@ abstract final class TriviaBank {
         'No importa cuál elijas',
       ],
       correctIndex: 1,
-      explanation: 'La adherencia a largo plazo depende mucho más del '
+      explanation:
+          'La adherencia a largo plazo depende mucho más del '
           'disfrute genuino de la actividad que de su "eficiencia" '
           'teórica — el mejor ejercicio es el que de verdad vas a seguir '
           'haciendo.',
     ),
     TriviaQuestion(
-      question: '¿Qué significa "recaída" (relapse) en el contexto de '
+      question:
+          '¿Qué significa "recaída" (relapse) en el contexto de '
           'cambio de comportamiento, y cómo se maneja mejor?',
       options: [
         'Significa que fallaste para siempre',
@@ -416,13 +471,15 @@ abstract final class TriviaBank {
         'Hay que empezar un hábito completamente distinto',
       ],
       correctIndex: 1,
-      explanation: 'Modelos como el de Prochaska y DiClemente incluyen la '
+      explanation:
+          'Modelos como el de Prochaska y DiClemente incluyen la '
           'recaída como una etapa normal del cambio de comportamiento, no '
           'un fracaso final — lo que predice el éxito a largo plazo es '
           'qué tan rápido se retoma.',
     ),
     TriviaQuestion(
-      question: '¿Qué rol cumple la "identidad" en mantener un hábito, '
+      question:
+          '¿Qué rol cumple la "identidad" en mantener un hábito, '
           'según la psicología del comportamiento?',
       options: [
         'Ninguno, es solo un concepto abstracto',
@@ -432,12 +489,14 @@ abstract final class TriviaBank {
         'Cambiar de identidad rompe cualquier hábito',
       ],
       correctIndex: 1,
-      explanation: 'Cuando un comportamiento se conecta con cómo te ves a '
+      explanation:
+          'Cuando un comportamiento se conecta con cómo te ves a '
           'vos mismo ("soy alguien constante"), se vuelve más resistente '
           'a excusas puntuales que si solo perseguís un resultado externo.',
     ),
     TriviaQuestion(
-      question: '¿Qué es el "efecto dominó de los hábitos" (o "keystone '
+      question:
+          '¿Qué es el "efecto dominó de los hábitos" (o "keystone '
           'habit")?',
       options: [
         'Un hábito que, al adoptarse, facilita la aparición de otros '
@@ -447,13 +506,15 @@ abstract final class TriviaBank {
         'Un hábito que solo funciona los domingos',
       ],
       correctIndex: 0,
-      explanation: 'Hábitos "ancla" como hacer ejercicio regularmente '
+      explanation:
+          'Hábitos "ancla" como hacer ejercicio regularmente '
           'suelen arrastrar mejoras en otras áreas (alimentación, sueño, '
           'productividad) sin proponérselo directamente — el concepto lo '
           'popularizó Charles Duhigg en "El poder de los hábitos".',
     ),
     TriviaQuestion(
-      question: '¿Qué tan efectivo es "castigarse" mentalmente después '
+      question:
+          '¿Qué tan efectivo es "castigarse" mentalmente después '
           'de fallar un hábito, para volver a intentarlo?',
       options: [
         'Muy efectivo, genera disciplina',
@@ -463,13 +524,15 @@ abstract final class TriviaBank {
         'Solo funciona en hábitos de ejercicio',
       ],
       correctIndex: 1,
-      explanation: 'Investigaciones sobre autocompasión (Kristin Neff, '
+      explanation:
+          'Investigaciones sobre autocompasión (Kristin Neff, '
           'entre otras) muestran que tratarse con comprensión tras un '
           'tropiezo predice mejor la persistencia que la autocrítica '
           'severa, que suele llevar a abandonar del todo.',
     ),
     TriviaQuestion(
-      question: '¿Qué tan seguido se recomienda revisar/ajustar tus '
+      question:
+          '¿Qué tan seguido se recomienda revisar/ajustar tus '
           'metas de hábitos?',
       options: [
         'Nunca, una meta fijada no debe tocarse',
@@ -479,13 +542,15 @@ abstract final class TriviaBank {
         'Solo cuando fallás por completo',
       ],
       correctIndex: 1,
-      explanation: 'Las metas rígidas que ignoran la realidad (poco '
+      explanation:
+          'Las metas rígidas que ignoran la realidad (poco '
           'tiempo, cambios de contexto) suelen abandonarse del todo. '
           'Revisarlas cada cierto tiempo con datos reales las hace más '
           'sostenibles.',
     ),
     TriviaQuestion(
-      question: '¿Qué es el "efecto de mera exposición" y cómo se '
+      question:
+          '¿Qué es el "efecto de mera exposición" y cómo se '
           'relaciona con formar hábitos?',
       options: [
         'No tiene relación con hábitos',
@@ -495,7 +560,8 @@ abstract final class TriviaBank {
         'Hace que odies más una actividad repetida',
       ],
       correctIndex: 1,
-      explanation: 'La repetición genera familiaridad y preferencia '
+      explanation:
+          'La repetición genera familiaridad y preferencia '
           '(Robert Zajonc lo estudió en los 60s) — por eso un hábito '
           'incómodo al principio se vuelve más natural cuanto más se '
           'repite, aunque no cambie nada más.',
@@ -509,12 +575,14 @@ abstract final class TriviaBank {
         'Un caramelo',
       ],
       correctIndex: 0,
-      explanation: 'Los frutos secos como las almendras son una de las '
+      explanation:
+          'Los frutos secos como las almendras son una de las '
           'fuentes de snack con más proteína y grasas saludables, a '
           'diferencia de opciones basadas casi solo en azúcar.',
     ),
     TriviaQuestion(
-      question: '¿Qué efecto tiene notificar/recordar un hábito en el '
+      question:
+          '¿Qué efecto tiene notificar/recordar un hábito en el '
           'momento y lugar correctos (en vez de a cualquier hora)?',
       options: [
         'Ninguna diferencia',
@@ -524,12 +592,14 @@ abstract final class TriviaBank {
         'Solo funciona para hábitos de trabajo',
       ],
       correctIndex: 1,
-      explanation: 'Los recordatorios "implementation intentions" '
+      explanation:
+          'Los recordatorios "implementation intentions" '
           '(cuándo y dónde específicos) son mucho más efectivos que '
           'intenciones vagas como "voy a hacer ejercicio esta semana".',
     ),
     TriviaQuestion(
-      question: '¿Qué es más realista esperar de un cambio de hábito '
+      question:
+          '¿Qué es más realista esperar de un cambio de hábito '
           'grande (como dejar de fumar o empezar a entrenar en serio)?',
       options: [
         'Un cambio lineal sin tropiezos',
@@ -538,12 +608,14 @@ abstract final class TriviaBank {
         'Que no requiera ningún ajuste en el camino',
       ],
       correctIndex: 1,
-      explanation: 'El cambio de comportamiento real casi nunca es '
+      explanation:
+          'El cambio de comportamiento real casi nunca es '
           'lineal — tener expectativas realistas sobre altibajos ayuda a '
           'no abandonar ante el primer tropiezo.',
     ),
     TriviaQuestion(
-      question: '¿Qué es la "carga cognitiva" y por qué importa al '
+      question:
+          '¿Qué es la "carga cognitiva" y por qué importa al '
           'diseñar un hábito nuevo?',
       options: [
         'El peso físico de un objeto',
@@ -553,12 +625,14 @@ abstract final class TriviaBank {
         'No tiene relación con hábitos',
       ],
       correctIndex: 1,
-      explanation: 'Cuantas menos decisiones haya que tomar en el '
+      explanation:
+          'Cuantas menos decisiones haya que tomar en el '
           'momento (qué ropa usar, a qué hora, con qué), menos esfuerzo '
           'mental consume el hábito y más fácil es sostenerlo día a día.',
     ),
     TriviaQuestion(
-      question: '¿Qué relación hay entre la hidratación y el rendimiento '
+      question:
+          '¿Qué relación hay entre la hidratación y el rendimiento '
           'cognitivo (concentración, memoria)?',
       options: [
         'Ninguna relación',
@@ -567,12 +641,14 @@ abstract final class TriviaBank {
         'Beber más agua siempre mejora la memoria sin límite',
       ],
       correctIndex: 1,
-      explanation: 'Estudios muestran que incluso una deshidratación '
+      explanation:
+          'Estudios muestran que incluso una deshidratación '
           'leve (1-2% del peso corporal en agua) puede afectar el estado '
           'de ánimo y la capacidad de concentración.',
     ),
     TriviaQuestion(
-      question: '¿Qué tan útil es "visualizar" el hábito completado, '
+      question:
+          '¿Qué tan útil es "visualizar" el hábito completado, '
           'comparado con solo planificar los pasos concretos?',
       options: [
         'Visualizar el resultado final es más efectivo que planificar '
@@ -583,12 +659,14 @@ abstract final class TriviaBank {
         'Solo sirve visualizar, nunca planificar',
       ],
       correctIndex: 1,
-      explanation: 'La investigación sobre "implementation intentions" '
+      explanation:
+          'La investigación sobre "implementation intentions" '
           'muestra que planificar el "cuándo/dónde/cómo" concreto supera '
           'a la simple visualización del resultado final deseado.',
     ),
     TriviaQuestion(
-      question: '¿Qué buscó demostrar el experimento de las "dos '
+      question:
+          '¿Qué buscó demostrar el experimento de las "dos '
           'macetas" de Jerry Seinfeld sobre productividad (la técnica de '
           '"no rompas la cadena")?',
       options: [
@@ -599,13 +677,15 @@ abstract final class TriviaBank {
         'Que las rachas no importan',
       ],
       correctIndex: 1,
-      explanation: 'La técnica ("Don\'t break the chain") consiste en '
+      explanation:
+          'La técnica ("Don\'t break the chain") consiste en '
           'marcar un calendario cada día que cumplís el hábito — ver la '
           'cadena crecer genera un incentivo visual fuerte para no '
           'cortarla, la misma idea detrás de una racha en esta app.',
     ),
     TriviaQuestion(
-      question: '¿Qué efecto tiene reducir el uso de pantallas antes de '
+      question:
+          '¿Qué efecto tiene reducir el uso de pantallas antes de '
           'dormir?',
       options: [
         'Ninguno comprobado',
@@ -615,13 +695,15 @@ abstract final class TriviaBank {
         'Solo afecta a los niños',
       ],
       correctIndex: 1,
-      explanation: 'La luz azul de las pantallas puede suprimir la '
+      explanation:
+          'La luz azul de las pantallas puede suprimir la '
           'producción de melatonina, la hormona que regula el sueño — '
           'reducir su uso antes de dormir suele mejorar la calidad del '
           'descanso.',
     ),
     TriviaQuestion(
-      question: '¿Qué significa tener una "tribu" o comunidad de apoyo '
+      question:
+          '¿Qué significa tener una "tribu" o comunidad de apoyo '
           'para un hábito, en términos prácticos?',
       options: [
         'Nada, es solo un concepto de marketing',
@@ -631,7 +713,8 @@ abstract final class TriviaBank {
         'Solo aplica a hábitos deportivos',
       ],
       correctIndex: 1,
-      explanation: 'Compartir un objetivo con otros y saber que ellos '
+      explanation:
+          'Compartir un objetivo con otros y saber que ellos '
           'también están al tanto de tu progreso combina responsabilidad '
           'social con apoyo emocional — la base del diseño de "círculos" '
           'de esta app.',

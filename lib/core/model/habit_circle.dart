@@ -117,7 +117,8 @@ class HabitCircle {
   /// Racha consecutiva más larga alcanzada en toda la historia del círculo
   /// (no solo la actual). Se usa como "récord personal" en el perfil.
   /// Prioriza [remoteLongestStreakDays] — ver doc-comment de [streakDays].
-  int get longestStreakDays => remoteLongestStreakDays ?? _localLongestStreakDays;
+  int get longestStreakDays =>
+      remoteLongestStreakDays ?? _localLongestStreakDays;
 
   int get _localLongestStreakDays {
     if (checkIns.isEmpty) return 0;
@@ -143,7 +144,8 @@ class HabitCircle {
   /// mantiene el conteo de racha para el multiplicador pero no gana gotas
   /// propias, porque no hubo check-in real ese día. Prioriza
   /// [remoteDropsEarned] — ver doc-comment de [streakDays].
-  int get constancyDropsEarned => remoteDropsEarned ?? _localConstancyDropsEarned;
+  int get constancyDropsEarned =>
+      remoteDropsEarned ?? _localConstancyDropsEarned;
 
   int get _localConstancyDropsEarned {
     if (checkIns.isEmpty) return 0;

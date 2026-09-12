@@ -574,8 +574,9 @@ class _AccountLinkingSection extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
-      builder: (sheetContext) =>
-          _EmailPasswordLinkSheet(onLinkWithEmailPassword: onLinkWithEmailPassword),
+      builder: (sheetContext) => _EmailPasswordLinkSheet(
+        onLinkWithEmailPassword: onLinkWithEmailPassword,
+      ),
     );
   }
 
@@ -584,9 +585,8 @@ class _AccountLinkingSection extends StatelessWidget {
     String? error, {
     required String successMessage,
   }) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(error ?? successMessage)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(error ?? successMessage)));
   }
 }
 
@@ -686,14 +686,14 @@ class _EmailPasswordLinkSheetState extends State<_EmailPasswordLinkSheet> {
     if (error == null) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cuenta vinculada con email y contraseña.')),
+        const SnackBar(
+          content: Text('Cuenta vinculada con email y contraseña.'),
+        ),
       );
       return;
     }
     setState(() => _submitting = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(error)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 }
 

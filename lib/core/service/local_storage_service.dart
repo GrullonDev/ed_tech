@@ -188,12 +188,10 @@ class LocalStorageService {
   /// hasta la primera sincronización exitosa; mientras esté vacío,
   /// `HomeLogic.todaysTrivia` usa `TriviaBank.questions` (banco local
   /// hardcodeado) — nunca se queda sin desafío del día por falta de red.
-  static List<TriviaQuestion> readRemoteTriviaQuestions() =>
-      _triviaQuestionsBox.values
-          .map(
-            (e) => TriviaQuestion.fromMap(Map<String, dynamic>.from(e as Map)),
-          )
-          .toList();
+  static List<TriviaQuestion> readRemoteTriviaQuestions() => _triviaQuestionsBox
+      .values
+      .map((e) => TriviaQuestion.fromMap(Map<String, dynamic>.from(e as Map)))
+      .toList();
 
   static Future<void> saveRemoteTriviaQuestions(
     List<TriviaQuestion> questions,
@@ -232,10 +230,7 @@ class LocalStorageService {
   }
 
   static Future<void> savePredictionPendingDate(DateTime? date) =>
-      _settingsBox.put(
-        _predictionPendingDateKey,
-        date?.toIso8601String(),
-      );
+      _settingsBox.put(_predictionPendingDateKey, date?.toIso8601String());
 
   /// Saldo neto (puede ser negativo) de Gotas de Constancia ganadas o
   /// perdidas apostando en la Predicción de Tribu — misma excepción de

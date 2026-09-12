@@ -42,10 +42,7 @@ Future<void> _initFirebase() async {
     return;
   }
   await _runFirebaseStep('Crashlytics', _initCrashlytics);
-  await _runFirebaseStep(
-    'Performance Monitoring',
-    _initPerformanceMonitoring,
-  );
+  await _runFirebaseStep('Performance Monitoring', _initPerformanceMonitoring);
   await _runFirebaseStep('Remote Config', _initRemoteConfig);
 }
 
@@ -54,10 +51,7 @@ Future<void> _initFirebase() async {
 /// independiente de los demás: si uno falla (ver doc-comment de
 /// [_initFirebase]), los otros igual se intentan, y el mensaje de debug
 /// dice exactamente cuál fue.
-Future<void> _runFirebaseStep(
-  String name,
-  Future<void> Function() step,
-) async {
+Future<void> _runFirebaseStep(String name, Future<void> Function() step) async {
   try {
     await step();
   } catch (error, stackTrace) {

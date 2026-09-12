@@ -76,7 +76,9 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
     return AdaptiveGlassScaffold(
       title: const Text('Crear círculo'),
       body: AppMaxWidth(
-        child: ListView(
+        child: Material(
+          type: MaterialType.transparency,
+          child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
             Text(
@@ -145,6 +147,7 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
               icon: const Icon(Icons.add_circle_outlined),
             ),
           ],
+          ),
         ),
       ),
     );

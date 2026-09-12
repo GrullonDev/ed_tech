@@ -35,59 +35,79 @@ class CircleDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      Expanded(
+                        child: Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            const Text('🔥', style: TextStyle(fontSize: 14)),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              '${circle.streakDays} días de racha',
-                              style: textTheme.labelMedium?.copyWith(
-                                color: AppColors.secondary,
-                                fontWeight: FontWeight.w800,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary.withValues(
+                                  alpha: 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.pill,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    '🔥',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  Text(
+                                    '${circle.streakDays} días de racha',
+                                    style: textTheme.labelMedium?.copyWith(
+                                      color: AppColors.secondary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            if (circle.freezesAvailable > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lavenderContainer,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.pill,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text(
+                                      '🛡️',
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${circle.freezesAvailable}',
+                                      style: textTheme.labelMedium?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),
-                      if (circle.freezesAvailable > 0) ...[
-                        const SizedBox(width: AppSpacing.xs),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.lavenderContainer,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🛡️', style: TextStyle(fontSize: 14)),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${circle.freezesAvailable}',
-                                style: textTheme.labelMedium?.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const Spacer(),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         '${(circle.progress * 100).round()}%',
                         style: textTheme.headlineSmall?.copyWith(
@@ -136,7 +156,11 @@ class CircleDetailPage extends StatelessWidget {
               _MemberTile(
                 label: circle.members[i],
                 isSample: i == 0,
-                done: i < circle.completedMembers,
+                // El índice 0 es siempre "Tú" (el único miembro real): su
+                // estado de check-in refleja circle.checkedInToday. Los
+                // demás son miembros simulados (sin backend) y se muestran
+                // siempre completados, salvo el pendiente de invitación.
+                done: i == 0 ? circle.checkedInToday : true,
                 isPending: circle.pendingMemberName == circle.members[i],
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -260,6 +284,19 @@ class _MemberTile extends StatelessWidget {
   final bool done;
   final bool isPending;
 
+  /// Iniciales del nombre para que el avatar nunca desborde su círculo,
+  /// sin importar qué tan largo sea el nombre del miembro.
+  static String _initials(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    final parts = trimmed.split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      return parts.first.substring(0, parts.first.length.clamp(0, 2)).toUpperCase();
+    }
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -283,11 +320,18 @@ class _MemberTile extends StatelessWidget {
                 : null,
             child: isSample
                 ? null
-                : Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.onSurface,
-                      fontWeight: FontWeight.w700,
+                : FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        _initials(label),
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: AppColors.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
           ),
@@ -295,6 +339,8 @@ class _MemberTile extends StatelessWidget {
           Expanded(
             child: Text(
               isSample ? 'Tú' : 'Miembro $label',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),

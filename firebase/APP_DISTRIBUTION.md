@@ -110,6 +110,34 @@ los testers — solo no se activa el diálogo hasta la próxima corrida
 exitosa, o hasta que se actualicen esos parámetros a mano en Firebase
 Console → Remote Config.
 
+**Si este paso falla con "Process completed with exit code 1" justo
+después de "Activated service account credentials for: ..."**: no es el
+rol de IAM ni los parámetros de Remote Config — el script ni siquiera
+llega a hacer el primer `curl`. Lo que está fallando es
+`gcloud auth print-access-token`, el primer momento en que gcloud usa de
+verdad la clave privada (RSA) del JSON para firmar un token contra
+Google. `activate-service-account` solo valida que el JSON tenga forma
+de service account y lo guarda, así que puede "funcionar" aunque la
+clave privada esté corrupta — el error real solo aparece un paso
+después. La causa típica es que el secret
+`FIREBASE_SERVICE_ACCOUNT_JSON` en GitHub quedó con el campo
+`private_key` dañado (el editor/portapapeles convirtió los `\n`
+escapados dentro del JSON en saltos de línea reales, o se comió el
+`\n` final). Para confirmarlo y arreglarlo:
+
+1. Volvé a descargar una clave JSON nueva para la cuenta de servicio
+   (Google Cloud Console → IAM → Cuentas de servicio →
+   `github-actions-app-distribution` → Claves → Agregar clave → JSON).
+2. Abrí el archivo con un editor de texto plano (no Word/Notion) y
+   copiá **todo** el contenido tal cual, sin tocarlo.
+3. GitHub → repo → Settings → Secrets and variables → Actions →
+   `FIREBASE_SERVICE_ACCOUNT_JSON` → Update secret → pegar el JSON
+   completo de nuevo (sobrescribe el valor anterior).
+4. Volvé a correr el workflow a mano (Actions → Run workflow). El
+   siguiente log de este paso, si vuelve a fallar, ahora sí va a
+   imprimir el mensaje de error real de gcloud antes de cortar (se
+   agregó captura explícita de stderr para este diagnóstico).
+
 Publicar los cambios en Remote Config tarda en tomar efecto — Remote
 Config los cachea hasta 1 hora (`minimumFetchInterval` en `main.dart`),
 así que un tester puede tardar hasta esa ventana en ver el diálogo tras

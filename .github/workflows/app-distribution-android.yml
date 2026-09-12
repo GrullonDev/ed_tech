@@ -107,12 +107,26 @@ jobs:
         env:
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           echo "$SA_JSON" > /tmp/sa.json
-          gcloud auth activate-service-account --key-file=/tmp/sa.json
-          TOKEN=$(gcloud auth print-access-token)
-          rm -f /tmp/sa.json
 
+          if ! gcloud auth activate-service-account --key-file=/tmp/sa.json 2>/tmp/gcloud_err.txt; then
+            echo "::warning::gcloud auth activate-service-account falló:"
+            cat /tmp/gcloud_err.txt
+            rm -f /tmp/sa.json /tmp/gcloud_err.txt
+            exit 1
+          fi
+
+          TOKEN=$(gcloud auth print-access-token 2>/tmp/gcloud_err.txt)
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::gcloud auth print-access-token falló (posible clave privada corrupta en el secret FIREBASE_SERVICE_ACCOUNT_JSON):"
+            cat /tmp/gcloud_err.txt
+            rm -f /tmp/sa.json /tmp/gcloud_err.txt
+            exit 1
+          fi
+          rm -f /tmp/sa.json /tmp/gcloud_err.txt
+
+          set -e
           RESPONSE=$(curl -sS -D /tmp/rc_headers.txt \
             -H "Authorization: Bearer $TOKEN" \
             "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig")

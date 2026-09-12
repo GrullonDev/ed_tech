@@ -61,9 +61,7 @@ class TriviaCard extends StatelessWidget {
                 )
               else
                 Icon(
-                  wasCorrect
-                      ? Icons.check_circle_rounded
-                      : Icons.info_rounded,
+                  wasCorrect ? Icons.check_circle_rounded : Icons.info_rounded,
                   size: 18,
                   color: wasCorrect ? AppColors.primary : AppColors.outline,
                 ),
@@ -426,7 +424,7 @@ class WeeklyDuelCard extends StatelessWidget {
                 ),
               ),
               if (won)
-                Icon(
+                const Icon(
                   Icons.emoji_events_rounded,
                   size: 18,
                   color: AppColors.primary,

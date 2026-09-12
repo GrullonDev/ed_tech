@@ -57,6 +57,21 @@ android {
         release {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // El Flutter Gradle Plugin habilita R8 (minifyEnabled) por defecto
+            // en release desde hace unas versiones, y sin reglas de ProGuard
+            // para Firebase rompe la reflexión que usa para autoregistrarse
+            // (`ComponentDiscoveryService`): la app instala bien pero
+            // `Firebase.initializeApp()` falla en silencio (el catch en
+            // main.dart solo hace debugPrint en modo debug) y cualquier uso
+            // posterior de Firebase (`FirebaseAuth.instance`, etc.) tira
+            // "No Firebase App '[DEFAULT]' has been created", lo que
+            // crashea el árbol de widgets y deja la pantalla en gris liso
+            // (la pantalla de error por defecto de Flutter en release).
+            // Se desactiva por ahora — para una futura release real de Play
+            // Store, hay que agregar las reglas de ProGuard de Firebase en
+            // vez de dejarlo desactivado sin más.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

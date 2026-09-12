@@ -50,6 +50,44 @@ testers del grupo reciben un email con el link para instalar el APK
 desde la app de Firebase App Distribution (o directo el APK) en su
 dispositivo.
 
+### Firma consistente entre builds
+
+`android/app/debug.keystore` es un keystore de debug **fijo, commiteado**
+(no el que Android autogenera por máquina en `~/.android/debug.keystore`).
+Sin esto, cada corrida de CI en un runner efímero firmaba con una clave
+nueva y aleatoria, y el tester no podía instalar un release nuevo encima
+del anterior ("Installation failed" — Android rechaza un APK cuya firma
+no coincide con la ya instalada). Ahora todas las builds (CI y locales)
+usan la misma clave, así que las actualizaciones se instalan encima sin
+problema. Es debug-only, no protege nada sensible: es seguro tenerlo en
+el repo. Si de todas formas un tester ya tiene una instalación previa
+firmada con una clave distinta (de antes de este cambio, o de un
+`flutter run` local), tiene que desinstalar esa versión una vez antes de
+poder instalar la siguiente.
+
+### Avisar a los testers de una nueva versión (diálogo en la app)
+
+La app (ver `HomeLogic._checkForUpdate` en `lib/features/logic/logic.dart`)
+compara su propio build number contra dos parámetros de Remote Config, y
+si el remoto es mayor, muestra un diálogo "Hay una nueva versión
+disponible" con un botón que abre el link de descarga. Después de subir
+un release nuevo con el workflow, para que el diálogo se active hay que
+actualizar esos dos parámetros en Firebase Console → Remote Config:
+
+- `latest_android_build_number` (número): el build number del release
+  recién subido — es el número entre paréntesis en `pubspec.yaml`
+  (`version: X.Y.Z+BUILD`, ese `BUILD` es el que hay que publicar).
+- `update_download_url` (string): el link de descarga del release. Se
+  consigue en Firebase Console → Release & Monitor → App Distribution →
+  abrir el release recién subido → "Copiar link" (o el link público del
+  grupo de testers).
+
+Publicar los cambios en Remote Config (botón "Publicar cambios") para que
+tomen efecto — Remote Config los cachea hasta 1 hora
+(`minimumFetchInterval` en `main.dart`), así que un tester puede tardar
+hasta esa ventana en ver el diálogo tras reabrir la app, salvo que la
+sesión de Remote Config todavía no haya hecho su primer fetch.
+
 ## iOS: manual, en tu Mac (por ahora)
 
 La firma de iOS requiere una cuenta de Apple Developer Program,

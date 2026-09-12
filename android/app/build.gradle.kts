@@ -36,6 +36,23 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Un keystore de debug FIJO, commiteado (android/app/debug.keystore),
+            // en vez del que Android Gradle Plugin autogenera por máquina
+            // (~/.android/debug.keystore). Sin esto, cada corrida de CI en un
+            // runner efímero firmaba con una clave nueva y aleatoria, así que
+            // instalar un release nuevo sobre uno anterior fallaba con
+            // "Installation failed" (Android rechaza un APK cuya firma no
+            // coincide con la ya instalada). Es debug-only: no protege nada
+            // sensible, por eso es seguro tenerlo en el repo.
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             // Signing with the debug keys for now, so `flutter run --release` works.

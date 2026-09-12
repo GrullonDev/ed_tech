@@ -111,6 +111,12 @@ Future<void> _initRemoteConfig() async {
   );
   await remoteConfig.setDefaults({
     'onboarding_headline': Onboarding.defaultHeadline,
+    // Fase "App Distribution" (firebase/APP_DISTRIBUTION.md): 0 por
+    // defecto para que el diálogo de "nueva versión" (HomeLogic.
+    // _checkForUpdate) nunca aparezca hasta que se publique un valor real
+    // desde la consola de Remote Config después de subir un release.
+    'latest_android_build_number': 0,
+    'update_download_url': '',
   });
   await remoteConfig.fetchAndActivate();
 }

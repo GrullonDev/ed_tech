@@ -30,6 +30,8 @@ dependencies:
   liquid_glass_widgets: ^1.4.4
   sign_in_with_apple: ^8.2.0
   crypto: ^3.0.6
+  package_info_plus: ^10.2.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

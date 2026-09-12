@@ -1,11 +1,15 @@
 name: Android → Firebase App Distribution
 
-# Manual: se dispara a mano desde la pestaña Actions cuando se quiere una
-# build de prueba en un dispositivo real (por ejemplo, para validar
-# Crashlytics/Performance Monitoring — ver firebase/PRODUCTS_PLAN.md,
-# secciones 1 y 2). No corre en cada push a propósito: cada corrida gasta
-# minutos de Actions y notifica a los testers, así que se deja como
-# decisión explícita en vez de automática.
+# Se dispara solo con cada push a `develop` (build automática) y también
+# se puede correr a mano desde la pestaña Actions cuando se quiere elegir
+# unas notas de release específicas.
+#
+# Número de build: en vez de depender de editar `version: X.Y.Z+BUILD` en
+# pubspec.yaml a mano antes de cada release, se usa
+# `github.run_number` (un contador que GitHub incrementa solo en cada
+# corrida de este workflow, nunca se repite ni retrocede) vía
+# `--build-number` al compilar. El `X.Y.Z` de pubspec.yaml sigue siendo
+# manual — ese sí es una decisión humana de qué versión "semántica" es.
 #
 # Requiere dos secrets del repo (Settings → Secrets and variables →
 # Actions):
@@ -19,6 +23,9 @@ name: Android → Firebase App Distribution
 #     (Release & Monitor → App Distribution → Testers y grupos) y ahí se
 #     agregan los emails de quienes van a probar.
 on:
+  push:
+    branches:
+      - develop
   workflow_dispatch:
     inputs:
       release_notes:
@@ -48,7 +55,7 @@ jobs:
         run: flutter pub get
 
       - name: flutter build apk --release
-        run: flutter build apk --release
+        run: flutter build apk --release --build-number=${{ github.run_number }}
 
       - name: Subir a Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
@@ -57,4 +64,4 @@ jobs:
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           groups: ${{ secrets.FIREBASE_APP_DISTRIBUTION_GROUPS }}
           file: build/app/outputs/flutter-apk/app-release.apk
-          releaseNotes: ${{ inputs.release_notes }}
+          releaseNotes: ${{ github.event_name == 'workflow_dispatch' && inputs.release_notes || format('Build automática (push a develop) — build {0}: {1}', github.run_number, github.event.head_commit.message) }}

@@ -15,9 +15,12 @@ de poder probar el resto del plan.
 `android/app/build.gradle.kts`, "Signing with the debug keys for now, so
 `flutter run --release` works"; para Play Store hará falta una key real
 más adelante, pero para probar en un dispositivo de prueba vía App
-Distribution alcanza) y lo sube a Firebase App Distribution. Se dispara a
-mano desde GitHub → Actions → "Android → Firebase App Distribution" →
-Run workflow.
+Distribution alcanza) y lo sube a Firebase App Distribution.
+
+Se dispara solo con **cada push a `develop`** (build automática, sin que
+nadie tenga que acordarse de correrla), y también se puede correr a mano
+desde GitHub → Actions → "Android → Firebase App Distribution" → Run
+workflow cuando se quieren notas de release específicas.
 
 ### Configuración de una sola vez
 
@@ -44,11 +47,23 @@ Run workflow.
 
 ### Uso
 
-GitHub → pestaña Actions → "Android → Firebase App Distribution" → Run
-workflow → (opcional) escribir notas de la release → Run workflow. Los
-testers del grupo reciben un email con el link para instalar el APK
-desde la app de Firebase App Distribution (o directo el APK) en su
-dispositivo.
+Automático: cada push a `develop` (mergear un PR incluido) dispara una
+build sola y la sube. Manual: GitHub → pestaña Actions → "Android →
+Firebase App Distribution" → Run workflow → (opcional) escribir notas de
+la release → Run workflow. En ambos casos, los testers del grupo reciben
+un email con el link para instalar el APK desde la app de Firebase App
+Distribution (o directo el APK) en su dispositivo.
+
+### Número de build automático
+
+El build number (lo que se ve entre paréntesis en la lista de releases
+de App Distribution, ej. "1.0.3 (7)") ya no depende de editar
+`version: X.Y.Z+BUILD` a mano en `pubspec.yaml` antes de cada release —
+el workflow lo pasa con `--build-number=${{ github.run_number }}`,
+el contador de corridas de GitHub Actions para este workflow (nunca se
+repite ni retrocede, sin importar si la corrida fue automática o
+manual). El `X.Y.Z` de `pubspec.yaml` sigue siendo una decisión manual
+— es la versión "semántica" que sí elige una persona.
 
 ### Firma consistente entre builds
 
@@ -75,8 +90,10 @@ un release nuevo con el workflow, para que el diálogo se active hay que
 actualizar esos dos parámetros en Firebase Console → Remote Config:
 
 - `latest_android_build_number` (número): el build number del release
-  recién subido — es el número entre paréntesis en `pubspec.yaml`
-  (`version: X.Y.Z+BUILD`, ese `BUILD` es el que hay que publicar).
+  recién subido — es el número entre paréntesis que muestra la lista de
+  releases en App Distribution (ver "Número de build automático" arriba;
+  también es el mismo número que aparece como "run #N" en la pestaña
+  Actions de esa corrida).
 - `update_download_url` (string): el link de descarga del release. Se
   consigue en Firebase Console → Release & Monitor → App Distribution →
   abrir el release recién subido → "Copiar link" (o el link público del

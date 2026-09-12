@@ -23,6 +23,7 @@ import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/model/trivia_question.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 
 /// Estado y reglas de negocio del dashboard de hábitos.
 ///
@@ -132,6 +133,11 @@ class HomeLogic extends ChangeNotifier {
   /// después de completar el onboarding de username.
   bool _hasSeenGameTour = false;
 
+  /// `true` (default) si las tarjetas/superficies de la app deben mostrar
+  /// el efecto "Liquid Glass" — controlable desde un switch en Perfil (ver
+  /// [setLiquidGlassEnabled]), disponible tanto en Android como en iOS.
+  bool _liquidGlassEnabled = true;
+
   /// Banco de preguntas sincronizado desde Firestore (`triviaQuestions`,
   /// ver [_syncTriviaQuestions]), cacheado en Hive. Vacío hasta la primera
   /// sincronización exitosa (o si nunca hay red/sesión) — mientras esté
@@ -157,6 +163,7 @@ class HomeLogic extends ChangeNotifier {
 
   bool get hasUsername => _hasUsername;
   bool get hasSeenGameTour => _hasSeenGameTour;
+  bool get liquidGlassEnabled => _liquidGlassEnabled;
   String get username => _username;
   DateTime? get memberSince => _memberSince;
   String get playerId => _playerId;
@@ -530,6 +537,8 @@ class HomeLogic extends ChangeNotifier {
         LocalStorageService.readTriviaLastSelectedIndex();
     _triviaBonusDrops = LocalStorageService.readTriviaBonusDrops();
     _hasSeenGameTour = LocalStorageService.readHasSeenGameTour();
+    _liquidGlassEnabled = LocalStorageService.readLiquidGlassEnabled();
+    GlassThemeController.enabled.value = _liquidGlassEnabled;
     _remoteTriviaQuestions = LocalStorageService.readRemoteTriviaQuestions();
     _openedStreakCardMilestones =
         LocalStorageService.readOpenedStreakCardMilestones();
@@ -688,6 +697,18 @@ class HomeLogic extends ChangeNotifier {
     if (_hasSeenGameTour) return;
     _hasSeenGameTour = true;
     LocalStorageService.saveHasSeenGameTour(true);
+    notifyListeners();
+  }
+
+  /// Prende/apaga el efecto "Liquid Glass" en toda la app (switch en
+  /// Perfil). Misma disponibilidad en Android e iOS: el paquete
+  /// `liquid_glass_widgets` es puramente Flutter, sin dependencias nativas
+  /// por plataforma.
+  void setLiquidGlassEnabled(bool value) {
+    if (_liquidGlassEnabled == value) return;
+    _liquidGlassEnabled = value;
+    LocalStorageService.saveLiquidGlassEnabled(value);
+    GlassThemeController.enabled.value = value;
     notifyListeners();
   }
 

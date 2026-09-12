@@ -2,8 +2,6 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-
 import 'package:edtech_tiktok/core/data/streak_cards.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
@@ -11,6 +9,7 @@ import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/streak_card.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 
@@ -58,6 +57,8 @@ class ProfilePage extends StatelessWidget {
     required this.onLinkWithGoogle,
     required this.onLinkWithApple,
     required this.onLinkWithEmailPassword,
+    required this.liquidGlassEnabled,
+    required this.onLiquidGlassChanged,
     required this.unlockedStreakCardMilestones,
     required this.pendingStreakCardMilestones,
     required this.onOpenStreakCard,
@@ -101,6 +102,12 @@ class ProfilePage extends StatelessWidget {
   /// mostrar en un SnackBar.
   final Future<String?> Function(String email, String password)
   onLinkWithEmailPassword;
+
+  /// `true` (default) si las tarjetas/superficies de la app usan el efecto
+  /// "Liquid Glass" — controla el switch en [_AppearanceSection], disponible
+  /// tanto en Android como en iOS.
+  final bool liquidGlassEnabled;
+  final ValueChanged<bool> onLiquidGlassChanged;
 
   /// Hitos de racha ya desbloqueados (ver `HomeLogic.unlockedStreakCard
   /// Milestones`) — la Carta de Racha correspondiente ya existe, abierta o
@@ -240,6 +247,11 @@ class ProfilePage extends StatelessWidget {
                       onLinkWithEmailPassword: onLinkWithEmailPassword,
                     ),
                   ],
+                  const SizedBox(height: AppSpacing.lg),
+                  _AppearanceSection(
+                    liquidGlassEnabled: liquidGlassEnabled,
+                    onLiquidGlassChanged: onLiquidGlassChanged,
+                  ),
                   const SizedBox(height: AppSpacing.xl2),
                   Row(
                     children: [
@@ -450,6 +462,63 @@ class ProfilePage extends StatelessWidget {
   static String _currentMonthName() => _kMonthNames[DateTime.now().month - 1];
 }
 
+/// "Apariencia": switch para prender/apagar el efecto "Liquid Glass" en
+/// toda la app (ver [GlassThemeController]) — mismo control en Android e
+/// iOS, ya que el paquete `liquid_glass_widgets` no depende de código
+/// nativo por plataforma. Siempre visible, a diferencia de
+/// [_AccountLinkingSection], que solo aparece mientras la cuenta es
+/// anónima.
+class _AppearanceSection extends StatelessWidget {
+  const _AppearanceSection({
+    required this.liquidGlassEnabled,
+    required this.onLiquidGlassChanged,
+  });
+
+  final bool liquidGlassEnabled;
+  final ValueChanged<bool> onLiquidGlassChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return AdaptiveGlassCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.auto_awesome_rounded,
+            color: AppColors.primary,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Efecto Liquid Glass',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tarjetas y pantallas con vidrio translúcido estilo iOS '
+                  '26. Disponible en Android e iOS.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(value: liquidGlassEnabled, onChanged: onLiquidGlassChanged),
+        ],
+      ),
+    );
+  }
+}
+
 /// "Vincular cuenta" (Fase Authentication de `firebase/PRODUCTS_PLAN.md`,
 /// sección 6): ofrece pasar de la sesión anónima de siempre a una cuenta
 /// real (Google o email/contraseña), sin perder el `uid` — y por lo tanto
@@ -487,7 +556,7 @@ class _AccountLinkingSection extends StatelessWidget {
         googleLinked && emailLinked && (appleLinked || !showApple);
     if (allRelevantLinked) return const SizedBox.shrink();
 
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -925,7 +994,7 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -968,7 +1037,7 @@ class _PresenceMap extends StatelessWidget {
       const Duration(days: 7 * (_weeks - 1)),
     );
 
-    return GlassCard(
+    return AdaptiveGlassCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [

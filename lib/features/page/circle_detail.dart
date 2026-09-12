@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 
 /// Vista de detalle de un círculo: progreso del grupo y estado de cada
 /// miembro. Recibe el círculo y el callback de check-in; no conoce a
@@ -24,15 +23,13 @@ class CircleDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return GlassScaffold(
-      appBar: GlassAppBar(
-        title: Text(circle.name, overflow: TextOverflow.ellipsis),
-      ),
+    return AdaptiveGlassScaffold(
+      title: Text(circle.name, overflow: TextOverflow.ellipsis),
       body: AppMaxWidth(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            GlassCard(
+            AdaptiveGlassCard(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

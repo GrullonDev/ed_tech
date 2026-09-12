@@ -190,6 +190,8 @@ class _MyHomePageState extends State<MyHomePage> {
             onLinkWithGoogle: _logic.linkWithGoogle,
             onLinkWithApple: _logic.linkWithApple,
             onLinkWithEmailPassword: _logic.linkWithEmailPassword,
+            liquidGlassEnabled: _logic.liquidGlassEnabled,
+            onLiquidGlassChanged: _logic.setLiquidGlassEnabled,
             unlockedStreakCardMilestones: _logic.unlockedStreakCardMilestones,
             pendingStreakCardMilestones: _logic.pendingStreakCardMilestones,
             onOpenStreakCard: _logic.openStreakCard,

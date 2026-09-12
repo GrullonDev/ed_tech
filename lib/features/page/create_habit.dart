@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
+import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 
 /// Categorías sugeridas para un círculo nuevo, cada una con un emoji para
@@ -74,8 +73,8 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
     final previewEmoji = _kCategoryOptions[category] ?? '⭐';
     final canSubmit = name.isNotEmpty;
 
-    return GlassScaffold(
-      appBar: const GlassAppBar(title: Text('Crear círculo')),
+    return AdaptiveGlassScaffold(
+      title: const Text('Crear círculo'),
       body: AppMaxWidth(
         child: Material(
           type: MaterialType.transparency,
@@ -141,14 +140,11 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
               onSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: AppSpacing.xl2),
-            SizedBox(
-              width: double.infinity,
-              child: GlassButton(
-                onTap: _submit,
-                enabled: canSubmit,
-                label: 'Crear círculo',
-                icon: const Icon(Icons.add_circle_outlined),
-              ),
+            AdaptiveGlassButton(
+              onTap: _submit,
+              enabled: canSubmit,
+              label: 'Crear círculo',
+              icon: const Icon(Icons.add_circle_outlined),
             ),
           ],
           ),
@@ -176,14 +172,8 @@ class _CirclePreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Container(
+    return AdaptiveGlassOutlinedCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: AppShadows.card,
-        border: Border.all(color: AppColors.outlineWhisper),
-      ),
       child: Row(
         children: [
           Iso3DIcon(

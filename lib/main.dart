@@ -15,10 +15,12 @@ import 'package:edtech_tiktok/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await LocalStorageService.init();
   await NotificationService.init();
   await _initFirebase();
   await LiquidGlassWidgets.initialize();
+
   runApp(LiquidGlassWidgets.wrap(child: const MyApp()));
 }
 

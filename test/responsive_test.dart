@@ -1,10 +1,17 @@
-// Prueba de responsividad: monta cada pantalla rediseñada (rama
-// design/stitch-ui-redesign) a varios anchos de pantalla reales — desde el
-// Android/iPhone más angosto en uso hasta una tablet — y falla si Flutter
-// reporta un overflow de layout (RenderFlex overflowed) o cualquier otra
-// excepción durante el build. Usa datos "de estrés" (nombres/usuarios muy
-// largos, listas largas) para forzar los casos límite en vez de solo los
-// nombres cortos que se usaron durante el desarrollo.
+// Prueba de responsividad: monta cada pantalla de la app a varios anchos de
+// pantalla reales — desde el Android/iPhone más angosto en uso hasta una
+// tablet — y falla si Flutter reporta un overflow de layout (RenderFlex
+// overflowed) o cualquier otra excepción durante el build. Usa datos "de
+// estrés" (nombres/usuarios muy largos, listas largas) para forzar los
+// casos límite en vez de solo los nombres cortos que se usaron durante el
+// desarrollo.
+//
+// No cubre CreateHabitPage: recibe un `HomeLogic` real, que en su
+// constructor ya dispara `_loadFromStorage()` (Hive/Firebase) — instanciarlo
+// en un test liviano requeriría mockear ambos, fuera de alcance acá. Su
+// contenido (TextFields + Wrap de chips dentro de un ListView) es en sí
+// mismo un patrón de bajo riesgo de overflow, a diferencia de las Row con
+// texto variable que sí causaron los bugs reales de este archivo.
 import 'package:flutter/material.dart';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -21,10 +28,13 @@ import 'package:edtech_tiktok/features/page/agora.dart';
 import 'package:edtech_tiktok/features/page/circle_detail.dart';
 import 'package:edtech_tiktok/features/page/games.dart';
 import 'package:edtech_tiktok/features/page/profile.dart';
+import 'package:edtech_tiktok/features/page/qr_summon.dart';
 import 'package:edtech_tiktok/features/page/rachas.dart';
 import 'package:edtech_tiktok/features/page/tribe_founded.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
 import 'package:edtech_tiktok/features/widgets/dashboard.dart';
+import 'package:edtech_tiktok/features/widgets/game_tour.dart';
+import 'package:edtech_tiktok/features/widgets/onboarding.dart';
 
 /// Anchos reales a cubrir: el Android/iPhone más angosto que sigue en uso
 /// (iPhone SE 1ª gen / Galaxy J-series ≈ 320), el piso "moderno" típico
@@ -316,6 +326,38 @@ void main() {
           circle: circles.first,
           onOpenCircleDetail: noop0,
           onOpenAgora: noop0,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Onboarding no desborda a ${width}px', (tester) async {
+      await pumpAtWidth(
+        tester,
+        width,
+        Onboarding(
+          usernameController: TextEditingController(),
+          onContinue: noop0,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('GameTour no desborda a ${width}px', (tester) async {
+      await pumpAtWidth(tester, width, GameTour(onFinish: noop0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('QrSummonPage (Mi Código) no desborda a ${width}px', (
+      tester,
+    ) async {
+      await pumpAtWidth(
+        tester,
+        width,
+        QrSummonPage(
+          username: 'Un_Usuario_De_Nombre_Extremadamente_Largo',
+          qrPayload: 'payload',
+          onScanned: (_) => null,
         ),
       );
       expect(tester.takeException(), isNull);

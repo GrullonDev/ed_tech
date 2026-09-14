@@ -164,7 +164,8 @@ jobs:
           RESPONSE=$(cat /tmp/rc_get_response.json)
           ETAG=$(grep -i '^etag:' /tmp/rc_headers.txt | sed 's/[Ee][Tt][Aa][Gg]:[[:space:]]*//' | tr -d '\r')
           if [ -z "$ETAG" ]; then
-            echo "::warning::No se pudo leer el ETag de la respuesta de Remote Config."
+            echo "::warning::No se pudo leer el ETag de la respuesta de Remote Config. Headers crudos recibidos:"
+            cat -A /tmp/rc_headers.txt
             exit 1
           fi
 

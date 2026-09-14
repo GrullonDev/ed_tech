@@ -43,6 +43,10 @@ class LocalStorageService {
   static const String _duelBonusDropsKey = 'duelBonusDrops';
   static const String _hasSeenGameTourKey = 'hasSeenGameTour';
   static const String _liquidGlassEnabledKey = 'liquidGlassEnabled';
+  static const String _unlockedAvatarIdsKey = 'unlockedAvatarIds';
+  static const String _selectedAvatarIdKey = 'selectedAvatarId';
+  static const String _avatarShopSpentDropsKey = 'avatarShopSpentDrops';
+  static const String _surpriseBonusDropsKey = 'surpriseBonusDrops';
 
   static late Box<dynamic> _settingsBox;
   static late Box<dynamic> _circlesBox;
@@ -310,6 +314,47 @@ class LocalStorageService {
 
   static Future<void> saveDuelBonusDrops(int drops) =>
       _settingsBox.put(_duelBonusDropsKey, drops);
+
+  // ---- Personalización: avatares desbloqueables ----
+
+  /// IDs de `AvatarOption` ya desbloqueados (ver `HomeLogic.unlockAvatar`).
+  /// El avatar gratis (`AvatarCatalog.defaultAvatarId`) no necesita estar
+  /// en esta lista — `HomeLogic.unlockedAvatarIds` lo agrega siempre al
+  /// leerla, así que una instalación nueva ya tiene algo seleccionable.
+  static List<String> readUnlockedAvatarIds() =>
+      List<String>.from(_settingsBox.get(_unlockedAvatarIdsKey) as List? ?? []);
+
+  static Future<void> saveUnlockedAvatarIds(List<String> ids) =>
+      _settingsBox.put(_unlockedAvatarIdsKey, ids);
+
+  /// Avatar actualmente elegido para mostrar en el perfil, o `null` si
+  /// nunca se eligió uno (cae al avatar gratis por defecto).
+  static String? readSelectedAvatarId() =>
+      _settingsBox.get(_selectedAvatarIdKey) as String?;
+
+  static Future<void> saveSelectedAvatarId(String id) =>
+      _settingsBox.put(_selectedAvatarIdKey, id);
+
+  /// Total de Gotas de Constancia gastadas desbloqueando avatares — se
+  /// resta del total en `HomeLogic.constancyDrops`, mismo criterio que
+  /// [readPredictionNetDrops] (contador persistido aparte que nunca
+  /// desincroniza el cálculo derivado de los check-ins reales).
+  static int readAvatarShopSpentDrops() =>
+      _settingsBox.get(_avatarShopSpentDropsKey) as int? ?? 0;
+
+  static Future<void> saveAvatarShopSpentDrops(int drops) =>
+      _settingsBox.put(_avatarShopSpentDropsKey, drops);
+
+  // ---- Bono sorpresa del check-in ----
+
+  /// Total acumulado de Gotas de Constancia ganadas por el bono sorpresa
+  /// aleatorio del check-in (ver `HomeLogic.toggleCheckIn`) — misma
+  /// excepción de "contador persistido aparte" que [readTriviaBonusDrops].
+  static int readSurpriseBonusDrops() =>
+      _settingsBox.get(_surpriseBonusDropsKey) as int? ?? 0;
+
+  static Future<void> saveSurpriseBonusDrops(int drops) =>
+      _settingsBox.put(_surpriseBonusDropsKey, drops);
 
   /// Borra todo el estado local (útil para pruebas o "cerrar sesión" local).
   static Future<void> clearAll() async {

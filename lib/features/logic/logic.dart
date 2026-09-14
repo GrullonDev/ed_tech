@@ -1501,10 +1501,68 @@ class HomeLogic extends ChangeNotifier {
         playerId: _playerId,
       ),
     );
+    await _rehydrateCirclesFromFirestore(user.uid);
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
     _watchIncomingChallenges();
     notifyListeners();
+  }
+
+  /// Repuebla `_circles` con los círculos que [uid] ya integra en Firestore
+  /// (creados o unidos desde CUALQUIER dispositivo, ver `uid` en
+  /// `circles/{id}/members/{uid}` — escrito por [_mirrorCircleCreation] y
+  /// por `redeemInviteCode` en `functions/src/index.ts`), tras un sign-in
+  /// real en [_adoptSignedInAccount]. Antes de esto, reinstalar la app
+  /// borraba Hive y dejaba `_circles` vacía aunque el `uid` recuperado
+  /// siguiera siendo miembro real de sus círculos en el backend — el dueño
+  /// veía el círculo con normalidad (su membresía nunca dependió de este
+  /// dispositivo), pero el que se unió no volvía a verlo nunca en el suyo.
+  ///
+  /// Usa una collectionGroup query en vez de guardar la lista de círculos
+  /// en el perfil del usuario porque ya existe la subcolección `members`:
+  /// solo hacía falta agregarle el campo `uid` (antes solo vivía como ID
+  /// de documento) y una regla de lectura basada en ESE campo — ver
+  /// `firestore.rules`, que a propósito NO reutiliza `isCircleMember`
+  /// (requiere un `exists()` extra por documento; si UN SOLO documento del
+  /// resultado potencial de la query lo fallara, Firestore rechaza la
+  /// query COMPLETA, no solo ese documento) — y el índice de
+  /// `firestore.indexes.json` para poder filtrar por él como collection
+  /// group. Fire-and-forget en el sentido de "no bloquea el login": si
+  /// falla (sin red, índice todavía construyéndose), la cuenta igual
+  /// queda adoptada y el jugador puede volver a unirse a mano con su
+  /// código de invitación mientras tanto.
+  Future<void> _rehydrateCirclesFromFirestore(String uid) async {
+    try {
+      final membershipSnap = await FirebaseFirestore.instance
+          .collectionGroup('members')
+          .where('uid', isEqualTo: uid)
+          .get();
+      for (final memberDoc in membershipSnap.docs) {
+        final circleRef = memberDoc.reference.parent.parent;
+        if (circleRef == null) continue;
+        final circleId = circleRef.id;
+        if (_circles.any((c) => c.id == circleId)) continue;
+
+        final circleSnap = await circleRef.get();
+        final data = circleSnap.data();
+        if (data == null) continue;
+        final circle = HabitCircle(
+          id: circleId,
+          name: data['name'] as String? ?? 'Círculo compartido',
+          category: data['category'] as String? ?? 'General',
+        );
+        _circles.add(circle);
+        _watchCircleActivityEvents(circle);
+        _watchCircleMemberStats(circle);
+        _watchCircleLeaderboard(circle);
+      }
+      if (membershipSnap.docs.isNotEmpty) {
+        LocalStorageService.saveCircles(_circles);
+      }
+    } catch (_) {
+      // Se ignora a propósito: ver doc-comment. Sin esto, el jugador sigue
+      // pudiendo unirse de nuevo a mano con el código de invitación.
+    }
   }
 
   /// Espeja la creación de [circle] en Firestore (`circles/{id}` +
@@ -1537,6 +1595,7 @@ class HomeLogic extends ChangeNotifier {
           'createdAt': FieldValue.serverTimestamp(),
         })
         ..set(circleRef.collection('members').doc(uid), {
+          'uid': uid,
           'role': 'owner',
           'joinedAt': FieldValue.serverTimestamp(),
         });

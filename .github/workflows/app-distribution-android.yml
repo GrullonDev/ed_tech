@@ -132,11 +132,22 @@ jobs:
             "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig")
           ETAG=$(grep -i '^etag:' /tmp/rc_headers.txt | sed 's/[Ee][Tt][Aa][Gg]:[[:space:]]*//' | tr -d '\r')
 
+          # OJO: reemplaza el objeto `defaultValue` entero (no solo el campo
+          # `.value`) a propósito. Si el parámetro se creó a mano en la
+          # consola con "Usar configuración predeterminada en la app"
+          # activado, queda como `defaultValue: {useInAppDefault: true}` —
+          # hacer `.defaultValue.value = $build` solo AGREGA `value` a ese
+          # objeto sin sacar `useInAppDefault`, y con ese flag en `true`
+          # Firebase sigue sirviendo el default de la app (0, ver
+          # main.dart) sin importar qué valor se publique. Reemplazar todo
+          # el objeto es la única forma de garantizar que quede
+          # `{value: "..."}` sin ambigüedad, corra el workflow desde cero o
+          # sobre un parámetro creado a mano.
           echo "$RESPONSE" | jq \
             --arg build "${{ github.run_number }}" \
             --arg url "${{ steps.upload.outputs.TESTING_URI }}" \
-            '.parameters.latest_android_build_number.defaultValue.value = $build
-             | .parameters.update_download_url.defaultValue.value = $url' \
+            '.parameters.latest_android_build_number.defaultValue = {value: $build}
+             | .parameters.update_download_url.defaultValue = {value: $url}' \
             > /tmp/rc_updated.json
 
           curl -sS -X PUT \

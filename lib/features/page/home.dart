@@ -297,6 +297,7 @@ class _MyHomePageState extends State<MyHomePage> {
             activityFeed: _logic.activityFeed,
             hasReactedTo: _logic.hasReactedTo,
             onToggleReaction: _logic.toggleActivityReaction,
+            onCheckIn: _logic.toggleCheckIn,
           ),
         ),
       ),

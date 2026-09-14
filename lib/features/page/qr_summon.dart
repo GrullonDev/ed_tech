@@ -86,14 +86,19 @@ class _MyCodeTab extends StatelessWidget {
               child: QrImageView(
                 data: qrPayload,
                 size: 220,
+                // Blanco/negro fijos a propósito, sin importar el tema de
+                // la app: un QR necesita contraste garantizado para poder
+                // escanearse. Con AppColors.onSurface (ahora blanco en el
+                // tema oscuro "Kinetic Cyber-Tribe") los módulos quedaban
+                // blancos sobre fondo blanco — invisibles.
                 backgroundColor: Colors.white,
                 eyeStyle: const QrEyeStyle(
                   eyeShape: QrEyeShape.square,
-                  color: AppColors.onSurface,
+                  color: Colors.black,
                 ),
                 dataModuleStyle: const QrDataModuleStyle(
                   dataModuleShape: QrDataModuleShape.square,
-                  color: AppColors.onSurface,
+                  color: Colors.black,
                 ),
               ),
             ),

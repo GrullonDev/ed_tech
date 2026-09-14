@@ -214,14 +214,18 @@ class TribeFoundedPage extends StatelessWidget {
                 child: QrImageView(
                   data: circle.inviteCode,
                   size: 160,
+                  // Blanco/negro fijos a propósito — ver la misma nota en
+                  // qr_summon.dart: con AppColors.onSurface (blanco en el
+                  // tema oscuro) los módulos quedaban invisibles sobre el
+                  // fondo blanco del propio QR.
                   backgroundColor: Colors.white,
                   eyeStyle: const QrEyeStyle(
                     eyeShape: QrEyeShape.square,
-                    color: AppColors.onSurface,
+                    color: Colors.black,
                   ),
                   dataModuleStyle: const QrDataModuleStyle(
                     dataModuleShape: QrDataModuleShape.square,
-                    color: AppColors.onSurface,
+                    color: Colors.black,
                   ),
                 ),
               ),

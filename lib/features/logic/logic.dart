@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,6 +23,7 @@ import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/model/leaderboard_entry.dart';
 import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/model/trivia_question.dart';
@@ -72,6 +74,24 @@ class HomeLogic extends ChangeNotifier {
   /// ver [_watchCircleMemberStats]. Se cancelan en [dispose].
   final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
   _memberStatsSubscriptions = {};
+
+  /// Suscripciones activas a `circles/{id}/memberStats` (la colección
+  /// completa, no solo el propio documento) por círculo, ver
+  /// [_watchCircleLeaderboard]. Se cancelan en [dispose].
+  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+  _leaderboardSubscriptions = {};
+
+  /// Tabla de posiciones real (competencia contra cuentas de Firebase reales
+  /// que se unieron con un código de invitación, no contra uno mismo) por
+  /// círculo, ver [_watchCircleLeaderboard] y [leaderboardFor].
+  final Map<String, List<LeaderboardEntry>> _circleLeaderboards = {};
+
+  /// Cache de `uid -> username` para no releer `users/{uid}` cada vez que
+  /// llega una actualización de `memberStats` del mismo miembro — el
+  /// username de una cuenta no cambia con la frecuencia con la que cambian
+  /// sus stats (cada check-in), así que una lectura por miembro alcanza
+  /// para toda la sesión.
+  final Map<String, String> _usernameCache = {};
 
   /// Suscripciones a `allyRequests` (ver [_watchIncomingAllyRequests] y
   /// [_watchOutgoingAllyRequests]). Se cancelan en [dispose].
@@ -187,6 +207,13 @@ class HomeLogic extends ChangeNotifier {
   List<HabitCircle> get circles => List.unmodifiable(_circles);
   List<TodayHabit> get todayHabits => List.unmodifiable(_todayHabits);
   int get streakPulseTick => _streakPulseTick;
+
+  /// Tabla de posiciones real de [circleId], ordenada de mayor a menor
+  /// racha (empate desuelto por gotas ganadas) — vacía si el círculo no
+  /// tiene todavía ningún miembro real unido por código de invitación (ver
+  /// [joinCircleWithInviteCode]) o si no hay sesión de Firebase.
+  List<LeaderboardEntry> leaderboardFor(String circleId) =>
+      _circleLeaderboards[circleId] ?? const [];
   int get circlesUpdatedTick => _circlesUpdatedTick;
   List<AllyRequest> get pendingAllyRequests =>
       List.unmodifiable(_pendingAllyRequests);
@@ -587,6 +614,7 @@ class HomeLogic extends ChangeNotifier {
     for (final circle in _circles) {
       _watchCircleActivityEvents(circle);
       _watchCircleMemberStats(circle);
+      _watchCircleLeaderboard(circle);
     }
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
@@ -1102,7 +1130,7 @@ class HomeLogic extends ChangeNotifier {
           'name': circle.name,
           'category': circle.category,
           'ownerId': uid,
-          'inviteCode': circle.id.substring(0, circle.id.length.clamp(0, 8)),
+          'inviteCode': circle.inviteCode,
           'createdAt': FieldValue.serverTimestamp(),
         })
         ..set(circleRef.collection('members').doc(uid), {
@@ -1265,6 +1293,140 @@ class HomeLogic extends ChangeNotifier {
     }
   }
 
+  /// Se suscribe a la colección completa `circles/{id}/memberStats` (no
+  /// solo el documento propio como [_watchCircleMemberStats]) para armar la
+  /// tabla de posiciones REAL del círculo — competencia contra otras
+  /// cuentas de Firebase de verdad que se unieron con
+  /// [joinCircleWithInviteCode], no contra el propio historial (a
+  /// diferencia del "Duelo Semanal" de `GamesPage`, que sí es contra uno
+  /// mismo). Las reglas de seguridad (`firestore.rules`) permiten leer
+  /// cualquier `memberStats` del círculo a todo miembro — ver
+  /// `firebase/FIRESTORE_SCHEMA.md`. No hace nada si no hay sesión de
+  /// Firebase.
+  void _watchCircleLeaderboard(HabitCircle circle) {
+    final myUid = _firebaseUid;
+    if (myUid == null || _leaderboardSubscriptions.containsKey(circle.id)) {
+      return;
+    }
+    final query = FirebaseFirestore.instance
+        .collection('circles')
+        .doc(circle.id)
+        .collection('memberStats');
+    try {
+      _leaderboardSubscriptions[circle.id] = query.snapshots().listen((
+        snapshot,
+      ) async {
+        final entries = <LeaderboardEntry>[];
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+          final username = await _resolveUsername(doc.id);
+          entries.add(
+            LeaderboardEntry(
+              uid: doc.id,
+              username: username,
+              streakDays: data['streakDays'] as int? ?? 0,
+              dropsEarned: data['dropsEarned'] as int? ?? 0,
+              checkedInToday: data['checkedInToday'] as bool? ?? false,
+              isCurrentUser: doc.id == myUid,
+            ),
+          );
+        }
+        entries.sort((a, b) {
+          final byStreak = b.streakDays.compareTo(a.streakDays);
+          return byStreak != 0
+              ? byStreak
+              : b.dropsEarned.compareTo(a.dropsEarned);
+        });
+        _circleLeaderboards[circle.id] = entries;
+        notifyListeners();
+      }, onError: (_) {});
+    } catch (_) {
+      // Se ignora a propósito: sin tabla de posiciones, la app sigue
+      // mostrando el círculo con sus miembros simulados de siempre (ver
+      // `CircleDetailPage`).
+    }
+  }
+
+  /// Resuelve el username de [uid] leyendo `users/{uid}` una sola vez por
+  /// sesión (ver doc-comment de [_usernameCache]). Cae a "Jugador" si el
+  /// documento no existe o la lectura falla, para que la tabla de
+  /// posiciones nunca se quede sin renderizar una fila por esto.
+  Future<String> _resolveUsername(String uid) async {
+    final cached = _usernameCache[uid];
+    if (cached != null) return cached;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      final username = snapshot.data()?['username'] as String? ?? 'Jugador';
+      _usernameCache[uid] = username;
+      return username;
+    } catch (_) {
+      return 'Jugador';
+    }
+  }
+
+  /// Canjea [inviteCode] (ver `HabitCircle.inviteCode`) contra la Cloud
+  /// Function `redeemInviteCode` (`functions/src/index.ts`), que verifica
+  /// que el código exista y agrega al usuario actual como miembro real
+  /// (`circles/{id}/members/{uid}`) — a diferencia de
+  /// [addMemberToCircle], que solo guarda un nombre local sin backend, esto
+  /// une de verdad dos cuentas de Firebase al mismo círculo. Si el círculo
+  /// no existe todavía en este dispositivo, lo agrega localmente (mismo
+  /// `id` que en Firestore, así los check-ins futuros se escriben en el
+  /// círculo correcto) y arranca sus suscripciones en vivo.
+  ///
+  /// Retorna `null` si se unió con éxito, o un mensaje de error para
+  /// mostrarle al usuario en caso contrario. Requiere sesión de Firebase.
+  Future<String?> joinCircleWithInviteCode(String inviteCode) async {
+    final trimmed = inviteCode.trim();
+    if (trimmed.isEmpty) return 'Escribí un código de invitación.';
+    if (_firebaseUid == null) {
+      return 'Necesitás conexión para unirte a un círculo con código.';
+    }
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('redeemInviteCode')
+          .call({'inviteCode': trimmed});
+      // El SDK de cloud_functions devuelve el payload como
+      // Map<Object?, Object?> (interop crudo), no Map<String, dynamic> —
+      // castear directo con `as Map<String, dynamic>` revienta en runtime.
+      final data = result.data as Map<Object?, Object?>?;
+      final circleId = data?['circleId'] as String?;
+      if (circleId == null) return 'Código de invitación inválido.';
+
+      if (!_circles.any((c) => c.id == circleId)) {
+        final circleDoc = await FirebaseFirestore.instance
+            .collection('circles')
+            .doc(circleId)
+            .get();
+        final data = circleDoc.data();
+        if (data == null) return 'El círculo ya no existe.';
+        final circle = HabitCircle(
+          id: circleId,
+          name: data['name'] as String? ?? 'Círculo compartido',
+          category: data['category'] as String? ?? 'General',
+        );
+        _circles.add(circle);
+        LocalStorageService.saveCircles(_circles);
+      }
+      final circle = _circles.firstWhere((c) => c.id == circleId);
+      _watchCircleActivityEvents(circle);
+      _watchCircleMemberStats(circle);
+      _watchCircleLeaderboard(circle);
+      _logAnalyticsEvent('circle_joined_with_code', {
+        'circle_category': circle.category,
+      });
+      notifyListeners();
+      return null;
+    } on FirebaseFunctionsException catch (e) {
+      return e.message ?? 'No se pudo unir al círculo.';
+    } catch (_) {
+      return 'No se pudo unir al círculo. Probá de nuevo.';
+    }
+  }
+
   /// Formatea [date] como "yyyy-mm-dd", igual que el `date` string que
   /// esperan las Cloud Functions en functions/src/streakLogic.ts.
   static String _dateKey(DateTime date) =>
@@ -1363,6 +1525,7 @@ class HomeLogic extends ChangeNotifier {
     unawaited(_mirrorCircleCreation(circle));
     _watchCircleActivityEvents(circle);
     _watchCircleMemberStats(circle);
+    _watchCircleLeaderboard(circle);
     _updatePrimaryCategoryUserProperty();
     notifyListeners();
   }
@@ -1685,6 +1848,9 @@ class HomeLogic extends ChangeNotifier {
       unawaited(subscription.cancel());
     }
     for (final subscription in _memberStatsSubscriptions.values) {
+      unawaited(subscription.cancel());
+    }
+    for (final subscription in _leaderboardSubscriptions.values) {
       unawaited(subscription.cancel());
     }
     unawaited(_incomingAllyRequestsSubscription?.cancel());

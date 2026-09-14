@@ -117,7 +117,7 @@ desde `functions/`). Usa IDs de documento determinísticos (`q-000`,
 |---|---|---|
 | `AppUser` | `users/{uid}` | `uid` viene de Firebase Auth; ya no hace falta `playerId` propio. |
 | `HabitCircle` (name, category) | `circles/{circleId}` | Suma `inviteCode`, canjeable vía la Cloud Function `redeemInviteCode`. |
-| `HabitCircle.members` | `circles/{circleId}/members/{uid}` | Relación real usuario↔círculo. |
+| `HabitCircle.members` | `circles/{circleId}/members/{uid}` | Relación real usuario↔círculo. La Cloud Function `redeemInviteCode` es la única que escribe acá — el cliente la invoca desde `HomeLogic.joinCircleWithInviteCode` (pantalla "Crear círculo" → "Unirme con código"), lo que la conecta por primera vez desde la UI. |
 | `HabitCircle.checkIns` / `CheckIn` | `circles/{circleId}/checkIns/{uid_fecha}` | El ID del documento (`uid_yyyy-mm-dd`) es la unicidad: Firestore rechaza el `create` si ya existe. |
 | `HabitCircle.freezesAvailable` | `memberStats.freezesAvailable` (denormalizado) | = `streakShieldGrants` − `streakShieldUses`, recalculado por Cloud Function. |
 | `HabitCircle.freezeUsedDates` | `circles/{circleId}/streakShieldUses` | |

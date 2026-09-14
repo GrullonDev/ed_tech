@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:google_fonts/google_fonts.dart';
 
 /// Tokens de diseño de "Kinship Routine" (ver `assets/DESIGN.md`).
@@ -60,25 +59,18 @@ abstract final class AppSpacing {
 /// Envuelve contenido con un ancho máximo y lo centra, para que las
 /// pantallas no se estiren en exceso en móviles grandes/tablets en modo
 /// retrato, manteniendo la app responsiva en todos los tamaños de teléfono.
-/// Centra el contenido y limita su ancho para que la app se vea bien tanto
-/// en teléfonos angostos como en tablets/pantallas grandes: en vez de un tope
-/// fijo, [maxWidth] escala con el ancho disponible dentro de un rango
-/// razonable (móvil ≈ 480, tablet ≈ 720).
 class AppMaxWidth extends StatelessWidget {
-  const AppMaxWidth({super.key, required this.child, this.maxWidth});
+  const AppMaxWidth({super.key, required this.child, this.maxWidth = 480});
 
   final Widget child;
-  final double? maxWidth;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final effectiveMaxWidth =
-        maxWidth ?? (screenWidth * 0.9).clamp(320, 720).toDouble();
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: effectiveMaxWidth),
+        constraints: BoxConstraints(maxWidth: maxWidth),
         child: child,
       ),
     );

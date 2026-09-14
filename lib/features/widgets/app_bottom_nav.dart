@@ -1,88 +1,55 @@
 import 'package:flutter/material.dart';
 
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
-import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
-
-/// Pestaña actualmente activa, para resaltarla en [AppBottomNav].
-enum AppTab { circles, rachas, games, profile }
 
 /// Barra de navegación inferior flotante en forma de píldora. El botón "+"
-/// vive dentro de la misma barra (no como FAB con muesca). Cada pantalla que
-/// la usa indica su [currentTab] para resaltar el ítem correspondiente y
-/// provee los callbacks de las demás pestañas.
+/// vive dentro de la misma barra (no como FAB con muesca). La pestaña
+/// "Círculos" es la pantalla actual; "Perfil" navega a [ProfilePage] vía
+/// [onOpenProfile]. "Rachas" queda como marcador visual hasta que exista
+/// esa pantalla.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
-    required this.currentTab,
     required this.onCreateCircle,
-    this.onOpenCircles,
-    this.onOpenRachas,
-    this.onOpenGames,
-    this.onOpenProfile,
+    required this.onOpenProfile,
   });
 
-  final AppTab currentTab;
   final VoidCallback onCreateCircle;
-  final VoidCallback? onOpenCircles;
-  final VoidCallback? onOpenRachas;
-  final VoidCallback? onOpenGames;
-  final VoidCallback? onOpenProfile;
-
-  /// Alto de la píldora de navegación en sí (sin contar el margen inferior
-  /// ni el inset de la barra de sistema).
-  static const double barHeight = 68;
-
-  /// Margen que [SafeArea] agrega debajo de la píldora.
-  static const double bottomMargin = AppSpacing.lg;
-
-  /// Espacio total que la barra flotante ocupa desde el borde inferior de la
-  /// pantalla (píldora + margen), sin contar el inset de la barra de
-  /// sistema. Con `extendBody: true` el body pasa por detrás de esta barra,
-  /// así que cualquier `ListView`/`ScrollView` de una pantalla con esta nav
-  /// debe agregar al menos esto como padding inferior para que el contenido
-  /// no quede oculto detrás de ella.
-  static const double reservedHeight = barHeight + bottomMargin;
+  final VoidCallback onOpenProfile;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         0,
         AppSpacing.lg,
-        bottomMargin,
+        AppSpacing.lg,
       ),
-      child: AdaptiveGlassCard(
-        height: barHeight,
-        radius: AppRadius.pill,
+      child: Container(
+        height: 68,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: AppShadows.card,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _NavItem(
+            const _NavItem(
               icon: Icons.group_rounded,
               label: 'Círculos',
-              selected: currentTab == AppTab.circles,
-              onTap: onOpenCircles,
+              selected: true,
             ),
-            _NavItem(
+            const _NavItem(
               icon: Icons.local_fire_department_rounded,
               label: 'Rachas',
-              selected: currentTab == AppTab.rachas,
-              onTap: onOpenRachas,
             ),
             _AddButton(onTap: onCreateCircle),
             _NavItem(
-              icon: Icons.sports_esports_rounded,
-              label: 'Juegos',
-              selected: currentTab == AppTab.games,
-              onTap: onOpenGames,
-            ),
-            _NavItem(
               icon: Icons.emoji_events_rounded,
               label: 'Perfil',
-              selected: currentTab == AppTab.profile,
               onTap: onOpenProfile,
             ),
           ],
@@ -103,33 +70,30 @@ class _AddButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.add_circle_rounded,
-                color: AppColors.primary,
-                size: 22,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.primaryContainer, AppColors.primary],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-              SizedBox(height: 3),
-              Text(
-                'Crear',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 11,
-                  height: 1.1,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 2),
-              SizedBox(width: 4, height: 4),
             ],
+          ),
+          child: const Icon(
+            Icons.add_rounded,
+            color: AppColors.onPrimary,
+            size: 26,
           ),
         ),
       ),

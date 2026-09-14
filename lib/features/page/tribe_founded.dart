@@ -65,12 +65,16 @@ class TribeFoundedPage extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return AdaptiveGlassScaffold(
       title: const Text('Fuego Sagrado Encendido'),
-      body: AppMaxWidth(
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            Text(
-              '🔥 RITO DE FUEGO COMPLETADO',
+      // SafeArea a propósito — ver la misma nota en circle_detail.dart:
+      // sin esto, el contenido queda debajo de la barra de estado del
+      // sistema en un dispositivo real.
+      body: SafeArea(
+        child: AppMaxWidth(
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              Text(
+                '🔥 RITO DE FUEGO COMPLETADO',
               textAlign: TextAlign.center,
               style: textTheme.labelSmall?.copyWith(
                 color: AppColors.primary,
@@ -261,7 +265,8 @@ class TribeFoundedPage extends StatelessWidget {
                 child: const Text('EXPLORAR EL GRAN ÁGORA'),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

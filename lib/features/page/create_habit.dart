@@ -111,12 +111,16 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
 
     return AdaptiveGlassScaffold(
       title: const Text('Fundar Tribu'),
-      body: AppMaxWidth(
-        child: Material(
-          type: MaterialType.transparency,
-          child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
+      // SafeArea a propósito — ver la misma nota en circle_detail.dart:
+      // sin esto, el contenido queda debajo de la barra de estado del
+      // sistema en un dispositivo real.
+      body: SafeArea(
+        child: AppMaxWidth(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [
             Text(
               '🔥 RITO CHAMÁNICO',
               style: textTheme.labelSmall?.copyWith(
@@ -259,7 +263,8 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
               label: _joiningCircle ? 'Uniéndome...' : 'Unirme con código',
               icon: const Icon(Icons.group_add_rounded),
             ),
-          ],
+              ],
+            ),
           ),
         ),
       ),

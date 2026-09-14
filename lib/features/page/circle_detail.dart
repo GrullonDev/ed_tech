@@ -51,12 +51,18 @@ class CircleDetailPage extends StatelessWidget {
     final clanLevel = _levelFor(circle.streakDays);
     return AdaptiveGlassScaffold(
       title: const Text('Detalle De Tribu'),
-      body: AppMaxWidth(
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            Row(
-              children: [
+      // SafeArea a propósito — sin esto, el primer elemento del body (el
+      // chip "LOBBY SAGRADO ACTIVO") queda debajo de la barra de estado del
+      // sistema en un dispositivo real (reportado en un Moto G30 en la
+      // PR: "no se ve la parte de arriba"). El resto de las pantallas de
+      // esta ronda ya usan SafeArea; esta se había quedado afuera.
+      body: SafeArea(
+        child: AppMaxWidth(
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              Row(
+                children: [
                 Flexible(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -311,7 +317,8 @@ class CircleDetailPage extends StatelessWidget {
                 label: const Text('Entrar a la Zona de Juegos'),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

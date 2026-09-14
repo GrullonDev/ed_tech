@@ -55,12 +55,18 @@ class _QrSummonPageState extends State<QrSummonPage>
           Tab(text: 'Escanear'),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _MyCodeTab(username: widget.username, qrPayload: widget.qrPayload),
-          _ScanTab(onScanned: widget.onScanned),
-        ],
+      // SafeArea a propósito — mismo bug que circle_detail.dart/
+      // tribe_founded.dart/create_habit.dart: tener un `title`/`bottom` en
+      // AdaptiveGlassScaffold no alcanza para evitar que el contenido quede
+      // debajo de la barra de estado del sistema en un dispositivo real.
+      body: SafeArea(
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _MyCodeTab(username: widget.username, qrPayload: widget.qrPayload),
+            _ScanTab(onScanned: widget.onScanned),
+          ],
+        ),
       ),
     );
   }

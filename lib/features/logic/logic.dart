@@ -25,6 +25,7 @@ import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/model/trivia_question.dart';
+import 'package:edtech_tiktok/core/service/game_feedback_service.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
 import 'package:edtech_tiktok/core/service/notification_service.dart';
 import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
@@ -86,6 +87,14 @@ class HomeLogic extends ChangeNotifier {
   /// ícono de racha: la UI observa este valor (no su magnitud) y reproduce
   /// la animación cada vez que cambia.
   int _streakPulseTick = 0;
+
+  /// Contador que se incrementa solo al completar un check-in de círculo
+  /// NUEVO (no al desmarcarlo). Sirve como trigger para el confetti — la UI
+  /// (`home.dart`) observa este valor y dispara la explosión de partículas
+  /// cada vez que cambia. Separado de [_streakPulseTick] porque este último
+  /// también se dispara con los hábitos personales del día, que no ameritan
+  /// confetti (queda reservado para lo que sí mueve la racha real).
+  int _celebrationTick = 0;
 
   /// Contador que se incrementa cada vez que un círculo compartido cambia
   /// (check-in de un miembro, nuevo aliado agregado a la tribu). Sirve para
@@ -188,6 +197,8 @@ class HomeLogic extends ChangeNotifier {
   List<HabitCircle> get circles => List.unmodifiable(_circles);
   List<TodayHabit> get todayHabits => List.unmodifiable(_todayHabits);
   int get streakPulseTick => _streakPulseTick;
+
+  int get celebrationTick => _celebrationTick;
   int get circlesUpdatedTick => _circlesUpdatedTick;
   List<AllyRequest> get pendingAllyRequests =>
       List.unmodifiable(_pendingAllyRequests);
@@ -1312,7 +1323,10 @@ class HomeLogic extends ChangeNotifier {
   void toggleTodayHabit(TodayHabit habit) {
     final wasDone = habit.done;
     habit.done = !habit.done;
-    if (!wasDone && habit.done) _streakPulseTick++;
+    if (!wasDone && habit.done) {
+      _streakPulseTick++;
+      unawaited(GameFeedbackService.todayHabitToggled());
+    }
     LocalStorageService.saveTodayHabits(_todayHabits);
     notifyListeners();
   }
@@ -1325,6 +1339,8 @@ class HomeLogic extends ChangeNotifier {
     } else {
       circle.addCheckInToday();
       _streakPulseTick++;
+      _celebrationTick++;
+      unawaited(GameFeedbackService.checkIn());
       _recordCircleActivity(
         circle,
         emoji: '🔥',

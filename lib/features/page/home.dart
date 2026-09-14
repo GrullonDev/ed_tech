@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
+import 'package:confetti/confetti.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
@@ -32,17 +35,37 @@ class _MyHomePageState extends State<MyHomePage> {
   /// el próximo arranque de la app.
   bool _updateDialogShown = false;
 
+  /// Overlay global de confetti: vive acá (no en `Dashboard`) porque
+  /// `toggleCheckIn` se dispara desde tres pantallas distintas (Dashboard,
+  /// CircleDetail, Rachas) y todas comparten esta misma instancia de
+  /// `_MyHomePageState` por debajo — un solo `ConfettiController` cubre los
+  /// tres casos sin duplicar el widget en cada pantalla.
+  late final ConfettiController _confettiController = ConfettiController(
+    duration: const Duration(milliseconds: 600),
+  );
+  int _lastCelebrationTick = 0;
+
   @override
   void initState() {
     super.initState();
+    _lastCelebrationTick = _logic.celebrationTick;
     _logic.addListener(_maybeShowUpdateDialog);
+    _logic.addListener(_maybeCelebrate);
   }
 
   @override
   void dispose() {
     _logic.removeListener(_maybeShowUpdateDialog);
+    _logic.removeListener(_maybeCelebrate);
+    _confettiController.dispose();
     _logic.dispose();
     super.dispose();
+  }
+
+  void _maybeCelebrate() {
+    if (_logic.celebrationTick == _lastCelebrationTick) return;
+    _lastCelebrationTick = _logic.celebrationTick;
+    _confettiController.play();
   }
 
   void _maybeShowUpdateDialog() {
@@ -97,6 +120,37 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _buildContent(context),
+        _buildConfettiOverlay(),
+      ],
+    );
+  }
+
+  /// Confetti cayendo desde arriba de toda la pantalla, sin bloquear toques
+  /// (`IgnorePointer`) — solo se ve, nunca interfiere con el resto de la UI.
+  Widget _buildConfettiOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirection: pi / 2,
+            blastDirectionality: BlastDirectionality.explosive,
+            numberOfParticles: 24,
+            maxBlastForce: 12,
+            minBlastForce: 6,
+            gravity: 0.4,
+            shouldLoop: false,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     return ListenableBuilder(
       listenable: _logic,
       builder: (context, _) {

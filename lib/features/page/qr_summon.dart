@@ -55,12 +55,18 @@ class _QrSummonPageState extends State<QrSummonPage>
           Tab(text: 'Escanear'),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _MyCodeTab(username: widget.username, qrPayload: widget.qrPayload),
-          _ScanTab(onScanned: widget.onScanned),
-        ],
+      // SafeArea a propósito — mismo bug que circle_detail.dart/
+      // tribe_founded.dart/create_habit.dart: tener un `title`/`bottom` en
+      // AdaptiveGlassScaffold no alcanza para evitar que el contenido quede
+      // debajo de la barra de estado del sistema en un dispositivo real.
+      body: SafeArea(
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _MyCodeTab(username: widget.username, qrPayload: widget.qrPayload),
+            _ScanTab(onScanned: widget.onScanned),
+          ],
+        ),
       ),
     );
   }
@@ -86,14 +92,19 @@ class _MyCodeTab extends StatelessWidget {
               child: QrImageView(
                 data: qrPayload,
                 size: 220,
+                // Blanco/negro fijos a propósito, sin importar el tema de
+                // la app: un QR necesita contraste garantizado para poder
+                // escanearse. Con AppColors.onSurface (ahora blanco en el
+                // tema oscuro "Kinetic Cyber-Tribe") los módulos quedaban
+                // blancos sobre fondo blanco — invisibles.
                 backgroundColor: Colors.white,
                 eyeStyle: const QrEyeStyle(
                   eyeShape: QrEyeShape.square,
-                  color: AppColors.onSurface,
+                  color: Colors.black,
                 ),
                 dataModuleStyle: const QrDataModuleStyle(
                   dataModuleShape: QrDataModuleShape.square,
-                  color: AppColors.onSurface,
+                  color: Colors.black,
                 ),
               ),
             ),

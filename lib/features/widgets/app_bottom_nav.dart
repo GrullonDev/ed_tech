@@ -57,33 +57,48 @@ class AppBottomNav extends StatelessWidget {
         height: barHeight,
         radius: AppRadius.pill,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        // Cada ítem va en un Expanded a propósito: con el Row midiendo el
+        // ancho intrínseco de cada hijo (como era antes), 5 ítems con
+        // ícono+label no entran en el ancho de pantalla más angosto en uso
+        // real (320px, ej. iPhone SE 1ª gen) — desborda ~120px, confirmado
+        // con `flutter test test/responsive_test.dart`. Con Expanded cada
+        // ítem se reparte el ancho disponible por igual sin importar el
+        // tamaño de pantalla, y el label adentro trunca con ellipsis en vez
+        // de desbordar si igual no entra.
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _NavItem(
-              icon: Icons.group_rounded,
-              label: 'Círculos',
-              selected: currentTab == AppTab.circles,
-              onTap: onOpenCircles,
+            Expanded(
+              child: _NavItem(
+                icon: Icons.group_rounded,
+                label: 'Inicio',
+                selected: currentTab == AppTab.circles,
+                onTap: onOpenCircles,
+              ),
             ),
-            _NavItem(
-              icon: Icons.local_fire_department_rounded,
-              label: 'Rachas',
-              selected: currentTab == AppTab.rachas,
-              onTap: onOpenRachas,
+            Expanded(
+              child: _NavItem(
+                icon: Icons.local_fire_department_rounded,
+                label: 'Rachas',
+                selected: currentTab == AppTab.rachas,
+                onTap: onOpenRachas,
+              ),
             ),
-            _AddButton(onTap: onCreateCircle),
-            _NavItem(
-              icon: Icons.sports_esports_rounded,
-              label: 'Juegos',
-              selected: currentTab == AppTab.games,
-              onTap: onOpenGames,
+            Expanded(child: _TribuButton(onTap: onCreateCircle)),
+            Expanded(
+              child: _NavItem(
+                icon: Icons.sports_esports_rounded,
+                label: 'Juegos',
+                selected: currentTab == AppTab.games,
+                onTap: onOpenGames,
+              ),
             ),
-            _NavItem(
-              icon: Icons.emoji_events_rounded,
-              label: 'Perfil',
-              selected: currentTab == AppTab.profile,
-              onTap: onOpenProfile,
+            Expanded(
+              child: _NavItem(
+                icon: Icons.emoji_events_rounded,
+                label: 'Perfil',
+                selected: currentTab == AppTab.profile,
+                onTap: onOpenProfile,
+              ),
             ),
           ],
         ),
@@ -92,8 +107,15 @@ class AppBottomNav extends StatelessWidget {
   }
 }
 
-class _AddButton extends StatelessWidget {
-  const _AddButton({required this.onTap});
+/// Ítem central de la nav — abre el flujo de fundar/unirse a una tribu
+/// (`CreateHabitPage`, ver `create_habit.dart`), igual acción que el viejo
+/// botón "Crear", solo restyleado como el aro de fuego destacado de la
+/// mockup de Stitch en vez de un simple "+". El aro/gradiente es plano
+/// (`Container`, no `AdaptiveGlassCard`) a propósito: la píldora que lo
+/// envuelve ya resuelve el modo Liquid Glass on/off, y un segundo efecto de
+/// vidrio anidado adentro se vería sobrecargado en ambos modos.
+class _TribuButton extends StatelessWidget {
+  const _TribuButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -103,32 +125,49 @@ class _AddButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.add_circle_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Crear',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 11,
-                  height: 1.1,
-                  fontWeight: FontWeight.w500,
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary,
+                      AppColors.secondary,
+                      AppColors.tertiary,
+                    ],
+                  ),
+                  boxShadow: AppShadows.streak,
+                ),
+                child: const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
-              SizedBox(height: 2),
-              SizedBox(width: 4, height: 4),
+              const SizedBox(height: 3),
+              const Text(
+                'TRIBU',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 10,
+                  height: 1.1,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.06,
+                ),
+              ),
             ],
           ),
         ),
@@ -160,7 +199,7 @@ class _NavItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
+            horizontal: AppSpacing.xs,
             vertical: AppSpacing.xs,
           ),
           child: Column(
@@ -170,6 +209,10 @@ class _NavItem extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: color,
                   fontSize: 11,

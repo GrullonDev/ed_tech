@@ -26,6 +26,18 @@ const Map<String, String> _kCategoryOptions = {
 /// solo agrega una vista previa en vivo y categorías tocables para que
 /// completar el formulario se sienta menos como rellenar un form y más
 /// como armar la identidad del círculo.
+///
+/// Rediseño de Stitch ("Fundar Tribu"): la mockup tiene varios campos sin
+/// respaldo real hoy — aura/color del tótem, lema sagrado, tag de clan,
+/// exigencias de racha configurables, tipo de alianza (pública/con
+/// filtro/secreta), nivel mínimo de entrada — ninguno existe en
+/// [HabitCircle] ni en `HomeLogic`, así que se omiten a propósito en vez de
+/// simular una configuración que no hace nada. Lo que sí se mapea 1:1:
+/// nombre real (nombre del círculo), "arquetipo tribal" = la categoría real
+/// (mismo campo de siempre, solo con el copy de la mockup), y los
+/// "Poderes de Líder Chamán" se muestran como texto informativo de
+/// funciones que ya existen (invitar, retar 1v1) en vez de una lista de
+/// privilegios ficticios.
 class CreateHabitPage extends StatefulWidget {
   const CreateHabitPage({super.key, required this.logic});
 
@@ -79,8 +91,9 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
   void _onFieldsChanged() => setState(() {});
 
   void _submit() {
-    if (widget.logic.submitNewCircle()) {
-      Navigator.of(context).pop();
+    final circle = widget.logic.submitNewCircle();
+    if (circle != null) {
+      Navigator.of(context).pop(circle);
     }
   }
 
@@ -97,129 +110,161 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
     final canSubmit = name.isNotEmpty;
 
     return AdaptiveGlassScaffold(
-      title: const Text('Crear círculo'),
-      body: AppMaxWidth(
-        child: Material(
-          type: MaterialType.transparency,
-          child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            Text(
-              'Dale nombre a tu nuevo círculo de hábito',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Invita después a tus amigos para compartir la racha.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _CirclePreviewCard(
-              emoji: previewEmoji,
-              name: name,
-              category: category,
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            TextField(
-              controller: widget.logic.habitNameController,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del hábito',
-                prefixIcon: Icon(Icons.local_fire_department_rounded),
-              ),
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              'Elegí una categoría',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
+      title: const Text('Fundar Tribu'),
+      // SafeArea a propósito — ver la misma nota en circle_detail.dart:
+      // sin esto, el contenido queda debajo de la barra de estado del
+      // sistema en un dispositivo real.
+      body: SafeArea(
+        child: AppMaxWidth(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                for (final entry in _kCategoryOptions.entries)
-                  _CategoryChip(
-                    emoji: entry.value,
-                    label: entry.key,
-                    selected: category == entry.key,
-                    onTap: () => _selectCategory(entry.key),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            TextField(
-              controller: widget.logic.habitCategoryController,
-              decoration: const InputDecoration(
-                labelText: 'O escribí tu propia categoría (opcional)',
-              ),
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            AdaptiveGlassButton(
-              onTap: _submit,
-              enabled: canSubmit,
-              label: 'Crear círculo',
-              icon: const Icon(Icons.add_circle_outlined),
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                  ),
-                  child: Text(
-                    'o',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
+                Text(
+                  '🔥 RITO CHAMÁNICO',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.06,
                   ),
                 ),
-                const Expanded(child: Divider()),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Reúne a tus guerreros, forja el tótem ancestral y enciende '
+                  'la llama madre para el dominio en las tablas.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  '🛡️ Tótem y Blasón',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _CirclePreviewCard(
+                  emoji: previewEmoji,
+                  name: name,
+                  category: category,
+                ),
+                const SizedBox(height: AppSpacing.xl2),
+                Text(
+                  '📜 Pacto de Identidad',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: widget.logic.habitNameController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la Tribu',
+                    prefixIcon: Icon(Icons.local_fire_department_rounded),
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  '⚔️ Arquetipo Tribal',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Define el hábito que va a sostener toda la tribu.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final entry in _kCategoryOptions.entries)
+                      _CategoryChip(
+                        emoji: entry.value,
+                        label: entry.key,
+                        selected: category == entry.key,
+                        onTap: () => _selectCategory(entry.key),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                TextField(
+                  controller: widget.logic.habitCategoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'O escribí tu propio arquetipo (opcional)',
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+                const SizedBox(height: AppSpacing.xl2),
+                const _FounderPowersCard(),
+                const SizedBox(height: AppSpacing.xl2),
+                AdaptiveGlassButton(
+                  onTap: _submit,
+                  enabled: canSubmit,
+                  label: '🔥 FUNDAR TRIBU',
+                  icon: const Icon(Icons.local_fire_department_rounded),
+                ),
+                const SizedBox(height: AppSpacing.xl2),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Text(
+                        'o',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  '🔑 Unión Tribal con Código',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Unite al círculo de un amigo — competencia real, no un '
+                  'nombre simulado.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _inviteCodeController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Código de invitación',
+                    prefixIcon: Icon(Icons.tag_rounded),
+                  ),
+                  onSubmitted: (_) => _joinWithCode(),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AdaptiveGlassButton(
+                  onTap: _joiningCircle ? () {} : _joinWithCode,
+                  enabled: !_joiningCircle,
+                  label: _joiningCircle ? 'Uniéndome...' : 'Unirme con código',
+                  icon: const Icon(Icons.group_add_rounded),
+                ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              '¿Ya tenés un código de invitación?',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Unite al círculo de un amigo — competencia real, no un '
-              'nombre simulado.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: _inviteCodeController,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Código de invitación',
-                prefixIcon: Icon(Icons.tag_rounded),
-              ),
-              onSubmitted: (_) => _joinWithCode(),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AdaptiveGlassButton(
-              onTap: _joiningCircle ? () {} : _joinWithCode,
-              enabled: !_joiningCircle,
-              label: _joiningCircle ? 'Uniéndome...' : 'Unirme con código',
-              icon: const Icon(Icons.group_add_rounded),
-            ),
-          ],
           ),
         ),
       ),
@@ -281,6 +326,72 @@ class _CirclePreviewCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Poderes de Líder Chamán" de la mockup, pero listando solo capacidades
+/// que ya existen de verdad al fundar un círculo — nada de multiplicadores
+/// ni cofres inventados.
+class _FounderPowersCard extends StatelessWidget {
+  const _FounderPowersCard();
+
+  static const _powers = [
+    (
+      icon: Icons.qr_code_2_rounded,
+      text:
+          'Vas a poder invitar guerreros reales con un código de '
+          'invitación único.',
+    ),
+    (
+      icon: Icons.leaderboard_rounded,
+      text:
+          'Vas a ver el ranking y la racha colectiva del círculo en '
+          'tiempo real.',
+    ),
+    (
+      icon: Icons.local_fire_department_rounded,
+      text:
+          'Cada check-in diario de un miembro suma a la racha '
+          'compartida de la tribu.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return AdaptiveGlassOutlinedCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '👑 Al fundar sos el líder del clan',
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (final power in _powers)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(power.icon, size: 18, color: AppColors.secondary),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      power.text,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

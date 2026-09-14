@@ -12,7 +12,16 @@ import 'package:edtech_tiktok/features/widgets/game_ui.dart';
 /// colectiva — rodeada de los avatares de sus miembros, y una lista de
 /// maestros ordena los círculos por racha. Sin backend social, los datos se
 /// derivan por completo de [HabitCircle] (miembros y check-ins reales).
-class AgoraPage extends StatelessWidget {
+///
+/// Rediseño de Stitch: la mockup muestra estadísticas de plataforma entera
+/// ("14,820 Hogueras Vivas", "+3.2k Guerreros Online", un tab "Top Fuego
+/// Global") y un boost "Impulso Chamánico" — nada de eso existe, porque esta
+/// app no tiene un backend social global, solo los círculos propios del
+/// usuario. Se mapean en cambio a agregados reales de ESOS círculos: cuántos
+/// tienen racha activa, qué porcentaje ya hizo check-in hoy, cuántos
+/// guerreros en total. El tab "Al Borde" sí es real: círculos con racha que
+/// todavía no marcaron hoy, en riesgo de romperse.
+class AgoraPage extends StatefulWidget {
   const AgoraPage({
     super.key,
     required this.circles,
@@ -22,6 +31,7 @@ class AgoraPage extends StatelessWidget {
     required this.activityFeed,
     required this.hasReactedTo,
     required this.onToggleReaction,
+    required this.onCheckIn,
   });
 
   final List<HabitCircle> circles;
@@ -47,71 +57,376 @@ class AgoraPage extends StatelessWidget {
   /// lectura.
   final ValueChanged<ActivityEvent> onToggleReaction;
 
+  /// Check-in directo desde una hoguera "Al Borde" — misma acción que en
+  /// Círculos/Rachas, para poder apagar el riesgo sin salir del Ágora.
+  final ValueChanged<HabitCircle> onCheckIn;
+
+  @override
+  State<AgoraPage> createState() => _AgoraPageState();
+}
+
+enum _AgoraFilter { mine, atRisk }
+
+class _AgoraPageState extends State<AgoraPage> {
+  _AgoraFilter _filter = _AgoraFilter.mine;
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final circles = widget.circles;
     final ranked = [...circles]
       ..sort((a, b) => b.streakDays.compareTo(a.streakDays));
+    final atRisk = ranked
+        .where((c) => c.streakDays > 0 && !c.checkedInToday)
+        .toList();
+    final visible = _filter == _AgoraFilter.atRisk ? atRisk : ranked;
+
+    final activeCount = circles.where((c) => c.streakDays > 0).length;
+    final sustainedPct = circles.isEmpty
+        ? 0
+        : (circles.where((c) => c.checkedInToday).length / circles.length * 100)
+              .round();
+    final totalWarriors = circles.fold<int>(
+      0,
+      (sum, c) => sum + c.totalMembers,
+    );
 
     return AdaptiveGlassScaffold(
       title: const Text('El Gran Ágora Tribal'),
+      // Material(type: transparency) a propósito — mismo parche que ya
+      // usaba create_habit.dart: en modo Liquid Glass, GlassScaffold no
+      // provee un ancestro Material (confirmado: no hay ningún `Material(`
+      // en el paquete `liquid_glass_widgets`), y el TextField de "Añadir
+      // Aliado" de más abajo lo necesita — sin esto, `debugCheckHasMaterial`
+      // falla apenas se intenta enfocar/tocar ese campo con el efecto
+      // Liquid Glass activo (el default). No afecta el modo plano, donde
+      // `AdaptiveGlassScaffold` ya usa un `Scaffold` normal (que sí trae
+      // su propio Material).
       body: SafeArea(
         child: AppMaxWidth(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
-                .copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
-            children: [
-              _AddAllySection(
-                usernameController: allyUsernameController,
-                onSend: onSendAllyRequest,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              if (circles.isEmpty)
-                _EmptyAgora(textTheme: textTheme)
-              else ...[
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
+                  .copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
+              children: [
                 Text(
-                  'Alrededor de cada hoguera se reúne tu tribu. Cuanto '
-                  'más fuerte la racha colectiva, más brilla el fuego.',
+                  '🌐 MAPA EN VIVO • TU REINO',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: AppColors.tertiary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.06,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Observa el pulso de tus hogueras en tiempo real y '
+                  'sincroniza tu fuego.',
                   style: textTheme.bodyMedium?.copyWith(
                     color: AppColors.onSurfaceVariant,
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                for (final circle in ranked) ...[
-                  _TribalBonfireCard(
-                    key: ValueKey('${circle.name}-$circlesUpdatedTick'),
-                    circle: circle,
+                const SizedBox(height: AppSpacing.lg),
+                if (circles.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AgoraStatBox(
+                          value: '$activeCount',
+                          label: 'Hogueras Vivas',
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _AgoraStatBox(
+                          value: '$sustainedPct%',
+                          label: 'Fuego Sostenido Hoy',
+                          color: AppColors.tertiary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _AgoraStatBox(
+                          value: '$totalWarriors',
+                          label: 'Guerreros en tu Tribu',
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AgoraFilterChip(
+                          label: '🔥 Mis Círculos',
+                          active: _filter == _AgoraFilter.mine,
+                          onTap: () =>
+                              setState(() => _filter = _AgoraFilter.mine),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _AgoraFilterChip(
+                          label: '⚠️ Al Borde (${atRisk.length})',
+                          active: _filter == _AgoraFilter.atRisk,
+                          onTap: () =>
+                              setState(() => _filter = _AgoraFilter.atRisk),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
                 ],
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Lista de Maestros de la Tribu',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                _AddAllySection(
+                  usernameController: widget.allyUsernameController,
+                  onSend: widget.onSendAllyRequest,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                if (circles.isEmpty)
+                  _EmptyAgora(textTheme: textTheme)
+                else ...[
+                  Text(
+                    'Círculos de Poder',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _LeaderboardCard(ranked: ranked),
-                const SizedBox(height: AppSpacing.xl2),
-                Text(
-                  'Actividad de la Tribu',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: AppSpacing.md),
+                  if (visible.isEmpty)
+                    _NoRiskCard(textTheme: textTheme)
+                  else
+                    for (final circle in visible) ...[
+                      _TribalBonfireCard(
+                        key: ValueKey(
+                          '${circle.name}-${widget.circlesUpdatedTick}',
+                        ),
+                        circle: circle,
+                        onCheckIn: () => widget.onCheckIn(circle),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Chamanes del Podio',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _ActivityFeedCard(
-                  events: activityFeed,
-                  hasReactedTo: hasReactedTo,
-                  onToggleReaction: onToggleReaction,
-                ),
+                  const SizedBox(height: AppSpacing.md),
+                  if (ranked.length >= 2) _PodiumRow(ranked: ranked),
+                  const SizedBox(height: AppSpacing.md),
+                  _LeaderboardCard(ranked: ranked),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Text(
+                    'Bitácora de Llamas',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _ActivityFeedCard(
+                    events: widget.activityFeed,
+                    hasReactedTo: widget.hasReactedTo,
+                    onToggleReaction: widget.onToggleReaction,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AgoraStatBox extends StatelessWidget {
+  const _AgoraStatBox({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.outlineWhisper),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: textTheme.labelSmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgoraFilterChip extends StatelessWidget {
+  const _AgoraFilterChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GamePressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary : AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: active ? Colors.white : AppColors.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoRiskCard extends StatelessWidget {
+  const _NoRiskCard({required this.textTheme});
+
+  final TextTheme textTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return AdaptiveGlassOutlinedCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Text(
+        '✅ Ninguna hoguera al borde — toda tu tribu ya hizo check-in hoy.',
+        style: textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+/// Podio de los 2-3 círculos con más racha — mismo dato que
+/// [_LeaderboardCard] (`streakDays`), solo destacado visualmente para los
+/// primeros puestos como en la mockup.
+class _PodiumRow extends StatelessWidget {
+  const _PodiumRow({required this.ranked});
+
+  final List<HabitCircle> ranked;
+
+  @override
+  Widget build(BuildContext context) {
+    final second = ranked.length > 1 ? ranked[1] : null;
+    final first = ranked[0];
+    final third = ranked.length > 2 ? ranked[2] : null;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: second == null
+              ? const SizedBox.shrink()
+              : _PodiumSpot(circle: second, place: 2, height: 84),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(child: _PodiumSpot(circle: first, place: 1, height: 104)),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: third == null
+              ? const SizedBox.shrink()
+              : _PodiumSpot(circle: third, place: 3, height: 68),
+        ),
+      ],
+    );
+  }
+}
+
+class _PodiumSpot extends StatelessWidget {
+  const _PodiumSpot({
+    required this.circle,
+    required this.place,
+    required this.height,
+  });
+
+  final HabitCircle circle;
+  final int place;
+  final double height;
+
+  static const _medals = {1: '🥇', 2: '🥈', 3: '🥉'};
+  static const _colors = {
+    1: AppColors.rankGold,
+    2: AppColors.rankSilver,
+    3: AppColors.rankBronze,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final color = _colors[place]!;
+    return Column(
+      children: [
+        Text(_medals[place]!, style: const TextStyle(fontSize: 22)),
+        const SizedBox(height: 4),
+        Text(
+          circle.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          '${circle.streakDays}d',
+          style: textTheme.labelSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.18),
+            border: Border.all(color: color, width: 1.5),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.md),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -233,7 +548,10 @@ class _ReactionChip extends StatelessWidget {
     return GamePressable(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 3,
+        ),
         decoration: BoxDecoration(
           color: reacted ? AppColors.completedGlow : AppColors.surfaceContainer,
           borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -250,7 +568,9 @@ class _ReactionChip extends StatelessWidget {
               Text(
                 '$count',
                 style: textTheme.labelSmall?.copyWith(
-                  color: reacted ? AppColors.secondary : AppColors.onSurfaceVariant,
+                  color: reacted
+                      ? AppColors.secondary
+                      : AppColors.onSurfaceVariant,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -346,25 +666,33 @@ class _AddAllySectionState extends State<_AddAllySection> {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              GamePressable(
-                onTap: _handleSend,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryContainer],
+              // Flexible (no un tamaño fijo) a propósito: en una pantalla
+              // angosta, el TextField (Expanded) ya cede todo lo que puede
+              // ceder, así que sin esto el botón desbordaba el Row en vez
+              // de que su propio texto se recorte con ellipsis.
+              Flexible(
+                child: GamePressable(
+                  onTap: _handleSend,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
                     ),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: const Text(
-                    'Enviar Solicitud',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryContainer],
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: const Text(
+                      'Enviar Solicitud',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -448,9 +776,14 @@ class _EmptyAgora extends StatelessWidget {
 /// Tarjeta de una hoguera tribal: crece, cambia de color e intensifica su
 /// brillo según la racha del círculo (0 = apagada, 30+ = fuego intenso).
 class _TribalBonfireCard extends StatelessWidget {
-  const _TribalBonfireCard({super.key, required this.circle});
+  const _TribalBonfireCard({
+    super.key,
+    required this.circle,
+    required this.onCheckIn,
+  });
 
   final HabitCircle circle;
+  final VoidCallback onCheckIn;
 
   @override
   Widget build(BuildContext context) {
@@ -568,6 +901,28 @@ class _TribalBonfireCard extends StatelessWidget {
               ),
             ),
           ),
+          if (!circle.checkedInToday) ...[
+            const SizedBox(height: AppSpacing.md),
+            GamePressable(
+              onTap: onCheckIn,
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: onCheckIn,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: streak > 0
+                        ? AppColors.secondary
+                        : AppColors.primary,
+                  ),
+                  child: Text(
+                    streak > 0
+                        ? '⚠️ EVITAR QUE SE APAGUE — CHECK-IN'
+                        : '🔥 ENCENDER HOGUERA',
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

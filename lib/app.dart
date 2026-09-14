@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Racha Tribu',
-      theme: AppTheme.light(),
+      theme: AppTheme.dark(),
       navigatorObservers: _analyticsObservers(),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);

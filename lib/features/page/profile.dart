@@ -203,15 +203,55 @@ class ProfilePage extends StatelessWidget {
                   Center(
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 44,
-                          backgroundColor: AppColors.surfaceContainer,
-                          child: Text(
-                            selectedAvatarEmoji,
-                            style: const TextStyle(fontSize: 40),
-                          ),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            CircleAvatar(
+                              radius: 44,
+                              backgroundColor: AppColors.surfaceContainer,
+                              child: Text(
+                                selectedAvatarEmoji,
+                                style: const TextStyle(fontSize: 40),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: -6,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.sm,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        AppColors.primary,
+                                        AppColors.primaryContainer,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.pill,
+                                    ),
+                                    border: Border.all(
+                                      color: AppColors.background,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Nv. $userLevel',
+                                    style: textTheme.labelSmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                        const SizedBox(height: AppSpacing.lg),
                         Text(
                           username,
                           style: textTheme.titleLarge?.copyWith(
@@ -225,68 +265,87 @@ class ProfilePage extends StatelessWidget {
                             color: AppColors.onSurfaceVariant,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _ProfileLevelPill(
-                              level: userLevel,
-                              title: userLevelTitle,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            ConstancyDropsPill(drops: constancyDrops),
-                          ],
+                        const SizedBox(height: 4),
+                        Text(
+                          '✨ ${userLevelTitle.toUpperCase()}',
+                          style: textTheme.labelMedium?.copyWith(
+                            color: AppColors.secondary,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.04,
+                          ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        GamePressable(
-                          onTap: onOpenQrSummon,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                              vertical: AppSpacing.sm,
+                        const SizedBox(height: AppSpacing.sm),
+                        if (circles.isNotEmpty)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.sizeOf(context).width -
+                                  AppSpacing.lg * 2,
                             ),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  AppColors.lavenderContainer,
-                                  AppColors.surface,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainer,
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.pill,
+                                ),
+                                border: Border.all(
+                                  color: AppColors.outlineWhisper,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.shield_rounded,
+                                    size: 14,
+                                    color: AppColors.tertiary,
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  Flexible(
+                                    child: Text(
+                                      'Tribu ${circles.first.name} ✓',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textTheme.labelMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.pill,
-                              ),
-                              border: Border.all(
-                                color: AppColors.primaryContainer,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.qr_code_2_rounded,
-                                  size: 16,
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: AppSpacing.xs),
-                                Text(
-                                  'Invocar por QR',
-                                  style: textTheme.labelMedium?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextButton.icon(
-                          onPressed: onOpenGameTour,
-                          icon: const Icon(
-                            Icons.help_outline_rounded,
-                            size: 16,
-                          ),
-                          label: const Text('¿Cómo funciona Racha Tribu?'),
+                        const SizedBox(height: AppSpacing.lg),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _StatBox(
+                                value: '$constancyDrops',
+                                label: 'Gotas de Constancia',
+                                color: AppColors.tertiary,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: _StatBox(
+                                value: '$recordStreakDays',
+                                label: 'Días Mejor Racha',
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: _StatBox(
+                                value: '$overallStreakDays',
+                                label: 'Racha Activa',
+                                color: AppColors.secondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -346,115 +405,20 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xl2),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.eco_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        'Tu Ritmo Vital',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatTile(
-                          icon: Icons.bolt_rounded,
-                          color: AppColors.secondary,
-                          value: '$overallStreakDays días',
-                          label: 'Racha activa',
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _StatTile(
-                          icon: Icons.emoji_events_rounded,
-                          color: AppColors.primary,
-                          value: '$recordStreakDays días',
-                          label: 'Récord personal',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatTile(
-                          icon: Icons.donut_large_rounded,
-                          color: AppColors.primary,
-                          value: '${(monthlyComplianceRate * 100).round()}%',
-                          label: 'Cumplimiento (mes de ${_currentMonthName()})',
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _StatTile(
-                          icon: Icons.group_rounded,
-                          color: AppColors.secondary,
-                          value: '${circles.length}',
-                          label: 'Círculos activos',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl2),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_month_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
+                      const Text('🏅', style: TextStyle(fontSize: 18)),
                       const SizedBox(width: AppSpacing.xs),
                       Expanded(
                         child: Text(
-                          'Mapa de Presencia',
+                          'Vitrina de Tótems',
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                       Text(
-                        'Últimas 10 semanas',
+                        '${_unlockedTotemsCount(overallStreakDays: overallStreakDays, recordStreakDays: recordStreakDays, hasPerfectCircle: perfectCount > 0)}/$_totalTotemsCount Desbloqueados',
                         style: textTheme.bodySmall?.copyWith(
                           color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Cada día cuenta para tu constancia, sin culpas ni presiones '
-                    'innecesarias.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _PresenceMap(circles: circles),
-                  const SizedBox(height: AppSpacing.xl2),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.military_tech_rounded,
-                        color: AppColors.secondary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          'Tótems de Maestría',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
                         ),
                       ),
                     ],
@@ -472,6 +436,77 @@ class ProfilePage extends StatelessWidget {
                     overallStreakDays: overallStreakDays,
                     recordStreakDays: recordStreakDays,
                     hasPerfectCircle: perfectCount > 0,
+                  ),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Row(
+                    children: [
+                      const Text('🔲', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          'Piel de Tótem',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.tertiary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text(
+                          '${(monthlyComplianceRate * 100).round()}% de '
+                          'Constancia este Mes',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: AppColors.tertiary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Registro biométrico de compromiso. Cada escama refleja '
+                    'tus check-ins reales de las últimas 10 semanas.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _PresenceMap(circles: circles),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Row(
+                    children: [
+                      const Text('⚔️', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        'Gestión de Guerrero',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _WarriorManagementRow(
+                    icon: Icons.qr_code_2_rounded,
+                    title: 'Invitar Amigos',
+                    subtitle: 'Comparte tu código QR con la tribu',
+                    onTap: onOpenQrSummon,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _WarriorManagementRow(
+                    icon: Icons.help_outline_rounded,
+                    title: '¿Cómo funciona Racha Tribu?',
+                    subtitle: 'Repasa el tour de bienvenida',
+                    onTap: onOpenGameTour,
                   ),
                   const SizedBox(height: AppSpacing.xl2),
                   Row(
@@ -549,8 +584,6 @@ class ProfilePage extends StatelessWidget {
     return 'Miembro desde ${_kMonthNames[memberSince.month - 1]} de '
         '${memberSince.year}';
   }
-
-  static String _currentMonthName() => _kMonthNames[DateTime.now().month - 1];
 }
 
 /// Retos 1v1 pendientes de un aliado real (ver `HomeLogic.challengeAlly`) —
@@ -757,10 +790,14 @@ class _AccountLinkingSection extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                'Asegura tu cuenta',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  'Asegura tu cuenta',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -781,7 +818,11 @@ class _AccountLinkingSection extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _linkWithApple(context),
                 icon: const Icon(Icons.apple, size: 20),
-                label: const Text('Continuar con Apple'),
+                label: const Text(
+                  'Continuar con Apple',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           if (showApple && !appleLinked && !googleLinked)
@@ -792,7 +833,11 @@ class _AccountLinkingSection extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _linkWithGoogle(context),
                 icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
-                label: const Text('Continuar con Google'),
+                label: const Text(
+                  'Continuar con Google',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           if (!googleLinked && !emailLinked)
@@ -803,7 +848,11 @@ class _AccountLinkingSection extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _openEmailPasswordSheet(context),
                 icon: const Icon(Icons.email_rounded, size: 18),
-                label: const Text('Vincular con email y contraseña'),
+                label: const Text(
+                  'Vincular con email y contraseña',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
         ],
@@ -951,52 +1000,6 @@ class _EmailPasswordLinkSheetState extends State<_EmailPasswordLinkSheet> {
     }
     setState(() => _submitting = false);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-  }
-}
-
-/// Insignia de "nivel" derivada de la racha general, igual criterio que en
-/// el dashboard (cada 7 días de racha suma un nivel), para reforzar la
-/// sensación de progresión tipo juego también en el perfil.
-class _ProfileLevelPill extends StatelessWidget {
-  const _ProfileLevelPill({required this.level, required this.title});
-
-  final int level;
-
-  /// Título de progresión (ver `HomeLogic.userLevelTitle`) — "Nivel 3" solo
-  /// era un número; agregar el título le da identidad a cada tramo de
-  /// progresión sin cambiar cómo se calcula el nivel.
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryContainer],
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.military_tech_rounded,
-            size: 14,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'Nivel $level · $title',
-            style: Theme.of(context).textTheme.labelMedium
-                ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -1171,40 +1174,117 @@ class _AllyRequestsSheet extends StatelessWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.icon,
-    required this.color,
+/// Caja de estadística compacta del encabezado de Perfil (Gotas, Mejor
+/// Racha, Racha Activa) — mismo criterio de "un dato real por caja" que el
+/// resto del rediseño.
+class _StatBox extends StatelessWidget {
+  const _StatBox({
     required this.value,
     required this.label,
+    required this.color,
   });
 
-  final IconData icon;
-  final Color color;
   final String value;
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return AdaptiveGlassCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.outlineWhisper),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
-            style: textTheme.bodySmall?.copyWith(
+            textAlign: TextAlign.center,
+            style: textTheme.labelSmall?.copyWith(
               color: AppColors.onSurfaceVariant,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Fila de "Gestión de Guerrero" — acciones reales ya existentes (invocar
+/// por QR, tour de bienvenida), solo restyleadas como lista con chevron en
+/// vez de botones sueltos.
+class _WarriorManagementRow extends StatelessWidget {
+  const _WarriorManagementRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return GamePressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.outlineWhisper),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
+              child: Icon(icon, size: 18, color: AppColors.secondary),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1339,6 +1419,28 @@ class _PresenceCell extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Cantidad total de tótems de [_TotemShowcase] — usado por el contador
+/// "X/4 Desbloqueados" del encabezado de la sección, sin duplicar los datos
+/// de cada tótem (eso vive en `_TotemShowcaseState.build`).
+const _totalTotemsCount = 4;
+
+/// Replica exactamente las 4 condiciones `unlocked` de
+/// `_TotemShowcaseState.build` (7 días, 21 días, círculo perfecto, 30 días)
+/// para poder mostrar "X/4 Desbloqueados" en el encabezado sin repetir la
+/// lista completa de tótems ahí.
+int _unlockedTotemsCount({
+  required int overallStreakDays,
+  required int recordStreakDays,
+  required bool hasPerfectCircle,
+}) {
+  var count = 0;
+  if (overallStreakDays >= 7) count++;
+  if (recordStreakDays >= 21) count++;
+  if (hasPerfectCircle) count++;
+  if (recordStreakDays >= 30) count++;
+  return count;
 }
 
 /// Logros calculados a partir de la racha activa, el récord histórico y si

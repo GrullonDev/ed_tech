@@ -32,8 +32,6 @@ dependencies:
   crypto: ^3.0.6
   package_info_plus: ^10.2.1
   url_launcher: ^6.3.2
-  audioplayers: ^6.1.0
-  confetti: ^0.8.0
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +53,5 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/sounds/
 
 

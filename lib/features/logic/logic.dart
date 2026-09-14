@@ -28,6 +28,7 @@ import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/model/trivia_question.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
+import 'package:edtech_tiktok/core/service/notification_service.dart';
 import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 
 /// Estado y reglas de negocio del dashboard de hábitos.
@@ -621,7 +622,23 @@ class HomeLogic extends ChangeNotifier {
     _updatePrimaryCategoryUserProperty();
     unawaited(_syncTriviaQuestions());
     unawaited(_checkForUpdate());
+    unawaited(_refreshStreakReminder());
     notifyListeners();
+  }
+
+  /// Reprograma el recordatorio local de las 8pm ("no pierdas tu racha") vía
+  /// [NotificationService] según el estado actual: se llama al cargar la app
+  /// y después de cada check-in ([toggleCheckIn]), así el mensaje siempre
+  /// refleja la racha real y desaparece apenas todos los círculos con racha
+  /// activa ya hicieron su check-in de hoy.
+  Future<void> _refreshStreakReminder() async {
+    final hasPendingCheckIn = _circles.any(
+      (c) => !c.checkedInToday && (c.streakDays > 0 || c.checkIns.isEmpty),
+    );
+    await NotificationService.refreshStreakReminder(
+      hasPendingCheckIn: hasPendingCheckIn,
+      streakDays: overallStreakDays,
+    );
   }
 
   /// Los hábitos de "hoy" son diarios: si cambió el día calendario desde la
@@ -1497,6 +1514,7 @@ class HomeLogic extends ChangeNotifier {
     _circlesUpdatedTick++;
     LocalStorageService.saveCircles(_circles);
     unawaited(_mirrorCheckIn(circle));
+    unawaited(_refreshStreakReminder());
     notifyListeners();
   }
 

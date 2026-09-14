@@ -20,6 +20,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+        // Requerido por flutter_local_notifications (usa APIs de java.time
+        // vía desugaring para programar los recordatorios de racha).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -84,4 +87,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

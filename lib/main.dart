@@ -9,12 +9,14 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:edtech_tiktok/app.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
+import 'package:edtech_tiktok/core/service/notification_service.dart';
 import 'package:edtech_tiktok/features/widgets/onboarding.dart';
 import 'package:edtech_tiktok/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorageService.init();
+  await NotificationService.init();
   await _initFirebase();
   await LiquidGlassWidgets.initialize();
   runApp(LiquidGlassWidgets.wrap(child: const MyApp()));

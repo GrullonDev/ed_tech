@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,15 +17,18 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import 'package:edtech_tiktok/core/data/avatar_catalog.dart';
 import 'package:edtech_tiktok/core/data/trivia_bank.dart';
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/model/leaderboard_entry.dart';
 import 'package:edtech_tiktok/core/model/milestone.dart';
 import 'package:edtech_tiktok/core/model/today_habit.dart';
 import 'package:edtech_tiktok/core/model/trivia_question.dart';
+import 'package:edtech_tiktok/core/service/game_feedback_service.dart';
 import 'package:edtech_tiktok/core/service/local_storage_service.dart';
 import 'package:edtech_tiktok/core/service/notification_service.dart';
 import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
@@ -74,6 +78,24 @@ class HomeLogic extends ChangeNotifier {
   final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
   _memberStatsSubscriptions = {};
 
+  /// Suscripciones activas a `circles/{id}/memberStats` (la colección
+  /// completa, no solo el propio documento) por círculo, ver
+  /// [_watchCircleLeaderboard]. Se cancelan en [dispose].
+  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+  _leaderboardSubscriptions = {};
+
+  /// Tabla de posiciones real (competencia contra cuentas de Firebase reales
+  /// que se unieron con un código de invitación, no contra uno mismo) por
+  /// círculo, ver [_watchCircleLeaderboard] y [leaderboardFor].
+  final Map<String, List<LeaderboardEntry>> _circleLeaderboards = {};
+
+  /// Cache de `uid -> username` para no releer `users/{uid}` cada vez que
+  /// llega una actualización de `memberStats` del mismo miembro — el
+  /// username de una cuenta no cambia con la frecuencia con la que cambian
+  /// sus stats (cada check-in), así que una lectura por miembro alcanza
+  /// para toda la sesión.
+  final Map<String, String> _usernameCache = {};
+
   /// Suscripciones a `allyRequests` (ver [_watchIncomingAllyRequests] y
   /// [_watchOutgoingAllyRequests]). Se cancelan en [dispose].
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
@@ -86,6 +108,14 @@ class HomeLogic extends ChangeNotifier {
   /// ícono de racha: la UI observa este valor (no su magnitud) y reproduce
   /// la animación cada vez que cambia.
   int _streakPulseTick = 0;
+
+  /// Contador que se incrementa solo al completar un check-in de círculo
+  /// NUEVO (no al desmarcarlo). Sirve como trigger para el confetti — la UI
+  /// (`home.dart`) observa este valor y dispara la explosión de partículas
+  /// cada vez que cambia. Separado de [_streakPulseTick] porque este último
+  /// también se dispara con los hábitos personales del día, que no ameritan
+  /// confetti (queda reservado para lo que sí mueve la racha real).
+  int _celebrationTick = 0;
 
   /// Contador que se incrementa cada vez que un círculo compartido cambia
   /// (check-in de un miembro, nuevo aliado agregado a la tribu). Sirve para
@@ -130,6 +160,29 @@ class HomeLogic extends ChangeNotifier {
   /// Total acumulado de Gotas de Constancia ganadas ganando el Duelo de
   /// Racha Semanal — ver doc-comment de [constancyDrops].
   int _duelBonusDrops = 0;
+
+  /// Total acumulado de Gotas de Constancia ganadas por el bono sorpresa
+  /// aleatorio del check-in (ver [toggleCheckIn] y [_kSurpriseBonusChance])
+  /// — ver doc-comment de [constancyDrops].
+  int _surpriseBonusDrops = 0;
+
+  /// Monto del último bono sorpresa recibido, o `null` si el check-in más
+  /// reciente no tuvo uno — la UI lo lee una vez para mostrar un aviso y
+  /// [clearLastSurpriseBonus] lo apaga para no repetir el aviso en el
+  /// próximo `notifyListeners()` que no venga de un check-in nuevo.
+  int? _lastSurpriseBonus;
+
+  /// IDs de `AvatarOption` (`core/data/avatar_catalog.dart`) desbloqueados
+  /// con Gotas de Constancia, sin contar el avatar gratis (ver
+  /// [unlockedAvatarIds], que sí lo incluye siempre).
+  List<String> _unlockedAvatarIds = [];
+
+  /// Avatar elegido para mostrar en el perfil — ver [selectAvatar].
+  String _selectedAvatarId = AvatarCatalog.defaultAvatarId;
+
+  /// Total de Gotas de Constancia gastadas desbloqueando avatares — ver
+  /// doc-comment de [constancyDrops] (se resta, no se suma).
+  int _avatarShopSpentDrops = 0;
 
   /// `true` si el usuario ya vio el tour de "cómo se juega" (ver
   /// `lib/features/widgets/game_tour.dart` y [completeGameTour]) —
@@ -188,6 +241,15 @@ class HomeLogic extends ChangeNotifier {
   List<HabitCircle> get circles => List.unmodifiable(_circles);
   List<TodayHabit> get todayHabits => List.unmodifiable(_todayHabits);
   int get streakPulseTick => _streakPulseTick;
+
+  int get celebrationTick => _celebrationTick;
+
+  /// Tabla de posiciones real de [circleId], ordenada de mayor a menor
+  /// racha (empate desuelto por gotas ganadas) — vacía si el círculo no
+  /// tiene todavía ningún miembro real unido por código de invitación (ver
+  /// [joinCircleWithInviteCode]) o si no hay sesión de Firebase.
+  List<LeaderboardEntry> leaderboardFor(String circleId) =>
+      _circleLeaderboards[circleId] ?? const [];
   int get circlesUpdatedTick => _circlesUpdatedTick;
   List<AllyRequest> get pendingAllyRequests =>
       List.unmodifiable(_pendingAllyRequests);
@@ -227,6 +289,25 @@ class HomeLogic extends ChangeNotifier {
   /// en el Nivel 1 aunque el usuario no tenga racha todavía.
   int get userLevel => (overallStreakDays ~/ 7) + 1;
 
+  /// Título de progresión asociado a [userLevel] — puramente cosmético
+  /// (personalización a largo plazo), no desbloquea nada por sí mismo a
+  /// diferencia de los avatares ([unlockAvatar]).
+  static const List<(int minLevel, String title)> _levelTitles = [
+    (1, 'Aprendiz'),
+    (3, 'Constante'),
+    (6, 'Guerrero de la Racha'),
+    (11, 'Veterano de la Tribu'),
+    (21, 'Leyenda Tribal'),
+  ];
+
+  String get userLevelTitle {
+    var title = _levelTitles.first.$2;
+    for (final entry in _levelTitles) {
+      if (userLevel >= entry.$1) title = entry.$2;
+    }
+    return title;
+  }
+
   /// "Gotas de Constancia": moneda blanda del juego. Se derivan casi por
   /// completo de datos reales (ver [HabitCircle.constancyDropsEarned]: 10
   /// gotas por check-in que escalan hasta x3 cuanto más larga sea la racha
@@ -257,7 +338,70 @@ class HomeLogic extends ChangeNotifier {
         _triviaBonusDrops +
         _wheelBonusDrops +
         _duelBonusDrops +
-        _predictionNetDrops;
+        _predictionNetDrops +
+        _surpriseBonusDrops -
+        _avatarShopSpentDrops;
+  }
+
+  /// Monto del último bono sorpresa recibido en un check-in, o `null` si no
+  /// hay ninguno pendiente de mostrar — ver [_kSurpriseBonusChance] en
+  /// [toggleCheckIn]. La UI lo lee una vez para mostrar un aviso especial y
+  /// llama a [clearLastSurpriseBonus] para no repetirlo.
+  int? get lastSurpriseBonus => _lastSurpriseBonus;
+
+  void clearLastSurpriseBonus() {
+    if (_lastSurpriseBonus == null) return;
+    _lastSurpriseBonus = null;
+    notifyListeners();
+  }
+
+  /// IDs de avatares disponibles para elegir: el gratis
+  /// ([AvatarCatalog.defaultAvatarId]) siempre está, más los que se hayan
+  /// desbloqueado con Gotas de Constancia (ver [unlockAvatar]).
+  List<String> get unlockedAvatarIds => [
+    AvatarCatalog.defaultAvatarId,
+    ..._unlockedAvatarIds,
+  ];
+
+  String get selectedAvatarId => _selectedAvatarId;
+
+  /// Emoji del avatar actualmente elegido, listo para mostrar en el perfil.
+  String get selectedAvatarEmoji =>
+      AvatarCatalog.byId(_selectedAvatarId).emoji;
+
+  /// Gasta las Gotas de Constancia de [AvatarOption.cost] para desbloquear
+  /// [avatarId] y lo deja seleccionado de una — retorna `false` sin hacer
+  /// nada si ya estaba desbloqueado, si el id no existe en el catálogo, o
+  /// si no alcanzan las gotas.
+  bool unlockAvatar(String avatarId) {
+    if (unlockedAvatarIds.contains(avatarId)) return false;
+    AvatarOption? option;
+    for (final candidate in AvatarCatalog.all) {
+      if (candidate.id == avatarId) {
+        option = candidate;
+        break;
+      }
+    }
+    if (option == null || constancyDrops < option.cost) return false;
+    _avatarShopSpentDrops += option.cost;
+    _unlockedAvatarIds = [..._unlockedAvatarIds, avatarId];
+    _selectedAvatarId = avatarId;
+    LocalStorageService.saveAvatarShopSpentDrops(_avatarShopSpentDrops);
+    LocalStorageService.saveUnlockedAvatarIds(_unlockedAvatarIds);
+    LocalStorageService.saveSelectedAvatarId(_selectedAvatarId);
+    _logAnalyticsEvent('avatar_unlocked', {'avatar_id': avatarId});
+    notifyListeners();
+    return true;
+  }
+
+  /// Cambia el avatar mostrado en el perfil — no hace nada si [avatarId]
+  /// todavía no está desbloqueado (ver [unlockAvatar]).
+  void selectAvatar(String avatarId) {
+    if (!unlockedAvatarIds.contains(avatarId)) return;
+    if (_selectedAvatarId == avatarId) return;
+    _selectedAvatarId = avatarId;
+    LocalStorageService.saveSelectedAvatarId(_selectedAvatarId);
+    notifyListeners();
   }
 
   /// Cuántas gotas otorga responder bien el desafío de trivia de hoy.
@@ -569,6 +713,12 @@ class HomeLogic extends ChangeNotifier {
     _wheelBonusDrops = LocalStorageService.readWheelBonusDrops();
     _duelRewardedWeekMonday = LocalStorageService.readDuelRewardedWeekMonday();
     _duelBonusDrops = LocalStorageService.readDuelBonusDrops();
+    _surpriseBonusDrops = LocalStorageService.readSurpriseBonusDrops();
+    _unlockedAvatarIds = LocalStorageService.readUnlockedAvatarIds();
+    _selectedAvatarId =
+        LocalStorageService.readSelectedAvatarId() ??
+        AvatarCatalog.defaultAvatarId;
+    _avatarShopSpentDrops = LocalStorageService.readAvatarShopSpentDrops();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
@@ -588,6 +738,7 @@ class HomeLogic extends ChangeNotifier {
     for (final circle in _circles) {
       _watchCircleActivityEvents(circle);
       _watchCircleMemberStats(circle);
+      _watchCircleLeaderboard(circle);
     }
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
@@ -1119,7 +1270,7 @@ class HomeLogic extends ChangeNotifier {
           'name': circle.name,
           'category': circle.category,
           'ownerId': uid,
-          'inviteCode': circle.id.substring(0, circle.id.length.clamp(0, 8)),
+          'inviteCode': circle.inviteCode,
           'createdAt': FieldValue.serverTimestamp(),
         })
         ..set(circleRef.collection('members').doc(uid), {
@@ -1282,6 +1433,140 @@ class HomeLogic extends ChangeNotifier {
     }
   }
 
+  /// Se suscribe a la colección completa `circles/{id}/memberStats` (no
+  /// solo el documento propio como [_watchCircleMemberStats]) para armar la
+  /// tabla de posiciones REAL del círculo — competencia contra otras
+  /// cuentas de Firebase de verdad que se unieron con
+  /// [joinCircleWithInviteCode], no contra el propio historial (a
+  /// diferencia del "Duelo Semanal" de `GamesPage`, que sí es contra uno
+  /// mismo). Las reglas de seguridad (`firestore.rules`) permiten leer
+  /// cualquier `memberStats` del círculo a todo miembro — ver
+  /// `firebase/FIRESTORE_SCHEMA.md`. No hace nada si no hay sesión de
+  /// Firebase.
+  void _watchCircleLeaderboard(HabitCircle circle) {
+    final myUid = _firebaseUid;
+    if (myUid == null || _leaderboardSubscriptions.containsKey(circle.id)) {
+      return;
+    }
+    final query = FirebaseFirestore.instance
+        .collection('circles')
+        .doc(circle.id)
+        .collection('memberStats');
+    try {
+      _leaderboardSubscriptions[circle.id] = query.snapshots().listen((
+        snapshot,
+      ) async {
+        final entries = <LeaderboardEntry>[];
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+          final username = await _resolveUsername(doc.id);
+          entries.add(
+            LeaderboardEntry(
+              uid: doc.id,
+              username: username,
+              streakDays: data['streakDays'] as int? ?? 0,
+              dropsEarned: data['dropsEarned'] as int? ?? 0,
+              checkedInToday: data['checkedInToday'] as bool? ?? false,
+              isCurrentUser: doc.id == myUid,
+            ),
+          );
+        }
+        entries.sort((a, b) {
+          final byStreak = b.streakDays.compareTo(a.streakDays);
+          return byStreak != 0
+              ? byStreak
+              : b.dropsEarned.compareTo(a.dropsEarned);
+        });
+        _circleLeaderboards[circle.id] = entries;
+        notifyListeners();
+      }, onError: (_) {});
+    } catch (_) {
+      // Se ignora a propósito: sin tabla de posiciones, la app sigue
+      // mostrando el círculo con sus miembros simulados de siempre (ver
+      // `CircleDetailPage`).
+    }
+  }
+
+  /// Resuelve el username de [uid] leyendo `users/{uid}` una sola vez por
+  /// sesión (ver doc-comment de [_usernameCache]). Cae a "Jugador" si el
+  /// documento no existe o la lectura falla, para que la tabla de
+  /// posiciones nunca se quede sin renderizar una fila por esto.
+  Future<String> _resolveUsername(String uid) async {
+    final cached = _usernameCache[uid];
+    if (cached != null) return cached;
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      final username = snapshot.data()?['username'] as String? ?? 'Jugador';
+      _usernameCache[uid] = username;
+      return username;
+    } catch (_) {
+      return 'Jugador';
+    }
+  }
+
+  /// Canjea [inviteCode] (ver `HabitCircle.inviteCode`) contra la Cloud
+  /// Function `redeemInviteCode` (`functions/src/index.ts`), que verifica
+  /// que el código exista y agrega al usuario actual como miembro real
+  /// (`circles/{id}/members/{uid}`) — a diferencia de
+  /// [addMemberToCircle], que solo guarda un nombre local sin backend, esto
+  /// une de verdad dos cuentas de Firebase al mismo círculo. Si el círculo
+  /// no existe todavía en este dispositivo, lo agrega localmente (mismo
+  /// `id` que en Firestore, así los check-ins futuros se escriben en el
+  /// círculo correcto) y arranca sus suscripciones en vivo.
+  ///
+  /// Retorna `null` si se unió con éxito, o un mensaje de error para
+  /// mostrarle al usuario en caso contrario. Requiere sesión de Firebase.
+  Future<String?> joinCircleWithInviteCode(String inviteCode) async {
+    final trimmed = inviteCode.trim();
+    if (trimmed.isEmpty) return 'Escribí un código de invitación.';
+    if (_firebaseUid == null) {
+      return 'Necesitás conexión para unirte a un círculo con código.';
+    }
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('redeemInviteCode')
+          .call({'inviteCode': trimmed});
+      // El SDK de cloud_functions devuelve el payload como
+      // Map<Object?, Object?> (interop crudo), no Map<String, dynamic> —
+      // castear directo con `as Map<String, dynamic>` revienta en runtime.
+      final data = result.data as Map<Object?, Object?>?;
+      final circleId = data?['circleId'] as String?;
+      if (circleId == null) return 'Código de invitación inválido.';
+
+      if (!_circles.any((c) => c.id == circleId)) {
+        final circleDoc = await FirebaseFirestore.instance
+            .collection('circles')
+            .doc(circleId)
+            .get();
+        final data = circleDoc.data();
+        if (data == null) return 'El círculo ya no existe.';
+        final circle = HabitCircle(
+          id: circleId,
+          name: data['name'] as String? ?? 'Círculo compartido',
+          category: data['category'] as String? ?? 'General',
+        );
+        _circles.add(circle);
+        LocalStorageService.saveCircles(_circles);
+      }
+      final circle = _circles.firstWhere((c) => c.id == circleId);
+      _watchCircleActivityEvents(circle);
+      _watchCircleMemberStats(circle);
+      _watchCircleLeaderboard(circle);
+      _logAnalyticsEvent('circle_joined_with_code', {
+        'circle_category': circle.category,
+      });
+      notifyListeners();
+      return null;
+    } on FirebaseFunctionsException catch (e) {
+      return e.message ?? 'No se pudo unir al círculo.';
+    } catch (_) {
+      return 'No se pudo unir al círculo. Probá de nuevo.';
+    }
+  }
+
   /// Formatea [date] como "yyyy-mm-dd", igual que el `date` string que
   /// esperan las Cloud Functions en functions/src/streakLogic.ts.
   static String _dateKey(DateTime date) =>
@@ -1312,9 +1597,39 @@ class HomeLogic extends ChangeNotifier {
   void toggleTodayHabit(TodayHabit habit) {
     final wasDone = habit.done;
     habit.done = !habit.done;
-    if (!wasDone && habit.done) _streakPulseTick++;
+    if (!wasDone && habit.done) {
+      _streakPulseTick++;
+      unawaited(GameFeedbackService.todayHabitToggled());
+    }
     LocalStorageService.saveTodayHabits(_todayHabits);
     notifyListeners();
+  }
+
+  /// Probabilidad de que un check-in dispare un bono sorpresa — variedad y
+  /// sorpresa en el loop principal (a diferencia de la Ruleta diaria, que
+  /// es un giro deliberado una vez al día, esto puede pasar en cualquier
+  /// check-in, de cualquier círculo, sin que el usuario lo busque).
+  static const double _kSurpriseBonusChance = 0.15;
+  static const List<int> _kSurpriseBonusAmounts = [10, 15, 25, 50];
+  static final Random _surpriseBonusRandom = Random();
+
+  /// Con probabilidad [_kSurpriseBonusChance], suma un monto aleatorio de
+  /// [_kSurpriseBonusAmounts] a [_surpriseBonusDrops] y lo deja en
+  /// [_lastSurpriseBonus] para que la UI muestre un aviso especial (ver
+  /// `HomeLogic.lastSurpriseBonus`). No hace nada el resto de las veces —
+  /// intencionalmente no hay forma de "forzar" el bono, para que se sienta
+  /// como una sorpresa real y no como parte del cálculo esperado del
+  /// check-in.
+  void _maybeGrantSurpriseBonus() {
+    if (_surpriseBonusRandom.nextDouble() >= _kSurpriseBonusChance) return;
+    final amount =
+        _kSurpriseBonusAmounts[_surpriseBonusRandom.nextInt(
+          _kSurpriseBonusAmounts.length,
+        )];
+    _surpriseBonusDrops += amount;
+    _lastSurpriseBonus = amount;
+    LocalStorageService.saveSurpriseBonusDrops(_surpriseBonusDrops);
+    _logAnalyticsEvent('surprise_bonus', {'amount': amount});
   }
 
   void toggleCheckIn(HabitCircle circle) {
@@ -1325,6 +1640,9 @@ class HomeLogic extends ChangeNotifier {
     } else {
       circle.addCheckInToday();
       _streakPulseTick++;
+      _celebrationTick++;
+      unawaited(GameFeedbackService.checkIn());
+      _maybeGrantSurpriseBonus();
       _recordCircleActivity(
         circle,
         emoji: '🔥',
@@ -1381,6 +1699,7 @@ class HomeLogic extends ChangeNotifier {
     unawaited(_mirrorCircleCreation(circle));
     _watchCircleActivityEvents(circle);
     _watchCircleMemberStats(circle);
+    _watchCircleLeaderboard(circle);
     _updatePrimaryCategoryUserProperty();
     notifyListeners();
   }
@@ -1703,6 +2022,9 @@ class HomeLogic extends ChangeNotifier {
       unawaited(subscription.cancel());
     }
     for (final subscription in _memberStatsSubscriptions.values) {
+      unawaited(subscription.cancel());
+    }
+    for (final subscription in _leaderboardSubscriptions.values) {
       unawaited(subscription.cancel());
     }
     unawaited(_incomingAllyRequestsSubscription?.cancel());

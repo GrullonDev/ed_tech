@@ -2,12 +2,12 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
+import 'package:edtech_tiktok/core/data/avatar_catalog.dart';
 import 'package:edtech_tiktok/core/data/streak_cards.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/streak_card.dart';
-import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
 import 'package:edtech_tiktok/features/widgets/app_bottom_nav.dart';
@@ -63,6 +63,12 @@ class ProfilePage extends StatelessWidget {
     required this.pendingStreakCardMilestones,
     required this.onOpenStreakCard,
     required this.onOpenGameTour,
+    required this.userLevelTitle,
+    required this.selectedAvatarEmoji,
+    required this.selectedAvatarId,
+    required this.unlockedAvatarIds,
+    required this.onUnlockAvatar,
+    required this.onSelectAvatar,
   });
 
   final String username;
@@ -124,6 +130,31 @@ class ProfilePage extends StatelessWidget {
   /// la primera vez que lo ve el usuario.
   final VoidCallback onOpenGameTour;
 
+  /// Título de progresión asociado al nivel (ver `HomeLogic.userLevelTitle`)
+  /// — puramente cosmético, se muestra junto al número de nivel.
+  final String userLevelTitle;
+
+  /// Emoji del avatar elegido (ver `HomeLogic.selectedAvatarEmoji`),
+  /// mostrado en vez de la imagen de muestra genérica.
+  final String selectedAvatarEmoji;
+
+  /// ID del avatar elegido (ver `HomeLogic.selectedAvatarId`), para marcarlo
+  /// en la grilla de [_AvatarShop] sin tener que adivinarlo a partir del
+  /// emoji.
+  final String selectedAvatarId;
+
+  /// IDs desbloqueados del catálogo (ver `HomeLogic.unlockedAvatarIds`),
+  /// incluyendo siempre el avatar gratis.
+  final List<String> unlockedAvatarIds;
+
+  /// Intenta desbloquear un avatar gastando Gotas de Constancia — no hace
+  /// nada si ya está desbloqueado, si el id no existe, o si no alcanza el
+  /// saldo (ver `HomeLogic.unlockAvatar`).
+  final ValueChanged<String> onUnlockAvatar;
+
+  /// Cambia el avatar mostrado, si ya está desbloqueado.
+  final ValueChanged<String> onSelectAvatar;
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -156,10 +187,13 @@ class ProfilePage extends StatelessWidget {
                   Center(
                     child: Column(
                       children: [
-                        const CircleAvatar(
+                        CircleAvatar(
                           radius: 44,
                           backgroundColor: AppColors.surfaceContainer,
-                          backgroundImage: AssetImage(AppAssets.avatarSample),
+                          child: Text(
+                            selectedAvatarEmoji,
+                            style: const TextStyle(fontSize: 40),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.md),
                         Text(
@@ -179,7 +213,10 @@ class ProfilePage extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _ProfileLevelPill(level: userLevel),
+                            _ProfileLevelPill(
+                              level: userLevel,
+                              title: userLevelTitle,
+                            ),
                             const SizedBox(width: AppSpacing.sm),
                             ConstancyDropsPill(drops: constancyDrops),
                           ],
@@ -251,6 +288,36 @@ class ProfilePage extends StatelessWidget {
                   _AppearanceSection(
                     liquidGlassEnabled: liquidGlassEnabled,
                     onLiquidGlassChanged: onLiquidGlassChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Row(
+                    children: [
+                      const Text('🎭', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          'Personalización',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Desbloqueá avatares con tus Gotas de Constancia.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _AvatarShop(
+                    unlockedAvatarIds: unlockedAvatarIds,
+                    selectedAvatarId: selectedAvatarId,
+                    constancyDrops: constancyDrops,
+                    onUnlock: onUnlockAvatar,
+                    onSelect: onSelectAvatar,
                   ),
                   const SizedBox(height: AppSpacing.xl2),
                   Row(
@@ -770,9 +837,14 @@ class _EmailPasswordLinkSheetState extends State<_EmailPasswordLinkSheet> {
 /// el dashboard (cada 7 días de racha suma un nivel), para reforzar la
 /// sensación de progresión tipo juego también en el perfil.
 class _ProfileLevelPill extends StatelessWidget {
-  const _ProfileLevelPill({required this.level});
+  const _ProfileLevelPill({required this.level, required this.title});
 
   final int level;
+
+  /// Título de progresión (ver `HomeLogic.userLevelTitle`) — "Nivel 3" solo
+  /// era un número; agregar el título le da identidad a cada tramo de
+  /// progresión sin cambiar cómo se calcula el nivel.
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -797,7 +869,7 @@ class _ProfileLevelPill extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            'Nivel $level',
+            'Nivel $level · $title',
             style: Theme.of(context).textTheme.labelMedium
                 ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
           ),
@@ -1466,6 +1538,118 @@ class _StreakCardTile extends StatelessWidget {
     return onTap == null
         ? content
         : GamePressable(onTap: onTap!, child: content);
+  }
+}
+
+/// Grilla del catálogo de avatares (ver `core/data/avatar_catalog.dart`):
+/// cada celda muestra el emoji, desbloqueado/bloqueado/seleccionado, y su
+/// costo si todavía no se desbloqueó. Tocar una celda desbloqueada la
+/// selecciona; tocar una bloqueada intenta comprarla (silenciosamente no
+/// hace nada si no alcanzan las gotas — `HomeLogic.unlockAvatar` ya valida
+/// eso, así que no hace falta duplicar la validación acá).
+class _AvatarShop extends StatelessWidget {
+  const _AvatarShop({
+    required this.unlockedAvatarIds,
+    required this.selectedAvatarId,
+    required this.constancyDrops,
+    required this.onUnlock,
+    required this.onSelect,
+  });
+
+  final List<String> unlockedAvatarIds;
+  final String selectedAvatarId;
+  final int constancyDrops;
+  final ValueChanged<String> onUnlock;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        for (final avatar in AvatarCatalog.all)
+          _AvatarTile(
+            avatar: avatar,
+            unlocked: unlockedAvatarIds.contains(avatar.id),
+            selected: avatar.id == selectedAvatarId,
+            affordable: constancyDrops >= avatar.cost,
+            onTap: () {
+              if (unlockedAvatarIds.contains(avatar.id)) {
+                onSelect(avatar.id);
+              } else {
+                onUnlock(avatar.id);
+              }
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _AvatarTile extends StatelessWidget {
+  const _AvatarTile({
+    required this.avatar,
+    required this.unlocked,
+    required this.selected,
+    required this.affordable,
+    required this.onTap,
+  });
+
+  final AvatarOption avatar;
+  final bool unlocked;
+  final bool selected;
+  final bool affordable;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return GamePressable(
+      onTap: onTap,
+      child: Container(
+        width: 76,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.outlineWhisper,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              avatar.emoji,
+              style: TextStyle(
+                fontSize: 28,
+                color: unlocked ? null : AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            if (unlocked)
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 14,
+                color: selected ? AppColors.primary : AppColors.outline,
+              )
+            else
+              Text(
+                '${avatar.cost} 💧',
+                style: textTheme.labelSmall?.copyWith(
+                  color: affordable
+                      ? AppColors.secondary
+                      : AppColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

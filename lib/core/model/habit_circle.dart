@@ -69,6 +69,15 @@ class HabitCircle {
   int? remoteDropsEarned;
   int? remoteFreezesAvailable;
 
+  /// Código corto para invitar cuentas reales a este círculo (ver
+  /// `HomeLogic.joinCircleWithInviteCode` y la Cloud Function
+  /// `redeemInviteCode` en `functions/src/index.ts`). Se deriva de [id] en
+  /// vez de guardarse aparte porque es exactamente lo que
+  /// `HomeLogic._mirrorCircleCreation` ya escribe como `inviteCode` en
+  /// Firestore al crear el círculo — mismo criterio, cero red adicional
+  /// para mostrarlo.
+  String get inviteCode => id.substring(0, id.length.clamp(0, 8));
+
   int get totalMembers => members.length;
   int get completedMembers => checkedInToday ? totalMembers : totalMembers - 1;
   bool get isPerfect => completedMembers >= totalMembers;

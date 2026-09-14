@@ -1,8 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
+import 'package:confetti/confetti.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
 import 'package:edtech_tiktok/features/page/agora.dart';
 import 'package:edtech_tiktok/features/page/circle_detail.dart';
@@ -32,17 +36,60 @@ class _MyHomePageState extends State<MyHomePage> {
   /// el próximo arranque de la app.
   bool _updateDialogShown = false;
 
+  /// Overlay global de confetti: vive acá (no en `Dashboard`) porque
+  /// `toggleCheckIn` se dispara desde tres pantallas distintas (Dashboard,
+  /// CircleDetail, Rachas) y todas comparten esta misma instancia de
+  /// `_MyHomePageState` por debajo — un solo `ConfettiController` cubre los
+  /// tres casos sin duplicar el widget en cada pantalla.
+  late final ConfettiController _confettiController = ConfettiController(
+    duration: const Duration(milliseconds: 600),
+  );
+  int _lastCelebrationTick = 0;
+
   @override
   void initState() {
     super.initState();
+    _lastCelebrationTick = _logic.celebrationTick;
     _logic.addListener(_maybeShowUpdateDialog);
+    _logic.addListener(_maybeCelebrate);
+    _logic.addListener(_maybeShowSurpriseBonus);
   }
 
   @override
   void dispose() {
     _logic.removeListener(_maybeShowUpdateDialog);
+    _logic.removeListener(_maybeCelebrate);
+    _confettiController.dispose();
+    _logic.removeListener(_maybeShowSurpriseBonus);
     _logic.dispose();
     super.dispose();
+  }
+
+  void _maybeCelebrate() {
+    if (_logic.celebrationTick == _lastCelebrationTick) return;
+    _lastCelebrationTick = _logic.celebrationTick;
+    _confettiController.play();
+  }
+
+  /// Aviso especial del bono sorpresa aleatorio del check-in (ver
+  /// `HomeLogic._maybeGrantSurpriseBonus`) — variedad/sorpresa del loop
+  /// principal, distinto del resultado normal del check-in. Se limpia con
+  /// [HomeLogic.clearLastSurpriseBonus] apenas se muestra, para no repetir
+  /// el mismo SnackBar en el próximo `notifyListeners()` que no venga de un
+  /// check-in nuevo.
+  void _maybeShowSurpriseBonus() {
+    final bonus = _logic.lastSurpriseBonus;
+    if (bonus == null) return;
+    _logic.clearLastSurpriseBonus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🎁 ¡Bono sorpresa! +$bonus Gotas de Constancia'),
+          backgroundColor: AppColors.secondary,
+        ),
+      );
+    });
   }
 
   void _maybeShowUpdateDialog() {
@@ -97,6 +144,37 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _buildContent(context),
+        _buildConfettiOverlay(),
+      ],
+    );
+  }
+
+  /// Confetti cayendo desde arriba de toda la pantalla, sin bloquear toques
+  /// (`IgnorePointer`) — solo se ve, nunca interfiere con el resto de la UI.
+  Widget _buildConfettiOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirection: pi / 2,
+            blastDirectionality: BlastDirectionality.explosive,
+            numberOfParticles: 24,
+            maxBlastForce: 12,
+            minBlastForce: 6,
+            gravity: 0.4,
+            shouldLoop: false,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     return ListenableBuilder(
       listenable: _logic,
       builder: (context, _) {
@@ -145,6 +223,7 @@ class _MyHomePageState extends State<MyHomePage> {
             circle: circle,
             onCheckIn: () => _logic.toggleCheckIn(circle),
             onInviteMember: (name) => _logic.addMemberToCircle(circle, name),
+            leaderboard: _logic.leaderboardFor(circle.id),
           ),
         ),
       ),
@@ -261,6 +340,12 @@ class _MyHomePageState extends State<MyHomePage> {
             pendingStreakCardMilestones: _logic.pendingStreakCardMilestones,
             onOpenStreakCard: _logic.openStreakCard,
             onOpenGameTour: _openGameTour,
+            userLevelTitle: _logic.userLevelTitle,
+            selectedAvatarEmoji: _logic.selectedAvatarEmoji,
+            selectedAvatarId: _logic.selectedAvatarId,
+            unlockedAvatarIds: _logic.unlockedAvatarIds,
+            onUnlockAvatar: _logic.unlockAvatar,
+            onSelectAvatar: _logic.selectAvatar,
           ),
         ),
       ),

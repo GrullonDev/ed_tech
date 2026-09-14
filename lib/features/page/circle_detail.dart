@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/model/leaderboard_entry.dart';
 import 'package:edtech_tiktok/core/theme/app_assets.dart';
 import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/widgets/adaptive_glass.dart';
@@ -14,11 +16,18 @@ class CircleDetailPage extends StatelessWidget {
     required this.circle,
     required this.onCheckIn,
     required this.onInviteMember,
+    this.leaderboard = const [],
   });
 
   final HabitCircle circle;
   final VoidCallback onCheckIn;
   final ValueChanged<String> onInviteMember;
+
+  /// Tabla de posiciones real del círculo (ver `HomeLogic.leaderboardFor`) —
+  /// vacía si nadie se unió todavía con un código de invitación real. No
+  /// reemplaza la lista de "Miembros" simulados de abajo: son dos cosas
+  /// complementarias (miembros locales sin backend vs. cuentas reales).
+  final List<LeaderboardEntry> leaderboard;
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +154,30 @@ class CircleDetailPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
+            _InviteCodeCard(code: circle.inviteCode),
+            if (leaderboard.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Tabla de posiciones',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Competencia real contra quienes se unieron con el código '
+                'de invitación — no contra vos mismo.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              for (var i = 0; i < leaderboard.length; i++) ...[
+                _LeaderboardTile(rank: i + 1, entry: leaderboard[i]),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+            ],
+            const SizedBox(height: AppSpacing.xl),
             Text(
               'Miembros',
               style: textTheme.titleMedium?.copyWith(
@@ -267,6 +300,141 @@ class _InviteMemberDialogState extends State<_InviteMemberDialog> {
           child: const Text('Invitar'),
         ),
       ],
+    );
+  }
+}
+
+/// Tarjeta con el código corto para invitar cuentas reales al círculo (ver
+/// `HabitCircle.inviteCode` y `HomeLogic.joinCircleWithInviteCode`) — a
+/// diferencia de "Invitar a un amigo" (solo un nombre local sin backend),
+/// quien ingrese este código desde "Crear círculo" → "Unirme con código" se
+/// une de verdad y aparece en la tabla de posiciones.
+class _InviteCodeCard extends StatelessWidget {
+  const _InviteCodeCard({required this.code});
+
+  final String code;
+
+  Future<void> _copyCode(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Código copiado — compartilo con tu amigo')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return AdaptiveGlassOutlinedCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Código de invitación',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  code,
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            onPressed: () => _copyCode(context),
+            icon: const Icon(Icons.copy_rounded),
+            tooltip: 'Copiar código',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fila de la tabla de posiciones real — medalla para el podio (1º-3º),
+/// número simple para el resto, y resaltado si es el propio usuario.
+class _LeaderboardTile extends StatelessWidget {
+  const _LeaderboardTile({required this.rank, required this.entry});
+
+  final int rank;
+  final LeaderboardEntry entry;
+
+  static const _medals = {1: '🥇', 2: '🥈', 3: '🥉'};
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: entry.isCurrentUser
+            ? AppColors.completedGlow
+            : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: entry.isCurrentUser
+              ? AppColors.primary
+              : AppColors.outlineWhisper,
+          width: entry.isCurrentUser ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              _medals[rank] ?? '#$rank',
+              textAlign: TextAlign.center,
+              style: textTheme.titleMedium,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              entry.isCurrentUser ? '${entry.username} (vos)' : entry.username,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: entry.isCurrentUser
+                    ? FontWeight.w800
+                    : FontWeight.w600,
+              ),
+            ),
+          ),
+          const Text('🔥', style: TextStyle(fontSize: 14)),
+          const SizedBox(width: 4),
+          Text(
+            '${entry.streakDays}',
+            style: textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.secondary,
+            ),
+          ),
+          if (entry.checkedInToday) ...[
+            const SizedBox(width: AppSpacing.sm),
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 18,
+              color: AppColors.primary,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

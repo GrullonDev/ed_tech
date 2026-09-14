@@ -126,11 +126,30 @@ jobs:
           fi
           rm -f /tmp/sa.json /tmp/gcloud_err.txt
 
-          set -e
-          RESPONSE=$(curl -sS -D /tmp/rc_headers.txt \
+          # A partir de acá se valida el código HTTP de cada llamada a mano
+          # (en vez de confiar en el exit code de curl, que con -sS solo
+          # falla si la conexión en sí falla, NUNCA por un 4xx/5xx de la
+          # API) — sin esto, un 403 por falta del rol "Firebase Remote
+          # Config Admin", un 400 por ETag inválido, etc. quedaban
+          # completamente invisibles: el paso terminaba en verde sin haber
+          # cambiado nada de verdad en Firestore (confirmado: la consola
+          # seguía mostrando la última publicación manual de días atrás
+          # pese a runs "exitosos").
+          GET_STATUS=$(curl -sS -o /tmp/rc_get_response.json -w '%{http_code}' \
+            -D /tmp/rc_headers.txt \
             -H "Authorization: Bearer $TOKEN" \
             "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig")
+          if [ "$GET_STATUS" -lt 200 ] || [ "$GET_STATUS" -ge 300 ]; then
+            echo "::warning::GET a Remote Config falló (HTTP $GET_STATUS):"
+            cat /tmp/rc_get_response.json
+            exit 1
+          fi
+          RESPONSE=$(cat /tmp/rc_get_response.json)
           ETAG=$(grep -i '^etag:' /tmp/rc_headers.txt | sed 's/[Ee][Tt][Aa][Gg]:[[:space:]]*//' | tr -d '\r')
+          if [ -z "$ETAG" ]; then
+            echo "::warning::No se pudo leer el ETag de la respuesta de Remote Config."
+            exit 1
+          fi
 
           # OJO: reemplaza el objeto `defaultValue` entero (no solo el campo
           # `.value`) a propósito. Si el parámetro se creó a mano en la
@@ -150,12 +169,18 @@ jobs:
              | .parameters.update_download_url.defaultValue = {value: $url}' \
             > /tmp/rc_updated.json
 
-          curl -sS -X PUT \
+          PUT_STATUS=$(curl -sS -o /tmp/rc_put_response.json -w '%{http_code}' -X PUT \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json; UTF-8" \
             -H "If-Match: $ETAG" \
             -d @/tmp/rc_updated.json \
-            "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig"
+            "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig")
+          if [ "$PUT_STATUS" -lt 200 ] || [ "$PUT_STATUS" -ge 300 ]; then
+            echo "::warning::PUT a Remote Config falló (HTTP $PUT_STATUS) — el build number/URL NO se actualizaron:"
+            cat /tmp/rc_put_response.json
+            exit 1
+          fi
+          echo "Remote Config actualizado con éxito (HTTP $PUT_STATUS)."
 
       - name: Commitea el bump de versión de vuelta a develop
         if: github.ref == 'refs/heads/develop'

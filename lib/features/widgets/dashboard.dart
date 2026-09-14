@@ -577,25 +577,31 @@ class _TopBar extends StatelessWidget {
           backgroundImage: AssetImage(AppAssets.avatarSample),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$constancyDrops GOTAS',
-              style: textTheme.labelSmall?.copyWith(
-                color: AppColors.tertiary,
-                fontWeight: FontWeight.w800,
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$constancyDrops GOTAS',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelSmall?.copyWith(
+                  color: AppColors.tertiary,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            Text(
-              'Nv.$userLevel',
-              style: textTheme.labelSmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
+              Text(
+                'Nv.$userLevel',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelSmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -634,7 +640,7 @@ class _TopBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        _StreakPill(days: streakDays, pulseTick: pulseTick),
+        Flexible(child: _StreakPill(days: streakDays, pulseTick: pulseTick)),
       ],
     );
   }
@@ -1066,7 +1072,11 @@ class _InviteTribeButton extends StatelessWidget {
             foregroundColor: AppColors.onTertiary,
           ),
           icon: const Icon(Icons.person_add_alt_1_rounded),
-          label: const Text('INVITAR A TU TRIBU'),
+          label: const Text(
+            'INVITAR A TU TRIBU',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ),
     );
@@ -1098,11 +1108,15 @@ class _StreakPill extends StatelessWidget {
             child: const Text('🔥', style: TextStyle(fontSize: 13)),
           ),
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            '$days DÍAS',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.secondary,
-              fontWeight: FontWeight.w800,
+          Flexible(
+            child: Text(
+              '$days DÍAS',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppColors.secondary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

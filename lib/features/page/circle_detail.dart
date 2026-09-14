@@ -57,20 +57,24 @@ class CircleDetailPage extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.tertiary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Text(
-                    '🔥 LOBBY SAGRADO ACTIVO',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: AppColors.tertiary,
-                      fontWeight: FontWeight.w800,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.tertiary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      '🔥 LOBBY SAGRADO ACTIVO',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: AppColors.tertiary,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
@@ -83,6 +87,8 @@ class CircleDetailPage extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   '${circle.totalMembers} Guerreros',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: textTheme.labelMedium?.copyWith(
                     color: AppColors.onSurfaceVariant,
                     fontWeight: FontWeight.w700,
@@ -149,11 +155,15 @@ class CircleDetailPage extends StatelessWidget {
                     children: [
                       const Text('🔥', style: TextStyle(fontSize: 18)),
                       const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        '${circle.streakDays} DÍAS RACHA CLAN',
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
+                      Flexible(
+                        child: Text(
+                          '${circle.streakDays} DÍAS RACHA CLAN',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                       const Spacer(),

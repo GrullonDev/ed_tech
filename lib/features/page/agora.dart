@@ -95,12 +95,23 @@ class _AgoraPageState extends State<AgoraPage> {
 
     return AdaptiveGlassScaffold(
       title: const Text('El Gran Ágora Tribal'),
+      // Material(type: transparency) a propósito — mismo parche que ya
+      // usaba create_habit.dart: en modo Liquid Glass, GlassScaffold no
+      // provee un ancestro Material (confirmado: no hay ningún `Material(`
+      // en el paquete `liquid_glass_widgets`), y el TextField de "Añadir
+      // Aliado" de más abajo lo necesita — sin esto, `debugCheckHasMaterial`
+      // falla apenas se intenta enfocar/tocar ese campo con el efecto
+      // Liquid Glass activo (el default). No afecta el modo plano, donde
+      // `AdaptiveGlassScaffold` ya usa un `Scaffold` normal (que sí trae
+      // su propio Material).
       body: SafeArea(
         child: AppMaxWidth(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
-                .copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
-            children: [
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
+                  .copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
+              children: [
               Text(
                 '🌐 MAPA EN VIVO • TU REINO',
                 style: textTheme.labelSmall?.copyWith(
@@ -223,6 +234,7 @@ class _AgoraPageState extends State<AgoraPage> {
                 ),
               ],
             ],
+            ),
           ),
         ),
       ),
@@ -651,25 +663,33 @@ class _AddAllySectionState extends State<_AddAllySection> {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              GamePressable(
-                onTap: _handleSend,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryContainer],
+              // Flexible (no un tamaño fijo) a propósito: en una pantalla
+              // angosta, el TextField (Expanded) ya cede todo lo que puede
+              // ceder, así que sin esto el botón desbordaba el Row en vez
+              // de que su propio texto se recorte con ellipsis.
+              Flexible(
+                child: GamePressable(
+                  onTap: _handleSend,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
                     ),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: const Text(
-                    'Enviar Solicitud',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryContainer],
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: const Text(
+                      'Enviar Solicitud',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),

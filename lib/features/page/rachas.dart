@@ -484,18 +484,24 @@ class _PersonalStreakCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Hito $nextMilestone Días',
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  'Hito $nextMilestone Días',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 daysToGo == 0
                     ? '¡Completado!'
                     : '${(progress * 100).round()}% completado',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: textTheme.bodySmall?.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w800,

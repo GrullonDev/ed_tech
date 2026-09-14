@@ -276,36 +276,47 @@ class ProfilePage extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         if (circles.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                              vertical: AppSpacing.xs,
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.sizeOf(context).width -
+                                  AppSpacing.lg * 2,
                             ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainer,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.pill,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs,
                               ),
-                              border: Border.all(
-                                color: AppColors.outlineWhisper,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.shield_rounded,
-                                  size: 14,
-                                  color: AppColors.tertiary,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainer,
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.pill,
                                 ),
-                                const SizedBox(width: AppSpacing.xs),
-                                Text(
-                                  'Tribu ${circles.first.name} ✓',
-                                  style: textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                                border: Border.all(
+                                  color: AppColors.outlineWhisper,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.shield_rounded,
+                                    size: 14,
+                                    color: AppColors.tertiary,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: AppSpacing.xs),
+                                  Flexible(
+                                    child: Text(
+                                      'Tribu ${circles.first.name} ✓',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textTheme.labelMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         const SizedBox(height: AppSpacing.lg),
@@ -783,10 +794,14 @@ class _AccountLinkingSection extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                'Asegura tu cuenta',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  'Asegura tu cuenta',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -807,7 +822,11 @@ class _AccountLinkingSection extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _linkWithApple(context),
                 icon: const Icon(Icons.apple, size: 20),
-                label: const Text('Continuar con Apple'),
+                label: const Text(
+                  'Continuar con Apple',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           if (showApple && !appleLinked && !googleLinked)
@@ -818,7 +837,11 @@ class _AccountLinkingSection extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _linkWithGoogle(context),
                 icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
-                label: const Text('Continuar con Google'),
+                label: const Text(
+                  'Continuar con Google',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           if (!googleLinked && !emailLinked)
@@ -829,7 +852,11 @@ class _AccountLinkingSection extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _openEmailPasswordSheet(context),
                 icon: const Icon(Icons.email_rounded, size: 18),
-                label: const Text('Vincular con email y contraseña'),
+                label: const Text(
+                  'Vincular con email y contraseña',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
         ],

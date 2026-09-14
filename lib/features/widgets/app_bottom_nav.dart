@@ -57,33 +57,48 @@ class AppBottomNav extends StatelessWidget {
         height: barHeight,
         radius: AppRadius.pill,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        // Cada ítem va en un Expanded a propósito: con el Row midiendo el
+        // ancho intrínseco de cada hijo (como era antes), 5 ítems con
+        // ícono+label no entran en el ancho de pantalla más angosto en uso
+        // real (320px, ej. iPhone SE 1ª gen) — desborda ~120px, confirmado
+        // con `flutter test test/responsive_test.dart`. Con Expanded cada
+        // ítem se reparte el ancho disponible por igual sin importar el
+        // tamaño de pantalla, y el label adentro trunca con ellipsis en vez
+        // de desbordar si igual no entra.
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _NavItem(
-              icon: Icons.group_rounded,
-              label: 'Inicio',
-              selected: currentTab == AppTab.circles,
-              onTap: onOpenCircles,
+            Expanded(
+              child: _NavItem(
+                icon: Icons.group_rounded,
+                label: 'Inicio',
+                selected: currentTab == AppTab.circles,
+                onTap: onOpenCircles,
+              ),
             ),
-            _NavItem(
-              icon: Icons.local_fire_department_rounded,
-              label: 'Rachas',
-              selected: currentTab == AppTab.rachas,
-              onTap: onOpenRachas,
+            Expanded(
+              child: _NavItem(
+                icon: Icons.local_fire_department_rounded,
+                label: 'Rachas',
+                selected: currentTab == AppTab.rachas,
+                onTap: onOpenRachas,
+              ),
             ),
-            _TribuButton(onTap: onCreateCircle),
-            _NavItem(
-              icon: Icons.sports_esports_rounded,
-              label: 'Juegos',
-              selected: currentTab == AppTab.games,
-              onTap: onOpenGames,
+            Expanded(child: _TribuButton(onTap: onCreateCircle)),
+            Expanded(
+              child: _NavItem(
+                icon: Icons.sports_esports_rounded,
+                label: 'Juegos',
+                selected: currentTab == AppTab.games,
+                onTap: onOpenGames,
+              ),
             ),
-            _NavItem(
-              icon: Icons.emoji_events_rounded,
-              label: 'Perfil',
-              selected: currentTab == AppTab.profile,
-              onTap: onOpenProfile,
+            Expanded(
+              child: _NavItem(
+                icon: Icons.emoji_events_rounded,
+                label: 'Perfil',
+                selected: currentTab == AppTab.profile,
+                onTap: onOpenProfile,
+              ),
             ),
           ],
         ),
@@ -112,10 +127,7 @@ class _TribuButton extends StatelessWidget {
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs,
-            vertical: 2,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 2),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -145,6 +157,9 @@ class _TribuButton extends StatelessWidget {
               const SizedBox(height: 3),
               const Text(
                 'TRIBU',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
                 style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 10,
@@ -184,7 +199,7 @@ class _NavItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
+            horizontal: AppSpacing.xs,
             vertical: AppSpacing.xs,
           ),
           child: Column(
@@ -194,6 +209,10 @@ class _NavItem extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: color,
                   fontSize: 11,

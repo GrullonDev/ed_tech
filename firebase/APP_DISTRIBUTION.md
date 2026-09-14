@@ -1,0 +1,243 @@
+# App Distribution: cómo generar builds de prueba (Android + iOS)
+
+Objetivo puntual: tener una build de Android y otra de iOS en manos de un
+dispositivo real, para poder probar Crashlytics/Performance Monitoring
+(`firebase/PRODUCTS_PLAN.md`, secciones 1 y 2) fuera de un emulador/debug.
+App Distribution en sí queda fuera del alcance de `PRODUCTS_PLAN.md`
+(sección 7: "es proceso de equipo, no arquitectura de la app"), pero
+armar el camino para generar y subir builds sí tiene sentido como parte
+de poder probar el resto del plan.
+
+## Android: automatizado (GitHub Actions)
+
+`.github/workflows/app-distribution-android.yml` compila un APK release
+(firmado con las claves de debug — mismo criterio que ya usa
+`android/app/build.gradle.kts`, "Signing with the debug keys for now, so
+`flutter run --release` works"; para Play Store hará falta una key real
+más adelante, pero para probar en un dispositivo de prueba vía App
+Distribution alcanza) y lo sube a Firebase App Distribution.
+
+Se dispara solo con **cada push a `develop`** (build automática, sin que
+nadie tenga que acordarse de correrla), y también se puede correr a mano
+desde GitHub → Actions → "Android → Firebase App Distribution" → Run
+workflow cuando se quieren notas de release específicas.
+
+### Configuración de una sola vez
+
+1. **Cuenta de servicio de Google Cloud** (reemplaza a `firebase login:ci`,
+   que Google está deprecando):
+   - Consola de Google Cloud del proyecto `rachatribu` → IAM y
+     administración → Cuentas de servicio → Crear cuenta de servicio.
+   - Nombre sugerido: `github-actions-app-distribution`.
+   - Roles: **Firebase App Distribution Admin** y **Firebase Remote
+     Config Admin** (buscar esos dos nombres exactos en el selector de
+     roles — "Agregar otro rol" para el segundo si la cuenta ya existe).
+     El segundo rol es el que necesita el paso que actualiza Remote
+     Config después de cada release (ver más abajo).
+   - Crear una clave JSON para esa cuenta (Acciones → Administrar
+     claves → Agregar clave → JSON) y descargarla.
+2. **Grupo de testers en Firebase App Distribution**:
+   - Consola de Firebase (`rachatribu`) → Release & Monitor → App
+     Distribution → pestaña "Testers y grupos" → crear un grupo (por
+     ejemplo `testers`) y agregar los emails de quienes van a probar
+     (incluido el tuyo).
+3. **Secrets del repo** (GitHub → `GrullonDev/ed_tech` → Settings →
+   Secrets and variables → Actions → New repository secret):
+   - `FIREBASE_SERVICE_ACCOUNT_JSON`: pegar el contenido completo del
+     JSON descargado en el paso 1.
+   - `FIREBASE_APP_DISTRIBUTION_GROUPS`: el alias del grupo del paso 2
+     (por ejemplo `testers`; varios grupos separados por coma).
+
+### Uso
+
+Automático: cada push a `develop` (mergear un PR incluido) dispara una
+build sola y la sube. Manual: GitHub → pestaña Actions → "Android →
+Firebase App Distribution" → Run workflow → (opcional) escribir notas de
+la release → Run workflow. En ambos casos, los testers del grupo reciben
+un email con el link para instalar el APK desde la app de Firebase App
+Distribution (o directo el APK) en su dispositivo.
+
+### Versionado automático
+
+- **Build number** (lo que se ve entre paréntesis en la lista de
+  releases de App Distribution, ej. "1.0.3 (7)"): el workflow lo pasa
+  con `--build-number=${{ github.run_number }}`, el contador de
+  corridas de GitHub Actions para este workflow (nunca se repite ni
+  retrocede, sin importar si la corrida fue automática o manual).
+- **Patch** (el "Z" de `X.Y.Z` en `pubspec.yaml`): el workflow lo sube
+  en 1 en cada corrida exitosa (paso "Sube el patch de la versión") y
+  commitea el cambio de vuelta a `develop` con `[skip ci]` en el
+  mensaje — ese commit no vuelve a disparar el workflow. Major/minor
+  siguen siendo decisión manual: editarlos a mano en `pubspec.yaml`
+  cuando corresponda un cambio más grande (el workflow solo toca el
+  último número).
+
+### Firma consistente entre builds
+
+`android/app/debug.keystore` es un keystore de debug **fijo, commiteado**
+(no el que Android autogenera por máquina en `~/.android/debug.keystore`).
+Sin esto, cada corrida de CI en un runner efímero firmaba con una clave
+nueva y aleatoria, y el tester no podía instalar un release nuevo encima
+del anterior ("Installation failed" — Android rechaza un APK cuya firma
+no coincide con la ya instalada). Ahora todas las builds (CI y locales)
+usan la misma clave, así que las actualizaciones se instalan encima sin
+problema. Es debug-only, no protege nada sensible: es seguro tenerlo en
+el repo. Si de todas formas un tester ya tiene una instalación previa
+firmada con una clave distinta (de antes de este cambio, o de un
+`flutter run` local), tiene que desinstalar esa versión una vez antes de
+poder instalar la siguiente.
+
+### Avisar a los testers de una nueva versión (diálogo en la app)
+
+La app (ver `HomeLogic._checkForUpdate` en `lib/features/logic/logic.dart`)
+compara su propio build number contra dos parámetros de Remote Config, y
+si el remoto es mayor, muestra un diálogo "Hay una nueva versión
+disponible" con un botón que abre el link de descarga.
+
+Esto ya es automático: el paso "Actualiza Remote Config" del workflow
+sube estos dos parámetros después de cada build exitoso (requiere el rol
+**Firebase Remote Config Admin** en la cuenta de servicio — ver arriba):
+
+- `latest_android_build_number` (número): el `github.run_number` de esa
+  corrida.
+- `update_download_url` (string): el `TESTING_URI` que devuelve el paso
+  de subida a App Distribution (el link persistente para testers, no el
+  de descarga directa que expira en 1 hora).
+
+Es `continue-on-error`, así que si falla (por ejemplo si a la cuenta de
+servicio le falta el rol de Remote Config) el release igual les llega a
+los testers — solo no se activa el diálogo hasta la próxima corrida
+exitosa, o hasta que se actualicen esos parámetros a mano en Firebase
+Console → Remote Config.
+
+**Si este paso falla con "Process completed with exit code 1" justo
+después de "Activated service account credentials for: ..."**: no es el
+rol de IAM ni los parámetros de Remote Config — el script ni siquiera
+llega a hacer el primer `curl`. Lo que está fallando es
+`gcloud auth print-access-token`, el primer momento en que gcloud usa de
+verdad la clave privada (RSA) del JSON para firmar un token contra
+Google. `activate-service-account` solo valida que el JSON tenga forma
+de service account y lo guarda, así que puede "funcionar" aunque la
+clave privada esté corrupta — el error real solo aparece un paso
+después. La causa típica es que el secret
+`FIREBASE_SERVICE_ACCOUNT_JSON` en GitHub quedó con el campo
+`private_key` dañado (el editor/portapapeles convirtió los `\n`
+escapados dentro del JSON en saltos de línea reales, o se comió el
+`\n` final). Para confirmarlo y arreglarlo:
+
+1. Volvé a descargar una clave JSON nueva para la cuenta de servicio
+   (Google Cloud Console → IAM → Cuentas de servicio →
+   `github-actions-app-distribution` → Claves → Agregar clave → JSON).
+2. Abrí el archivo con un editor de texto plano (no Word/Notion) y
+   copiá **todo** el contenido tal cual, sin tocarlo.
+3. GitHub → repo → Settings → Secrets and variables → Actions →
+   `FIREBASE_SERVICE_ACCOUNT_JSON` → Update secret → pegar el JSON
+   completo de nuevo (sobrescribe el valor anterior).
+4. Volvé a correr el workflow a mano (Actions → Run workflow). El
+   siguiente log de este paso, si vuelve a fallar, ahora sí va a
+   imprimir el mensaje de error real de gcloud antes de cortar (se
+   agregó captura explícita de stderr para este diagnóstico).
+
+**Si el paso corre en verde pero el diálogo nunca aparece en la app**
+(confirmado el caso real: varios runs seguidos en éxito, cero avisos):
+el problema no es que el script falle, es que escribe un valor que
+Firebase ignora. Si alguno de los dos parámetros se creó a mano desde
+la consola con el toggle "Usar configuración predeterminada en la
+app" activado, queda como `defaultValue: {useInAppDefault: true}` en
+Firestore. El script viejo hacía `.defaultValue.value = $build`, que
+solo **agrega** el campo `value` a ese objeto sin sacar
+`useInAppDefault` — con ese flag en `true`, Firebase sigue sirviendo
+el default de la app (`0`, ver `_initRemoteConfig` en `main.dart`) sin
+importar qué se publique. El script ahora reemplaza el objeto
+`defaultValue` completo (`{value: "..."}` sin más), así que corre una
+vez y el parámetro queda sano para siempre — no hace falta tocar la
+consola a mano.
+
+**Si el paso corre "en verde" (o falla con "Process completed with exit
+code 1" pero sin imprimir NINGUNO de los mensajes `::warning::` que el
+script agrega para diagnosticar)**: root cause confirmado revisando los
+logs completos de un run — GitHub Actions invoca todo `run:` step con
+`bash -e {0}` por default (se ve literal en el log como
+`shell: /usr/bin/bash -e {0}`), y ese `-e` (errexit) queda activo para
+todo el script sin importar que el script mismo declare
+`set -uo pipefail` (sin `-e`, a propósito, para poder chequear el código
+de salida a mano) — esa declaración solo agrega `-u` y pipefail, nunca
+apaga el `-e` con el que bash ya arrancó. El problema: una asignación
+simple como `TOKEN=$(gcloud auth print-access-token ...)` **no** está
+exenta de errexit (solo lo están los comandos que son la condición de un
+`if`/`&&`/`||`), así que en cuanto ese comando — o cualquiera de los dos
+`curl` que asignan `GET_STATUS`/`PUT_STATUS` — devolvía un código
+distinto de 0, bash cortaba el script ahí mismo, antes de llegar al `if`
+que iba a imprimir el diagnóstico. El paso ahora fija
+`shell: bash --noprofile --norc {0}` explícitamente (sin `-e`), así que
+los `if` del script sí llegan a correr y el próximo fallo real va a
+imprimir su `::warning::` correspondiente en vez de morir en silencio.
+
+Publicar los cambios en Remote Config tarda en tomar efecto — Remote
+Config los cachea hasta 1 hora (`minimumFetchInterval` en `main.dart`),
+así que un tester puede tardar hasta esa ventana en ver el diálogo tras
+reabrir la app, salvo que la sesión de Remote Config todavía no haya
+hecho su primer fetch.
+
+## iOS: manual, en tu Mac (por ahora)
+
+La firma de iOS requiere una cuenta de Apple Developer Program,
+certificados de distribución y provisioning profiles — nada de eso puede
+generarse desde este entorno (no hay Mac/Xcode ni acceso a
+developer.apple.com). Mientras no se automatice en CI, los pasos en tu
+Mac con Xcode instalado son:
+
+```bash
+# 1. Traer dependencias
+flutter pub get
+cd ios && pod install && cd ..
+
+# 2. Compilar el IPA (Xcode te va a pedir elegir tu Team/certificado la
+#    primera vez si el proyecto no tiene firma automática configurada)
+flutter build ipa --release
+
+# 3. Instalar la Firebase CLI si no la tenés (una sola vez)
+npm install -g firebase-tools
+firebase login
+
+# 4. Subir a App Distribution (mismo grupo de testers que Android)
+firebase appdistribution:distribute \
+  build/ios/ipa/*.ipa \
+  --app 1:315811589668:ios:db1535fc9d5d16178a72b1 \
+  --groups "testers" \
+  --release-notes "Build de prueba manual (iOS)."
+```
+
+Notas:
+
+- El App ID de iOS (`1:315811589668:ios:db1535fc9d5d16178a72b1`) es el
+  mismo que ya está en `lib/firebase_options.dart`.
+- `ios/Runner` no tiene un `GoogleService-Info.plist` commiteado — no
+  debería hacer falta para que Crashlytics/Performance reporten (Firebase
+  se inicializa 100% programático, ver `firebase_options.dart`), pero si
+  Xcode se queja durante `pod install`/build, descargalo desde la consola
+  de Firebase (Configuración del proyecto → tu app iOS, bundle id
+  `com.example.edtechTiktok`) y agregalo a `ios/Runner` (arrastrándolo en
+  Xcode con "Copy items if needed" + target membership en Runner).
+- Si `flutter build ipa` falla pidiendo un Team de firma: Xcode → abrir
+  `ios/Runner.xcworkspace` → seleccionar el target Runner → pestaña
+  "Signing & Capabilities" → elegir tu Apple Developer Team ahí una vez;
+  después `flutter build ipa` ya lo reutiliza.
+
+### Automatizarlo en CI más adelante (opcional, no hecho todavía)
+
+Si en algún momento se quiere automatizar también iOS (build en un
+runner `macos-latest` de GitHub Actions), hace falta antes:
+
+- Certificado de distribución (.p12) + contraseña, o una API Key de App
+  Store Connect (recomendado: `fastlane match` o `xcodebuild` con
+  "Automatic Signing" usando esa API Key es más fácil de mantener en CI
+  que manejar certificados .p12 a mano).
+- Un provisioning profile de distribución para
+  `com.example.edtechTiktok`.
+- Todo eso vive en secrets de GitHub, nunca commiteado.
+
+Se deja documentado como el siguiente paso natural, pero no se
+implementa ahora — requiere decisiones (qué método de firma, si vale la
+pena el costo de mantenimiento en CI para el volumen actual de builds)
+que le corresponden a quien tenga la cuenta de Apple Developer.

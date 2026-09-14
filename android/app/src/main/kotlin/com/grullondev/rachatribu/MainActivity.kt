@@ -1,4 +1,4 @@
-package com.example.edtech_tiktok
+package com.grullondev.rachatribu
 
 import io.flutter.embedding.android.FlutterActivity
 

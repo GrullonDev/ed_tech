@@ -92,25 +92,39 @@ class Dashboard extends StatelessWidget {
                 pulseTick: streakPulseTick,
                 constancyDrops: constancyDrops,
                 userLevel: userLevel,
+                clanName: circles.isEmpty ? null : circles.first.name,
               ),
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
+              _ConstancyBanner(drops: constancyDrops),
+              const SizedBox(height: AppSpacing.lg),
               Text(
-                '¡Buen día, $username! 👋',
+                '¡Buen día, $username!',
                 style: textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Tu tribu te espera. La constancia compartida pesa la mitad.',
+                circles.isEmpty
+                    ? 'Tu tribu te espera. La constancia compartida pesa la '
+                          'mitad.'
+                    : 'Tu ${circles.first.name} cuenta contigo para encender '
+                          'el fuego sagrado de hoy.',
                 style: textTheme.bodyMedium?.copyWith(
                   color: AppColors.onSurfaceVariant,
                   height: 1.5,
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              _GamesTeaserCard(onTap: onOpenGames),
-              const SizedBox(height: AppSpacing.lg),
+              _StreakHeroCard(
+                streakDays: overallStreakDays,
+                onIgnite: nextPendingHabit != null
+                    ? () => onToggleTodayHabit(nextPendingHabit!)
+                    : (circles.isEmpty ? onCreateCircle : () => onCheckIn(circles.first)),
+              ),
+              const SizedBox(height: AppSpacing.xl2),
+              _AscensionTotemSection(streakDays: overallStreakDays),
+              const SizedBox(height: AppSpacing.xl2),
               _TodayCard(
                 habits: todayHabits,
                 completed: todayCompletedCount,
@@ -123,22 +137,21 @@ class Dashboard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 const _AllDoneBanner(),
               ],
-              const SizedBox(height: AppSpacing.lg),
-              if (nextPendingHabit != null)
-                GamePressable(
-                  onTap: () => onToggleTodayHabit(nextPendingHabit!),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => onToggleTodayHabit(nextPendingHabit!),
-                      icon: const Icon(Icons.playlist_add_check_rounded),
-                      label: Text(
-                        'Registrar hábito pendiente (${nextPendingHabit!.label})',
-                        textAlign: TextAlign.center,
+              const SizedBox(height: AppSpacing.xl2),
+              _GamesPreviewSection(onOpenGames: onOpenGames),
+              const SizedBox(height: AppSpacing.xl2),
+              _InviteTribeButton(
+                onTap: circles.isEmpty
+                    ? onCreateCircle
+                    : () => _showManageCirclesSheet(
+                        context,
+                        circles: circles,
+                        allies: allies,
+                        onOpenCircle: onOpenCircle,
+                        onInviteMember: onInviteMember,
+                        onChallengeAlly: onChallengeAlly,
                       ),
-                    ),
-                  ),
-                ),
+              ),
               const SizedBox(height: AppSpacing.xl2),
               Row(
                 children: [
@@ -534,18 +547,408 @@ class _InviteMemberDialogState extends State<_InviteMemberDialog> {
   }
 }
 
+/// Barra superior estilo "Kinetic Cyber-Tribe" (rediseño Stitch): avatar +
+/// nivel + gotas a la izquierda, nombre del clan al centro, racha a la
+/// derecha — todo con datos reales (`HomeLogic`), sin inventar métricas
+/// como un ranking global que la app no calcula.
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.streakDays,
     required this.pulseTick,
     required this.constancyDrops,
     required this.userLevel,
+    required this.clanName,
   });
 
   final int streakDays;
   final int pulseTick;
   final int constancyDrops;
   final int userLevel;
+  final String? clanName;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        const CircleAvatar(
+          radius: 18,
+          backgroundColor: AppColors.surfaceContainer,
+          backgroundImage: AssetImage(AppAssets.avatarSample),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$constancyDrops GOTAS',
+              style: textTheme.labelSmall?.copyWith(
+                color: AppColors.tertiary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              'Nv.$userLevel',
+              style: textTheme.labelSmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              border: Border.all(color: AppColors.outlineWhisper),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'CLAN TRIBAL',
+                  textAlign: TextAlign.center,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.06,
+                  ),
+                ),
+                Text(
+                  clanName ?? 'Sin tribu aún',
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        _StreakPill(days: streakDays, pulseTick: pulseTick),
+      ],
+    );
+  }
+}
+
+/// Banner de gotas acumuladas — refuerza el número que ya se ve en la
+/// barra superior como un "logro" propio, tal como en el rediseño de
+/// Stitch, sin agregar ningún dato nuevo.
+class _ConstancyBanner extends StatelessWidget {
+  const _ConstancyBanner({required this.drops});
+
+  final int drops;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.outlineWhisper),
+      ),
+      child: Text(
+        '⚡ $drops GOTAS DE CONSTANCIA ACUMULADAS',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppColors.tertiary,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.04,
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta hero de la racha del día — el "Fuego Primario" del rediseño de
+/// Stitch. [onIgnite] ya trae resuelta la mejor acción disponible (marcar
+/// el próximo hábito pendiente, o check-in del primer círculo si no hay
+/// hábitos sueltos, o crear un círculo si todavía no hay ninguno).
+class _StreakHeroCard extends StatelessWidget {
+  const _StreakHeroCard({required this.streakDays, required this.onIgnite});
+
+  final int streakDays;
+  final VoidCallback onIgnite;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xl,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.outlineWhisper),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.lavenderContainer,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+            child: Text(
+              '🏅 MULTIPLICADOR COMUNITARIO ACTIVO',
+              style: textTheme.labelSmall?.copyWith(
+                color: AppColors.secondaryContainer,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.background,
+              boxShadow: AppShadows.streak,
+            ),
+            alignment: Alignment.center,
+            child: const Text('🔥', style: TextStyle(fontSize: 40)),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            '$streakDays ${streakDays == 1 ? "DÍA" : "DÍAS"}',
+            style: textTheme.displaySmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            streakDays > 0
+                ? 'FUEGO PRIMARIO DESPERTADO'
+                : 'ENCIENDE TU PRIMER FUEGO',
+            style: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '¡Racha iniciada! Valida hoy para activar el multiplicador '
+            'comunitario x1.5 y nutrir al clan.',
+            textAlign: TextAlign.center,
+            style: textTheme.bodySmall?.copyWith(
+              color: AppColors.onSurfaceVariant,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          GamePressable(
+            onTap: onIgnite,
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onIgnite,
+                child: const Text('🔥 ENCENDER RACHA DE HOY (+150 XP)'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Tótem de Ascensión" — tres hitos derivados directamente de la racha
+/// general (sin inventar un sistema de progreso nuevo): Tier 1 se activa
+/// apenas hay racha, Tier 2 a los 3 días, Tier 3 a los 7.
+class _AscensionTotemSection extends StatelessWidget {
+  const _AscensionTotemSection({required this.streakDays});
+
+  final int streakDays;
+
+  static const _tiers = [
+    (
+      title: 'Tier 1: Fuego Primario',
+      description: 'Glifos ancestrales encendidos. +5% velocidad de gotas.',
+      threshold: 1,
+    ),
+    (
+      title: 'Tier 2: Garra del Clan',
+      description: 'Alcanza racha de 3 días consecutivos con tu tribu.',
+      threshold: 3,
+    ),
+    (
+      title: 'Tier 3: Ojo del Fénix',
+      description: 'Desbloquea el aura ardiente para el avatar.',
+      threshold: 7,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final unlockedCount = _tiers
+        .where((tier) => streakDays >= tier.threshold)
+        .length;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.outlineWhisper),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🧩', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  'Tótem de Ascensión',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  'NIVEL $unlockedCount / ${_tiers.length}',
+                  style: textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (var i = 0; i < _tiers.length; i++) ...[
+            _AscensionTier(
+              title: _tiers[i].title,
+              description: _tiers[i].description,
+              state: streakDays >= _tiers[i].threshold
+                  ? _TierState.active
+                  : (i == 0 || streakDays >= _tiers[i - 1].threshold
+                        ? _TierState.pending
+                        : _TierState.locked),
+              daysRemaining: _tiers[i].threshold - streakDays,
+            ),
+            if (i != _tiers.length - 1) const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+enum _TierState { active, pending, locked }
+
+class _AscensionTier extends StatelessWidget {
+  const _AscensionTier({
+    required this.title,
+    required this.description,
+    required this.state,
+    required this.daysRemaining,
+  });
+
+  final String title;
+  final String description;
+  final _TierState state;
+  final int daysRemaining;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final IconData icon;
+    final Color color;
+    final String badgeLabel;
+    switch (state) {
+      case _TierState.active:
+        icon = Icons.workspace_premium_rounded;
+        color = AppColors.tertiary;
+        badgeLabel = 'ACTIVO';
+      case _TierState.pending:
+        icon = Icons.hourglass_bottom_rounded;
+        color = AppColors.secondary;
+        badgeLabel = daysRemaining > 0 ? 'EN $daysRemaining DÍAS' : 'HOY';
+      case _TierState.locked:
+        icon = Icons.lock_rounded;
+        color = AppColors.onSurfaceVariant;
+        badgeLabel = 'BLOQUEADO';
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: color.withValues(alpha: 0.15),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          badgeLabel,
+          style: textTheme.labelSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Vista previa compacta de "Zona de Juegos" — dos tarjetas que abren la
+/// pestaña de Juegos; sin datos por-juego inventados (rondas ganadas,
+/// apuestas activas), ya que el dashboard no los tiene.
+class _GamesPreviewSection extends StatelessWidget {
+  const _GamesPreviewSection({required this.onOpenGames});
+
+  final VoidCallback onOpenGames;
 
   @override
   Widget build(BuildContext context) {
@@ -555,37 +958,117 @@ class _TopBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Image.asset(AppAssets.logo, width: 28, height: 28),
-            const SizedBox(width: AppSpacing.sm),
-            Flexible(
+            const Text('⚡', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
               child: Text(
-                'Racha Tribu',
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.titleMedium?.copyWith(
+                'Zona de Juegos',
+                style: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
                 ),
               ),
             ),
-            const Spacer(),
-            _StreakPill(days: streakDays, pulseTick: pulseTick),
-            const SizedBox(width: AppSpacing.md),
-            const CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.surfaceContainer,
-              backgroundImage: AssetImage(AppAssets.avatarSample),
+            GestureDetector(
+              onTap: onOpenGames,
+              child: Text(
+                'VER TODOS',
+                style: textTheme.labelSmall?.copyWith(
+                  color: AppColors.tertiary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         Row(
           children: [
-            _LevelPill(level: userLevel),
-            const SizedBox(width: AppSpacing.sm),
-            ConstancyDropsPill(drops: constancyDrops),
+            Expanded(
+              child: _GamePreviewCard(onTap: onOpenGames),
+            ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _GamePreviewCard extends StatelessWidget {
+  const _GamePreviewCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return GamePressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primaryContainer, AppColors.lavenderContainer],
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          boxShadow: AppShadows.card,
+        ),
+        child: Row(
+          children: [
+            const Text('🎮', style: TextStyle(fontSize: 32)),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Juegos de la tribu',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Desafío del día, Ruleta, Duelo semanal y más — ganá '
+                    'gotas jugando.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// CTA final de la pantalla de inicio — abre la hoja de gestión de
+/// círculos/aliados si ya hay al menos un círculo, o crea el primero.
+class _InviteTribeButton extends StatelessWidget {
+  const _InviteTribeButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GamePressable(
+      onTap: onTap,
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: onTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.tertiary,
+            foregroundColor: AppColors.onTertiary,
+          ),
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: const Text('INVITAR A TU TRIBU'),
+        ),
+      ),
     );
   }
 }
@@ -645,47 +1128,6 @@ class _StreakFirePulse extends StatelessWidget {
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
       child: child,
-    );
-  }
-}
-
-/// Insignia de "nivel" derivada de la racha general: cada 7 días de racha
-/// suma un nivel. Es puramente decorativo (sin backend) pero refuerza la
-/// sensación de progreso tipo juego.
-class _LevelPill extends StatelessWidget {
-  const _LevelPill({required this.level});
-
-  final int level;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryContainer],
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.military_tech_rounded,
-            size: 14,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'Nv. $level',
-            style: Theme.of(context).textTheme.labelMedium
-                ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -753,63 +1195,6 @@ class _CountPill extends StatelessWidget {
         '$count',
         style: Theme.of(context).textTheme.labelMedium
             ?.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-/// Banner que invita a la pestaña "Juegos" (Desafío del día, Ruleta,
-/// Duelo de Racha Semanal y Predicción de Tribu) — esos cuatro minijuegos
-/// tenían antes su propia tarjeta acá mismo, pero saturaban la pantalla
-/// principal de círculos; ahora viven en `page/games.dart` y este banner es
-/// lo único que queda de ellos en el dashboard.
-class _GamesTeaserCard extends StatelessWidget {
-  const _GamesTeaserCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return GamePressable(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primaryContainer, AppColors.lavenderContainer],
-          ),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          boxShadow: AppShadows.card,
-        ),
-        child: Row(
-          children: [
-            const Text('🎮', style: TextStyle(fontSize: 32)),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Juegos de la tribu',
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Desafío del día, Ruleta, Duelo semanal y más — ganá '
-                    'gotas jugando.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
-          ],
-        ),
       ),
     );
   }

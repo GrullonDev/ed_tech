@@ -54,9 +54,7 @@ class TribeFoundedPage extends StatelessWidget {
     await Clipboard.setData(ClipboardData(text: circle.inviteCode));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Código copiado — compartilo con tu tribu'),
-      ),
+      const SnackBar(content: Text('Código copiado — compartilo con tu tribu')),
     );
   }
 
@@ -75,196 +73,196 @@ class TribeFoundedPage extends StatelessWidget {
             children: [
               Text(
                 '🔥 RITO DE FUEGO COMPLETADO',
-              textAlign: TextAlign.center,
-              style: textTheme.labelSmall?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.06,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '¡FUEGO SAGRADO',
-              textAlign: TextAlign.center,
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            Text(
-              'ENCENDIDO!',
-              textAlign: TextAlign.center,
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: AppColors.tertiary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Tu clan ha nacido en el reino de Racha Tribu. La primera '
-              'chispa arde bajo tu mando.',
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            Center(
-              child: Container(
-                width: 140,
-                height: 140,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.secondary],
-                  ),
-                  boxShadow: AppShadows.streak,
+                textAlign: TextAlign.center,
+                style: textTheme.labelSmall?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.06,
                 ),
-                child: const Text('🔥', style: TextStyle(fontSize: 64)),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              circle.name,
-              textAlign: TextAlign.center,
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              circle.category,
-              textAlign: TextAlign.center,
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: _FoundedStatBox(
-                    label: 'RANGO',
-                    value: 'Fundador',
-                    color: AppColors.rankGold,
-                  ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '¡FUEGO SAGRADO',
+                textAlign: TextAlign.center,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: _FoundedStatBox(
-                    label: 'HOGUERA',
-                    value: 'Nv.${_levelFor(circle.streakDays)}',
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: _FoundedStatBox(
-                    label: 'GUERREROS',
-                    value: '${circle.totalMembers}',
-                    color: AppColors.tertiary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            Text(
-              '🔑 Runa Sagrada de Invocación',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
               ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AdaptiveGlassOutlinedCard(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Row(
+              Text(
+                'ENCENDIDO!',
+                textAlign: TextAlign.center,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.tertiary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Tu clan ha nacido en el reino de Racha Tribu. La primera '
+                'chispa arde bajo tu mando.',
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl2),
+              Center(
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.secondary],
+                    ),
+                    boxShadow: AppShadows.streak,
+                  ),
+                  child: const Text('🔥', style: TextStyle(fontSize: 64)),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                circle.name,
+                textAlign: TextAlign.center,
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                circle.category,
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Código de Hermandad',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          circle.inviteCode,
-                          style: textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
+                  const Expanded(
+                    child: _FoundedStatBox(
+                      label: 'RANGO',
+                      value: 'Fundador',
+                      color: AppColors.rankGold,
                     ),
                   ),
-                  IconButton.filledTonal(
-                    onPressed: () => _copyCode(context),
-                    icon: const Icon(Icons.copy_rounded),
-                    tooltip: 'Copiar código',
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _FoundedStatBox(
+                      label: 'HOGUERA',
+                      value: 'Nv.${_levelFor(circle.streakDays)}',
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _FoundedStatBox(
+                      label: 'GUERREROS',
+                      value: '${circle.totalMembers}',
+                      color: AppColors.tertiary,
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Center(
-              child: AdaptiveGlassCard(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: QrImageView(
-                  data: circle.inviteCode,
-                  size: 160,
-                  // Blanco/negro fijos a propósito — ver la misma nota en
-                  // qr_summon.dart: con AppColors.onSurface (blanco en el
-                  // tema oscuro) los módulos quedaban invisibles sobre el
-                  // fondo blanco del propio QR.
-                  backgroundColor: Colors.white,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.square,
-                    color: Colors.black,
-                  ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.square,
-                    color: Colors.black,
+              const SizedBox(height: AppSpacing.xl2),
+              Text(
+                '🔑 Runa Sagrada de Invocación',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              AdaptiveGlassOutlinedCard(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Código de Hermandad',
+                            style: textTheme.labelMedium?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            circle.inviteCode,
+                            style: textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      onPressed: () => _copyCode(context),
+                      icon: const Icon(Icons.copy_rounded),
+                      tooltip: 'Copiar código',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Center(
+                child: AdaptiveGlassCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: QrImageView(
+                    data: circle.inviteCode,
+                    size: 160,
+                    // Blanco/negro fijos a propósito — ver la misma nota en
+                    // qr_summon.dart: con AppColors.onSurface (blanco en el
+                    // tema oscuro) los módulos quedaban invisibles sobre el
+                    // fondo blanco del propio QR.
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            AdaptiveGlassButton(
-              onTap: () => _shareViaWhatsapp(context),
-              label: 'RECLUTAR POR WHATSAPP',
-              icon: const Icon(Icons.chat_rounded),
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            Text(
-              circle.totalMembers <= 1
-                  ? 'Por ahora solo estás vos — comparte tu código para '
-                        'sumar guerreros reales.'
-                  : '${circle.totalMembers} guerreros ya forman parte de tu '
-                        'tribu.',
-              textAlign: TextAlign.center,
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
+              const SizedBox(height: AppSpacing.xl),
+              AdaptiveGlassButton(
+                onTap: () => _shareViaWhatsapp(context),
+                label: 'RECLUTAR POR WHATSAPP',
+                icon: const Icon(Icons.chat_rounded),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            AdaptiveGlassButton(
-              onTap: onOpenCircleDetail,
-              label: '🔥 IR A LA SALA DE GUERREROS',
-              icon: const Icon(Icons.local_fire_department_rounded),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Center(
-              child: TextButton(
-                onPressed: onOpenAgora,
-                child: const Text('EXPLORAR EL GRAN ÁGORA'),
+              const SizedBox(height: AppSpacing.xl2),
+              Text(
+                circle.totalMembers <= 1
+                    ? 'Por ahora solo estás vos — comparte tu código para '
+                          'sumar guerreros reales.'
+                    : '${circle.totalMembers} guerreros ya forman parte de tu '
+                          'tribu.',
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
-            ),
+              const SizedBox(height: AppSpacing.xl2),
+              AdaptiveGlassButton(
+                onTap: onOpenCircleDetail,
+                label: '🔥 IR A LA SALA DE GUERREROS',
+                icon: const Icon(Icons.local_fire_department_rounded),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Center(
+                child: TextButton(
+                  onPressed: onOpenAgora,
+                  child: const Text('EXPLORAR EL GRAN ÁGORA'),
+                ),
+              ),
             ],
           ),
         ),

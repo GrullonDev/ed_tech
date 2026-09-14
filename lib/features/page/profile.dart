@@ -416,11 +416,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${_unlockedTotemsCount(
-                          overallStreakDays: overallStreakDays,
-                          recordStreakDays: recordStreakDays,
-                          hasPerfectCircle: perfectCount > 0,
-                        )}/$_totalTotemsCount Desbloqueados',
+                        '${_unlockedTotemsCount(overallStreakDays: overallStreakDays, recordStreakDays: recordStreakDays, hasPerfectCircle: perfectCount > 0)}/$_totalTotemsCount Desbloqueados',
                         style: textTheme.bodySmall?.copyWith(
                           color: AppColors.onSurfaceVariant,
                         ),

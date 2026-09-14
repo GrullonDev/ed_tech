@@ -145,12 +145,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        _buildContent(context),
-        _buildConfettiOverlay(),
-      ],
-    );
+    return Stack(children: [_buildContent(context), _buildConfettiOverlay()]);
   }
 
   /// Confetti cayendo desde arriba de toda la pantalla, sin bloquear toques

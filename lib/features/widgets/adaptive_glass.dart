@@ -207,11 +207,7 @@ class AdaptiveGlassButton extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: enabled ? onTap : null,
             icon: icon,
-            label: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
         );
         return enabled ? GamePressable(onTap: onTap, child: button) : button;

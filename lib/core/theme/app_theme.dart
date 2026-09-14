@@ -147,11 +147,7 @@ abstract final class AppShadows {
 
   // Aura glow "Streak Ignition" del design system de Stitch.
   static const streak = [
-    BoxShadow(
-      color: Color(0x59FF5722),
-      blurRadius: 32,
-      offset: Offset(0, 8),
-    ),
+    BoxShadow(color: Color(0x59FF5722), blurRadius: 32, offset: Offset(0, 8)),
   ];
 }
 

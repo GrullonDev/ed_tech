@@ -84,9 +84,7 @@ class _AgoraPageState extends State<AgoraPage> {
     final activeCount = circles.where((c) => c.streakDays > 0).length;
     final sustainedPct = circles.isEmpty
         ? 0
-        : (circles.where((c) => c.checkedInToday).length /
-                  circles.length *
-                  100)
+        : (circles.where((c) => c.checkedInToday).length / circles.length * 100)
               .round();
     final totalWarriors = circles.fold<int>(
       0,
@@ -112,128 +110,130 @@ class _AgoraPageState extends State<AgoraPage> {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
                   .copyWith(top: AppSpacing.lg, bottom: AppSpacing.xl2),
               children: [
-              Text(
-                '🌐 MAPA EN VIVO • TU REINO',
-                style: textTheme.labelSmall?.copyWith(
-                  color: AppColors.tertiary,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.06,
+                Text(
+                  '🌐 MAPA EN VIVO • TU REINO',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: AppColors.tertiary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.06,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Observa el pulso de tus hogueras en tiempo real y '
-                'sincroniza tu fuego.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              if (circles.isNotEmpty) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: _AgoraStatBox(
-                        value: '$activeCount',
-                        label: 'Hogueras Vivas',
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _AgoraStatBox(
-                        value: '$sustainedPct%',
-                        label: 'Fuego Sostenido Hoy',
-                        color: AppColors.tertiary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _AgoraStatBox(
-                        value: '$totalWarriors',
-                        label: 'Guerreros en tu Tribu',
-                        color: AppColors.secondary,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Observa el pulso de tus hogueras en tiempo real y '
+                  'sincroniza tu fuego.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _AgoraFilterChip(
-                        label: '🔥 Mis Círculos',
-                        active: _filter == _AgoraFilter.mine,
-                        onTap: () =>
-                            setState(() => _filter = _AgoraFilter.mine),
+                if (circles.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AgoraStatBox(
+                          value: '$activeCount',
+                          label: 'Hogueras Vivas',
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _AgoraFilterChip(
-                        label: '⚠️ Al Borde (${atRisk.length})',
-                        active: _filter == _AgoraFilter.atRisk,
-                        onTap: () =>
-                            setState(() => _filter = _AgoraFilter.atRisk),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _AgoraStatBox(
+                          value: '$sustainedPct%',
+                          label: 'Fuego Sostenido Hoy',
+                          color: AppColors.tertiary,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _AgoraStatBox(
+                          value: '$totalWarriors',
+                          label: 'Guerreros en tu Tribu',
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AgoraFilterChip(
+                          label: '🔥 Mis Círculos',
+                          active: _filter == _AgoraFilter.mine,
+                          onTap: () =>
+                              setState(() => _filter = _AgoraFilter.mine),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _AgoraFilterChip(
+                          label: '⚠️ Al Borde (${atRisk.length})',
+                          active: _filter == _AgoraFilter.atRisk,
+                          onTap: () =>
+                              setState(() => _filter = _AgoraFilter.atRisk),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+                _AddAllySection(
+                  usernameController: widget.allyUsernameController,
+                  onSend: widget.onSendAllyRequest,
                 ),
                 const SizedBox(height: AppSpacing.xl),
-              ],
-              _AddAllySection(
-                usernameController: widget.allyUsernameController,
-                onSend: widget.onSendAllyRequest,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              if (circles.isEmpty)
-                _EmptyAgora(textTheme: textTheme)
-              else ...[
-                Text(
-                  'Círculos de Poder',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (visible.isEmpty)
-                  _NoRiskCard(textTheme: textTheme)
-                else
-                  for (final circle in visible) ...[
-                    _TribalBonfireCard(
-                      key: ValueKey('${circle.name}-${widget.circlesUpdatedTick}'),
-                      circle: circle,
-                      onCheckIn: () => widget.onCheckIn(circle),
+                if (circles.isEmpty)
+                  _EmptyAgora(textTheme: textTheme)
+                else ...[
+                  Text(
+                    'Círculos de Poder',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                  ],
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Chamanes del Podio',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (ranked.length >= 2) _PodiumRow(ranked: ranked),
-                const SizedBox(height: AppSpacing.md),
-                _LeaderboardCard(ranked: ranked),
-                const SizedBox(height: AppSpacing.xl2),
-                Text(
-                  'Bitácora de Llamas',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: AppSpacing.md),
+                  if (visible.isEmpty)
+                    _NoRiskCard(textTheme: textTheme)
+                  else
+                    for (final circle in visible) ...[
+                      _TribalBonfireCard(
+                        key: ValueKey(
+                          '${circle.name}-${widget.circlesUpdatedTick}',
+                        ),
+                        circle: circle,
+                        onCheckIn: () => widget.onCheckIn(circle),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Chamanes del Podio',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _ActivityFeedCard(
-                  events: widget.activityFeed,
-                  hasReactedTo: widget.hasReactedTo,
-                  onToggleReaction: widget.onToggleReaction,
-                ),
+                  const SizedBox(height: AppSpacing.md),
+                  if (ranked.length >= 2) _PodiumRow(ranked: ranked),
+                  const SizedBox(height: AppSpacing.md),
+                  _LeaderboardCard(ranked: ranked),
+                  const SizedBox(height: AppSpacing.xl2),
+                  Text(
+                    'Bitácora de Llamas',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _ActivityFeedCard(
+                    events: widget.activityFeed,
+                    hasReactedTo: widget.hasReactedTo,
+                    onToggleReaction: widget.onToggleReaction,
+                  ),
+                ],
               ],
-            ],
             ),
           ),
         ),
@@ -363,9 +363,7 @@ class _PodiumRow extends StatelessWidget {
               : _PodiumSpot(circle: second, place: 2, height: 84),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _PodiumSpot(circle: first, place: 1, height: 104),
-        ),
+        Expanded(child: _PodiumSpot(circle: first, place: 1, height: 104)),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: third == null
@@ -550,7 +548,10 @@ class _ReactionChip extends StatelessWidget {
     return GamePressable(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 3,
+        ),
         decoration: BoxDecoration(
           color: reacted ? AppColors.completedGlow : AppColors.surfaceContainer,
           borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -567,7 +568,9 @@ class _ReactionChip extends StatelessWidget {
               Text(
                 '$count',
                 style: textTheme.labelSmall?.copyWith(
-                  color: reacted ? AppColors.secondary : AppColors.onSurfaceVariant,
+                  color: reacted
+                      ? AppColors.secondary
+                      : AppColors.onSurfaceVariant,
                   fontWeight: FontWeight.w800,
                 ),
               ),

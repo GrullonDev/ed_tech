@@ -121,148 +121,148 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-            Text(
-              '🔥 RITO CHAMÁNICO',
-              style: textTheme.labelSmall?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.06,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Reúne a tus guerreros, forja el tótem ancestral y enciende '
-              'la llama madre para el dominio en las tablas.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              '🛡️ Tótem y Blasón',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _CirclePreviewCard(
-              emoji: previewEmoji,
-              name: name,
-              category: category,
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            Text(
-              '📜 Pacto de Identidad',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: widget.logic.habitNameController,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Nombre de la Tribu',
-                prefixIcon: Icon(Icons.local_fire_department_rounded),
-              ),
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              '⚔️ Arquetipo Tribal',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Define el hábito que va a sostener toda la tribu.',
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final entry in _kCategoryOptions.entries)
-                  _CategoryChip(
-                    emoji: entry.value,
-                    label: entry.key,
-                    selected: category == entry.key,
-                    onTap: () => _selectCategory(entry.key),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            TextField(
-              controller: widget.logic.habitCategoryController,
-              decoration: const InputDecoration(
-                labelText: 'O escribí tu propio arquetipo (opcional)',
-              ),
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            const _FounderPowersCard(),
-            const SizedBox(height: AppSpacing.xl2),
-            AdaptiveGlassButton(
-              onTap: _submit,
-              enabled: canSubmit,
-              label: '🔥 FUNDAR TRIBU',
-              icon: const Icon(Icons.local_fire_department_rounded),
-            ),
-            const SizedBox(height: AppSpacing.xl2),
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                  ),
-                  child: Text(
-                    'o',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
+                Text(
+                  '🔥 RITO CHAMÁNICO',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.06,
                   ),
                 ),
-                const Expanded(child: Divider()),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              '🔑 Unión Tribal con Código',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Unite al círculo de un amigo — competencia real, no un '
-              'nombre simulado.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              controller: _inviteCodeController,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Código de invitación',
-                prefixIcon: Icon(Icons.tag_rounded),
-              ),
-              onSubmitted: (_) => _joinWithCode(),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AdaptiveGlassButton(
-              onTap: _joiningCircle ? () {} : _joinWithCode,
-              enabled: !_joiningCircle,
-              label: _joiningCircle ? 'Uniéndome...' : 'Unirme con código',
-              icon: const Icon(Icons.group_add_rounded),
-            ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Reúne a tus guerreros, forja el tótem ancestral y enciende '
+                  'la llama madre para el dominio en las tablas.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  '🛡️ Tótem y Blasón',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _CirclePreviewCard(
+                  emoji: previewEmoji,
+                  name: name,
+                  category: category,
+                ),
+                const SizedBox(height: AppSpacing.xl2),
+                Text(
+                  '📜 Pacto de Identidad',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: widget.logic.habitNameController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la Tribu',
+                    prefixIcon: Icon(Icons.local_fire_department_rounded),
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  '⚔️ Arquetipo Tribal',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Define el hábito que va a sostener toda la tribu.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final entry in _kCategoryOptions.entries)
+                      _CategoryChip(
+                        emoji: entry.value,
+                        label: entry.key,
+                        selected: category == entry.key,
+                        onTap: () => _selectCategory(entry.key),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                TextField(
+                  controller: widget.logic.habitCategoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'O escribí tu propio arquetipo (opcional)',
+                  ),
+                  onSubmitted: (_) => _submit(),
+                ),
+                const SizedBox(height: AppSpacing.xl2),
+                const _FounderPowersCard(),
+                const SizedBox(height: AppSpacing.xl2),
+                AdaptiveGlassButton(
+                  onTap: _submit,
+                  enabled: canSubmit,
+                  label: '🔥 FUNDAR TRIBU',
+                  icon: const Icon(Icons.local_fire_department_rounded),
+                ),
+                const SizedBox(height: AppSpacing.xl2),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Text(
+                        'o',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  '🔑 Unión Tribal con Código',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Unite al círculo de un amigo — competencia real, no un '
+                  'nombre simulado.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _inviteCodeController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Código de invitación',
+                    prefixIcon: Icon(Icons.tag_rounded),
+                  ),
+                  onSubmitted: (_) => _joinWithCode(),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AdaptiveGlassButton(
+                  onTap: _joiningCircle ? () {} : _joinWithCode,
+                  enabled: !_joiningCircle,
+                  label: _joiningCircle ? 'Uniéndome...' : 'Unirme con código',
+                  icon: const Icon(Icons.group_add_rounded),
+                ),
               ],
             ),
           ),
@@ -341,17 +341,20 @@ class _FounderPowersCard extends StatelessWidget {
   static const _powers = [
     (
       icon: Icons.qr_code_2_rounded,
-      text: 'Vas a poder invitar guerreros reales con un código de '
+      text:
+          'Vas a poder invitar guerreros reales con un código de '
           'invitación único.',
     ),
     (
       icon: Icons.leaderboard_rounded,
-      text: 'Vas a ver el ranking y la racha colectiva del círculo en '
+      text:
+          'Vas a ver el ranking y la racha colectiva del círculo en '
           'tiempo real.',
     ),
     (
       icon: Icons.local_fire_department_rounded,
-      text: 'Cada check-in diario de un miembro suma a la racha '
+      text:
+          'Cada check-in diario de un miembro suma a la racha '
           'compartida de la tribu.',
     ),
   ];

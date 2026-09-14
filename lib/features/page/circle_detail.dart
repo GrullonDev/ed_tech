@@ -63,260 +63,261 @@ class CircleDetailPage extends StatelessWidget {
             children: [
               Row(
                 children: [
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.tertiary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      '🔥 LOBBY SAGRADO ACTIVO',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelSmall?.copyWith(
-                        color: AppColors.tertiary,
-                        fontWeight: FontWeight.w800,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 2,
                       ),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.group_rounded,
-                  size: 16,
-                  color: AppColors.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${circle.totalMembers} Guerreros',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.labelMedium?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AdaptiveGlassCard(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppColors.primaryContainer,
-                              AppColors.primary,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        child: Text(
-                          'LVL $clanLevel',
-                          textAlign: TextAlign.center,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                      decoration: BoxDecoration(
+                        color: AppColors.tertiary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              circle.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Text(
-                              circle.category,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    children: [
-                      const Text('🔥', style: TextStyle(fontSize: 18)),
-                      const SizedBox(width: AppSpacing.xs),
-                      Flexible(
-                        child: Text(
-                          '${circle.streakDays} DÍAS RACHA CLAN',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.water_drop_rounded,
-                        size: 16,
-                        color: AppColors.tertiary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${circle.constancyDropsEarned}',
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                      child: Text(
+                        '🔥 LOBBY SAGRADO ACTIVO',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelSmall?.copyWith(
                           color: AppColors.tertiary,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    child: LinearProgressIndicator(
-                      value: circle.progress,
-                      minHeight: 8,
-                      backgroundColor: AppColors.surfaceContainer,
-                      color: AppColors.primary,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const Spacer(),
+                  const Icon(
+                    Icons.group_rounded,
+                    size: 16,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
                   Text(
-                    '${circle.completedMembers} de ${circle.totalMembers} miembros completaron hoy',
-                    style: textTheme.bodySmall?.copyWith(
+                    '${circle.totalMembers} Guerreros',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.labelMedium?.copyWith(
                       color: AppColors.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (circle.freezesAvailable > 0) ...[
-                    const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AdaptiveGlassCard(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('🛡️', style: TextStyle(fontSize: 14)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${circle.freezesAvailable} escudo(s) de racha disponibles',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: AppColors.onSurfaceVariant,
+                        Container(
+                          width: 48,
+                          height: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.primaryContainer,
+                                AppColors.primary,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                          ),
+                          child: Text(
+                            'LVL $clanLevel',
+                            textAlign: TextAlign.center,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                circle.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                circle.category,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      children: [
+                        const Text('🔥', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: AppSpacing.xs),
+                        Flexible(
+                          child: Text(
+                            '${circle.streakDays} DÍAS RACHA CLAN',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.water_drop_rounded,
+                          size: 16,
+                          color: AppColors.tertiary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${circle.constancyDropsEarned}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.tertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      child: LinearProgressIndicator(
+                        value: circle.progress,
+                        minHeight: 8,
+                        backgroundColor: AppColors.surfaceContainer,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '${circle.completedMembers} de ${circle.totalMembers} miembros completaron hoy',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                    if (circle.freezesAvailable > 0) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          const Text('🛡️', style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${circle.freezesAvailable} escudo(s) de racha disponibles',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _InviteCodeCard(code: circle.inviteCode),
-            const SizedBox(height: AppSpacing.xl2),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    leaderboard.isNotEmpty
-                        ? 'Guerreros de Guardia'
-                        : 'Guerreros de Guardia (simulados)',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+              const SizedBox(height: AppSpacing.xl),
+              _InviteCodeCard(code: circle.inviteCode),
+              const SizedBox(height: AppSpacing.xl2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      leaderboard.isNotEmpty
+                          ? 'Guerreros de Guardia'
+                          : 'Guerreros de Guardia (simulados)',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
+                  Text(
+                    '${circle.completedMembers}/${circle.totalMembers} sin romper racha',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                leaderboard.isNotEmpty
+                    ? 'Competencia real contra quienes se unieron con el '
+                          'código de invitación.'
+                    : 'Todavía nadie se unió con el código real — estos son '
+                          'marcadores locales, no cuentas de verdad.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
                 ),
-                Text(
-                  '${circle.completedMembers}/${circle.totalMembers} sin romper racha',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (leaderboard.isNotEmpty)
+                for (final entry in leaderboard) ...[
+                  _WarriorTile(
+                    username: entry.isCurrentUser
+                        ? '${entry.username} (TÚ)'
+                        : entry.username,
+                    level: _levelFor(entry.streakDays),
+                    drops: entry.dropsEarned,
+                    streakDays: entry.streakDays,
+                    checkedInToday: entry.checkedInToday,
+                    isCurrentUser: entry.isCurrentUser,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ]
+              else
+                for (var i = 0; i < circle.members.length; i++) ...[
+                  _MemberTile(
+                    label: circle.members[i],
+                    isSample: i == 0,
+                    // El índice 0 es siempre "Tú" (el único miembro real): su
+                    // estado de check-in refleja circle.checkedInToday. Los
+                    // demás son miembros simulados (sin backend) y se
+                    // muestran siempre completados, salvo el pendiente de
+                    // invitación.
+                    done: i == 0 ? circle.checkedInToday : true,
+                    isPending: circle.pendingMemberName == circle.members[i],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              const SizedBox(height: AppSpacing.md),
+              _InviteMoreWarriorsBanner(
+                onInvite: () =>
+                    _showInviteMemberDialog(context, onInviteMember),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onCheckIn,
+                  icon: Icon(
+                    circle.checkedInToday
+                        ? Icons.check_circle_rounded
+                        : Icons.playlist_add_check_rounded,
+                  ),
+                  label: Text(
+                    circle.checkedInToday
+                        ? 'Ya hiciste check-in hoy'
+                        : 'Hacer check-in',
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              leaderboard.isNotEmpty
-                  ? 'Competencia real contra quienes se unieron con el '
-                        'código de invitación.'
-                  : 'Todavía nadie se unió con el código real — estos son '
-                        'marcadores locales, no cuentas de verdad.',
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            if (leaderboard.isNotEmpty)
-              for (final entry in leaderboard) ...[
-                _WarriorTile(
-                  username: entry.isCurrentUser
-                      ? '${entry.username} (TÚ)'
-                      : entry.username,
-                  level: _levelFor(entry.streakDays),
-                  drops: entry.dropsEarned,
-                  streakDays: entry.streakDays,
-                  checkedInToday: entry.checkedInToday,
-                  isCurrentUser: entry.isCurrentUser,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ]
-            else
-              for (var i = 0; i < circle.members.length; i++) ...[
-                _MemberTile(
-                  label: circle.members[i],
-                  isSample: i == 0,
-                  // El índice 0 es siempre "Tú" (el único miembro real): su
-                  // estado de check-in refleja circle.checkedInToday. Los
-                  // demás son miembros simulados (sin backend) y se
-                  // muestran siempre completados, salvo el pendiente de
-                  // invitación.
-                  done: i == 0 ? circle.checkedInToday : true,
-                  isPending: circle.pendingMemberName == circle.members[i],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-            const SizedBox(height: AppSpacing.md),
-            _InviteMoreWarriorsBanner(
-              onInvite: () => _showInviteMemberDialog(context, onInviteMember),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onCheckIn,
-                icon: Icon(
-                  circle.checkedInToday
-                      ? Icons.check_circle_rounded
-                      : Icons.playlist_add_check_rounded,
-                ),
-                label: Text(
-                  circle.checkedInToday
-                      ? 'Ya hiciste check-in hoy'
-                      : 'Hacer check-in',
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onOpenGames,
+                  icon: const Icon(Icons.sports_esports_rounded),
+                  label: const Text('Entrar a la Zona de Juegos'),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onOpenGames,
-                icon: const Icon(Icons.sports_esports_rounded),
-                label: const Text('Entrar a la Zona de Juegos'),
-              ),
-            ),
             ],
           ),
         ),
@@ -454,9 +455,7 @@ class _WarriorTile extends StatelessWidget {
                     ? Icons.check_circle_rounded
                     : Icons.radio_button_unchecked_rounded,
                 size: 16,
-                color: checkedInToday
-                    ? AppColors.primary
-                    : AppColors.outline,
+                color: checkedInToday ? AppColors.primary : AppColors.outline,
               ),
             ],
           ),
@@ -597,7 +596,6 @@ class _InviteCodeCard extends StatelessWidget {
   }
 }
 
-
 class _MemberTile extends StatelessWidget {
   const _MemberTile({
     required this.label,
@@ -618,7 +616,9 @@ class _MemberTile extends StatelessWidget {
     if (trimmed.isEmpty) return '?';
     final parts = trimmed.split(RegExp(r'\s+'));
     if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length.clamp(0, 2)).toUpperCase();
+      return parts.first
+          .substring(0, parts.first.length.clamp(0, 2))
+          .toUpperCase();
     }
     return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
         .toUpperCase();

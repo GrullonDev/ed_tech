@@ -819,7 +819,9 @@ class _ClanStreakCard extends StatelessWidget {
             Row(
               children: [
                 SizedBox(
-                  width: 20.0 * visibleMembers.length + (extraMembers > 0 ? 24 : 0),
+                  width:
+                      20.0 * visibleMembers.length +
+                      (extraMembers > 0 ? 24 : 0),
                   height: 24,
                   child: Stack(
                     children: [

@@ -4,7 +4,11 @@
 /// (Predicción de Tribu), y el perfil se vuelve distinto entre usuarios que
 /// llevan tiempo jugando.
 class AvatarOption {
-  const AvatarOption({required this.id, required this.emoji, required this.cost});
+  const AvatarOption({
+    required this.id,
+    required this.emoji,
+    required this.cost,
+  });
 
   final String id;
   final String emoji;

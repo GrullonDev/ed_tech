@@ -54,9 +54,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.dark(), home: child),
-    );
+    await tester.pumpWidget(MaterialApp(theme: AppTheme.dark(), home: child));
     await tester.pumpAndSettle();
   }
 
@@ -66,7 +64,8 @@ void main() {
   Future<bool> asyncTrue() async => true;
   Future<String?> asyncNullArg1(Object _) async => null;
 
-  final longCircleName = 'Círculo con un nombre extremadamente largo para '
+  final longCircleName =
+      'Círculo con un nombre extremadamente largo para '
       'forzar el límite del layout';
   final circles = [
     HabitCircle(
@@ -84,14 +83,18 @@ void main() {
   ];
 
   final todayHabits = [
-    TodayHabit(label: 'Un hábito con un nombre bastante largo también', done: true),
+    TodayHabit(
+      label: 'Un hábito con un nombre bastante largo también',
+      done: true,
+    ),
     TodayHabit(label: 'Otro', done: false),
   ];
 
   final activityFeed = [
     ActivityEvent(
       emoji: '🔥',
-      message: 'Un mensaje de actividad muy largo que debería truncarse o '
+      message:
+          'Un mensaje de actividad muy largo que debería truncarse o '
           'ajustarse sin romper el layout de la tarjeta del feed',
       at: DateTime.now(),
       reactedByUids: ['a', 'b', 'c'],
@@ -99,7 +102,7 @@ void main() {
   ];
 
   final leaderboard = [
-    LeaderboardEntry(
+    const LeaderboardEntry(
       uid: '1',
       username: 'Usuario_Con_Nombre_De_Verdad_Largo',
       streakDays: 47,
@@ -107,7 +110,7 @@ void main() {
       checkedInToday: true,
       isCurrentUser: true,
     ),
-    LeaderboardEntry(
+    const LeaderboardEntry(
       uid: '2',
       username: 'Otro',
       streakDays: 3,
@@ -182,7 +185,7 @@ void main() {
           onOpenRachas: noop0,
           onOpenGames: noop0,
           onOpenProfile: noop0,
-          onInviteMember: (_, __) {},
+          onInviteMember: (_, _) {},
           allies: const ['Aliado uno', 'Aliado dos'],
           onChallengeAlly: asyncNullArg1,
         ),
@@ -251,7 +254,10 @@ void main() {
           userLevel: 28,
           circles: circles,
           pendingAllyRequests: [
-            AllyRequest(fromUsername: 'Un aliado con nombre largo', sentAt: DateTime.now()),
+            AllyRequest(
+              fromUsername: 'Un aliado con nombre largo',
+              sentAt: DateTime.now(),
+            ),
           ],
           onAcceptAllyRequest: noop1,
           onRejectAllyRequest: noop1,
@@ -264,7 +270,7 @@ void main() {
           linkedProviderIds: const [],
           onLinkWithGoogle: asyncNull,
           onLinkWithApple: asyncNull,
-          onLinkWithEmailPassword: (_, __) async => null,
+          onLinkWithEmailPassword: (_, _) async => null,
           liquidGlassEnabled: true,
           onLiquidGlassChanged: noop1,
           unlockedStreakCardMilestones: const [7, 21],

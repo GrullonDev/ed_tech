@@ -381,9 +381,8 @@ class _DailyMissionsCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Progreso del día',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               Text(

@@ -381,8 +381,7 @@ class HomeLogic extends ChangeNotifier {
   String get selectedAvatarId => _selectedAvatarId;
 
   /// Emoji del avatar actualmente elegido, listo para mostrar en el perfil.
-  String get selectedAvatarEmoji =>
-      AvatarCatalog.byId(_selectedAvatarId).emoji;
+  String get selectedAvatarEmoji => AvatarCatalog.byId(_selectedAvatarId).emoji;
 
   /// Gasta las Gotas de Constancia de [AvatarOption.cost] para desbloquear
   /// [avatarId] y lo deja seleccionado de una — retorna `false` sin hacer

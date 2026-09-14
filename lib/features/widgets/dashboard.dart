@@ -120,7 +120,9 @@ class Dashboard extends StatelessWidget {
                 streakDays: overallStreakDays,
                 onIgnite: nextPendingHabit != null
                     ? () => onToggleTodayHabit(nextPendingHabit!)
-                    : (circles.isEmpty ? onCreateCircle : () => onCheckIn(circles.first)),
+                    : (circles.isEmpty
+                          ? onCreateCircle
+                          : () => onCheckIn(circles.first)),
               ),
               const SizedBox(height: AppSpacing.xl2),
               _AscensionTotemSection(streakDays: overallStreakDays),
@@ -410,12 +412,12 @@ class _ManageCirclesSheet extends StatelessWidget {
                           ),
                       IconButton(
                         tooltip: 'Retar a un duelo 1v1',
-                        icon: const Text(
-                          '🔥',
-                          style: TextStyle(fontSize: 16),
+                        icon: const Text('🔥', style: TextStyle(fontSize: 16)),
+                        onPressed: () => _challengeAllyAndNotify(
+                          context,
+                          ally,
+                          onChallengeAlly,
                         ),
-                        onPressed: () =>
-                            _challengeAllyAndNotify(context, ally, onChallengeAlly),
                       ),
                     ],
                   ),
@@ -438,9 +440,7 @@ Future<void> _challengeAllyAndNotify(
   final error = await onChallengeAlly(allyUsername);
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(error ?? '¡Reto enviado a @$allyUsername!'),
-    ),
+    SnackBar(content: Text(error ?? '¡Reto enviado a @$allyUsername!')),
   );
 }
 
@@ -640,7 +640,9 @@ class _TopBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Flexible(child: _StreakPill(days: streakDays, pulseTick: pulseTick)),
+        Flexible(
+          child: _StreakPill(days: streakDays, pulseTick: pulseTick),
+        ),
       ],
     );
   }
@@ -727,7 +729,7 @@ class _StreakHeroCard extends StatelessWidget {
           Container(
             width: 88,
             height: 88,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.background,
               boxShadow: AppShadows.streak,
@@ -988,11 +990,7 @@ class _GamesPreviewSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Row(
-          children: [
-            Expanded(
-              child: _GamePreviewCard(onTap: onOpenGames),
-            ),
-          ],
+          children: [Expanded(child: _GamePreviewCard(onTap: onOpenGames))],
         ),
       ],
     );
@@ -1037,9 +1035,7 @@ class _GamePreviewCard extends StatelessWidget {
                   Text(
                     'Desafío del día, Ruleta, Duelo semanal y más — ganá '
                     'gotas jugando.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Colors.white70,
-                    ),
+                    style: textTheme.bodySmall?.copyWith(color: Colors.white70),
                   ),
                 ],
               ),

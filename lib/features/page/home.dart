@@ -209,6 +209,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onOpenProfile: _openProfile,
           onInviteMember: _logic.addMemberToCircle,
           allies: _logic.allies,
+          onChallengeAlly: _logic.challengeAlly,
         );
       },
     );
@@ -294,6 +295,8 @@ class _MyHomePageState extends State<MyHomePage> {
             allyUsernameController: _logic.allyUsernameController,
             onSendAllyRequest: _logic.sendAllyRequest,
             activityFeed: _logic.activityFeed,
+            hasReactedTo: _logic.hasReactedTo,
+            onToggleReaction: _logic.toggleActivityReaction,
           ),
         ),
       ),
@@ -346,6 +349,9 @@ class _MyHomePageState extends State<MyHomePage> {
             unlockedAvatarIds: _logic.unlockedAvatarIds,
             onUnlockAvatar: _logic.unlockAvatar,
             onSelectAvatar: _logic.selectAvatar,
+            incomingChallenges: _logic.incomingChallenges,
+            onAcceptChallenge: _logic.acceptChallenge,
+            onDeclineChallenge: _logic.declineChallenge,
           ),
         ),
       ),

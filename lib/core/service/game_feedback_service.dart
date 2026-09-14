@@ -29,6 +29,15 @@ class GameFeedbackService {
     unawaited(HapticFeedback.selectionClick());
   }
 
+  /// Revelar una Carta de Racha (hito de 7/21/30/50/100 días) — el momento
+  /// más importante de la progresión, así que el feedback es más grande que
+  /// el del check-in normal: impacto pesado + una fanfarria de 4 notas en
+  /// vez del chime de dos notas.
+  static Future<void> milestone() async {
+    unawaited(HapticFeedback.heavyImpact());
+    await _play('sounds/milestone.wav');
+  }
+
   static Future<void> _play(String assetPath) async {
     try {
       await _player.stop();

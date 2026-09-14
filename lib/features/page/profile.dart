@@ -1,10 +1,14 @@
 import 'dart:io' show Platform;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
+
+import 'package:confetti/confetti.dart';
 
 import 'package:edtech_tiktok/core/data/avatar_catalog.dart';
 import 'package:edtech_tiktok/core/data/streak_cards.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
+import 'package:edtech_tiktok/core/model/challenge.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/streak_card.dart';
@@ -69,6 +73,9 @@ class ProfilePage extends StatelessWidget {
     required this.unlockedAvatarIds,
     required this.onUnlockAvatar,
     required this.onSelectAvatar,
+    required this.incomingChallenges,
+    required this.onAcceptChallenge,
+    required this.onDeclineChallenge,
   });
 
   final String username;
@@ -154,6 +161,15 @@ class ProfilePage extends StatelessWidget {
 
   /// Cambia el avatar mostrado, si ya está desbloqueado.
   final ValueChanged<String> onSelectAvatar;
+
+  /// Retos 1v1 pendientes recibidos de un aliado real (ver
+  /// `HomeLogic.challengeAlly`).
+  final List<Challenge> incomingChallenges;
+
+  /// Acepta el reto: se une al círculo del duelo. Retorna `null` si salió
+  /// bien, o un mensaje de error para mostrar en un SnackBar.
+  final Future<String?> Function(Challenge challenge) onAcceptChallenge;
+  final ValueChanged<Challenge> onDeclineChallenge;
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +305,14 @@ class ProfilePage extends StatelessWidget {
                     liquidGlassEnabled: liquidGlassEnabled,
                     onLiquidGlassChanged: onLiquidGlassChanged,
                   ),
+                  if (incomingChallenges.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _IncomingChallengesSection(
+                      challenges: incomingChallenges,
+                      onAccept: onAcceptChallenge,
+                      onDecline: onDeclineChallenge,
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xl2),
                   Row(
                     children: [
@@ -527,6 +551,103 @@ class ProfilePage extends StatelessWidget {
   }
 
   static String _currentMonthName() => _kMonthNames[DateTime.now().month - 1];
+}
+
+/// Retos 1v1 pendientes de un aliado real (ver `HomeLogic.challengeAlly`) —
+/// aceptar une al usuario a un círculo de duelo real de verdad, rechazar
+/// solo descarta la invitación.
+class _IncomingChallengesSection extends StatefulWidget {
+  const _IncomingChallengesSection({
+    required this.challenges,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  final List<Challenge> challenges;
+  final Future<String?> Function(Challenge challenge) onAccept;
+  final ValueChanged<Challenge> onDecline;
+
+  @override
+  State<_IncomingChallengesSection> createState() =>
+      _IncomingChallengesSectionState();
+}
+
+class _IncomingChallengesSectionState
+    extends State<_IncomingChallengesSection> {
+  String? _acceptingChallengeId;
+
+  Future<void> _accept(Challenge challenge) async {
+    setState(() => _acceptingChallengeId = challenge.id);
+    final error = await widget.onAccept(challenge);
+    if (!mounted) return;
+    setState(() => _acceptingChallengeId = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error ?? '¡Duelo aceptado contra @${challenge.fromUsername}!',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return AdaptiveGlassCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🔥', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'Retos pendientes',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (final challenge in widget.challenges) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '@${challenge.fromUsername} te retó a un duelo 1v1',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => widget.onDecline(challenge),
+                    child: const Text('Rechazar'),
+                  ),
+                  FilledButton(
+                    onPressed: _acceptingChallengeId == challenge.id
+                        ? null
+                        : () => _accept(challenge),
+                    child: _acceptingChallengeId == challenge.id
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Aceptar'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 /// "Apariencia": switch para prender/apagar el efecto "Liquid Glass" en
@@ -1465,9 +1586,160 @@ class _StreakCardsGallery extends StatelessWidget {
             card: card,
             unlocked: unlocked,
             sealed: sealed,
-            onTap: sealed ? () => onOpenCard(card.milestoneDays) : null,
+            onTap: sealed
+                ? () => _revealStreakCard(context, card, onOpenCard)
+                : null,
           );
         },
+      ),
+    );
+  }
+}
+
+/// Revela [card] con una celebración a pantalla completa (confetti propio +
+/// el sonido/haptic de [HomeLogic.openStreakCard], que se dispara al llamar
+/// [onOpenCard] acá mismo) en vez de solo voltear la miniatura en la
+/// grilla — este es el hito más importante de la progresión (7/21/30/50/100
+/// días), así que merece el momento más grande de toda la app.
+///
+/// El confetti vive en este diálogo (no en el overlay global de
+/// `home.dart`) porque `ProfilePage` es una ruta empujada por `Navigator`
+/// distinta de `MyHomePage` — el overlay de `home.dart` queda tapado detrás
+/// de rutas opacas como esta, así que un confetti propio es la única forma
+/// de que se vea acá.
+void _revealStreakCard(
+  BuildContext context,
+  StreakCard card,
+  ValueChanged<int> onOpenCard,
+) {
+  onOpenCard(card.milestoneDays);
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (context) => _StreakCardRevealDialog(card: card),
+  );
+}
+
+class _StreakCardRevealDialog extends StatefulWidget {
+  const _StreakCardRevealDialog({required this.card});
+
+  final StreakCard card;
+
+  @override
+  State<_StreakCardRevealDialog> createState() =>
+      _StreakCardRevealDialogState();
+}
+
+class _StreakCardRevealDialogState extends State<_StreakCardRevealDialog> {
+  late final ConfettiController _confettiController = ConfettiController(
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _confettiController.play();
+    });
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(AppSpacing.lg),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xl2),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              boxShadow: AppShadows.card,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '¡Carta desbloqueada!',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.3, end: 1),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.elasticOut,
+                  builder: (context, scale, child) =>
+                      Transform.scale(scale: scale, child: child),
+                  child: Text(
+                    widget.card.emoji,
+                    style: const TextStyle(fontSize: 72),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  widget.card.title,
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${widget.card.milestoneDays} días de racha',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  widget.card.flavorText,
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Genial'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: -20,
+            child: IgnorePointer(
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirection: pi / 2,
+                blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 32,
+                maxBlastForce: 16,
+                minBlastForce: 8,
+                gravity: 0.35,
+                shouldLoop: false,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

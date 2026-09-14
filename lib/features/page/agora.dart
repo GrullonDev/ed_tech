@@ -20,6 +20,8 @@ class AgoraPage extends StatelessWidget {
     required this.allyUsernameController,
     required this.onSendAllyRequest,
     required this.activityFeed,
+    required this.hasReactedTo,
+    required this.onToggleReaction,
   });
 
   final List<HabitCircle> circles;
@@ -35,6 +37,15 @@ class AgoraPage extends StatelessWidget {
   /// Feed de actividad de la tribu (check-ins, hitos, escudos usados, nuevos
   /// miembros, aliados), más reciente primero.
   final List<ActivityEvent> activityFeed;
+
+  /// `true` si el usuario actual ya reaccionó 🔥 a ese evento (ver
+  /// `HomeLogic.hasReactedTo`).
+  final bool Function(ActivityEvent event) hasReactedTo;
+
+  /// Alterna la reacción 🔥 del usuario actual sobre un evento (ver
+  /// `HomeLogic.toggleActivityReaction`) — el feed deja de ser de solo
+  /// lectura.
+  final ValueChanged<ActivityEvent> onToggleReaction;
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +102,11 @@ class AgoraPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                _ActivityFeedCard(events: activityFeed),
+                _ActivityFeedCard(
+                  events: activityFeed,
+                  hasReactedTo: hasReactedTo,
+                  onToggleReaction: onToggleReaction,
+                ),
               ],
             ],
           ),
@@ -106,9 +121,15 @@ class AgoraPage extends StatelessWidget {
 /// usado, nuevo miembro, aliado). Refuerza la sensación de vida social del
 /// Ágora incluso antes de tener sync remoto entre dispositivos.
 class _ActivityFeedCard extends StatelessWidget {
-  const _ActivityFeedCard({required this.events});
+  const _ActivityFeedCard({
+    required this.events,
+    required this.hasReactedTo,
+    required this.onToggleReaction,
+  });
 
   final List<ActivityEvent> events;
+  final bool Function(ActivityEvent event) hasReactedTo;
+  final ValueChanged<ActivityEvent> onToggleReaction;
 
   @override
   Widget build(BuildContext context) {
@@ -135,22 +156,39 @@ class _ActivityFeedCard extends StatelessWidget {
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.sm,
               ),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(events[i].emoji, style: const TextStyle(fontSize: 18)),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      events[i].message,
-                      style: textTheme.bodySmall?.copyWith(height: 1.4),
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        events[i].emoji,
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          events[i].message,
+                          style: textTheme.bodySmall?.copyWith(height: 1.4),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        _relativeTime(events[i].at),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    _relativeTime(events[i].at),
-                    style: textTheme.labelSmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                  const SizedBox(height: AppSpacing.xs),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 26),
+                    child: _ReactionChip(
+                      count: events[i].reactedByUids.length,
+                      reacted: hasReactedTo(events[i]),
+                      onTap: () => onToggleReaction(events[i]),
                     ),
                   ),
                 ],
@@ -170,6 +208,57 @@ class _ActivityFeedCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes} min';
     if (diff.inHours < 24) return '${diff.inHours} h';
     return '${diff.inDays} d';
+  }
+}
+
+/// Chip de reacción 🔥 tocable — el Ágora deja de ser de solo lectura. Sin
+/// contador muestra solo el emoji apagado; con reacciones propias se ve
+/// relleno y con el número. Real entre cuentas de verdad para eventos de
+/// círculo compartido (ver `HomeLogic.toggleActivityReaction`), local para
+/// eventos puramente del dispositivo (aliados/miembros simulados).
+class _ReactionChip extends StatelessWidget {
+  const _ReactionChip({
+    required this.count,
+    required this.reacted,
+    required this.onTap,
+  });
+
+  final int count;
+  final bool reacted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return GamePressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+        decoration: BoxDecoration(
+          color: reacted ? AppColors.completedGlow : AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(
+            color: reacted ? AppColors.secondary : AppColors.outlineWhisper,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 12, height: 1)),
+            if (count > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '$count',
+                style: textTheme.labelSmall?.copyWith(
+                  color: reacted ? AppColors.secondary : AppColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 

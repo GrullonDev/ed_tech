@@ -32,6 +32,7 @@ class Dashboard extends StatelessWidget {
     required this.onOpenProfile,
     required this.onInviteMember,
     required this.allies,
+    required this.onChallengeAlly,
   });
 
   final String username;
@@ -55,6 +56,10 @@ class Dashboard extends StatelessWidget {
   final VoidCallback onOpenGames;
   final VoidCallback onOpenProfile;
   final void Function(HabitCircle circle, String name) onInviteMember;
+
+  /// Reta a un aliado real a un duelo 1v1 (ver `HomeLogic.challengeAlly`) —
+  /// retorna `null` si se envió con éxito, o un mensaje de error.
+  final Future<String?> Function(String allyUsername) onChallengeAlly;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +164,7 @@ class Dashboard extends StatelessWidget {
                             allies: allies,
                             onOpenCircle: onOpenCircle,
                             onInviteMember: onInviteMember,
+                            onChallengeAlly: onChallengeAlly,
                           ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -214,6 +220,7 @@ void _showManageCirclesSheet(
   required List<String> allies,
   required ValueChanged<HabitCircle> onOpenCircle,
   required void Function(HabitCircle circle, String name) onInviteMember,
+  required Future<String?> Function(String allyUsername) onChallengeAlly,
 }) {
   showModalBottomSheet<void>(
     context: context,
@@ -239,6 +246,7 @@ void _showManageCirclesSheet(
           onInviteMember(circle, name);
           setSheetState(() {});
         },
+        onChallengeAlly: onChallengeAlly,
       ),
     ),
   );
@@ -250,12 +258,14 @@ class _ManageCirclesSheet extends StatelessWidget {
     required this.allies,
     required this.onOpenCircle,
     required this.onInviteMember,
+    required this.onChallengeAlly,
   });
 
   final List<HabitCircle> circles;
   final List<String> allies;
   final ValueChanged<HabitCircle> onOpenCircle;
   final void Function(HabitCircle circle, String name) onInviteMember;
+  final Future<String?> Function(String allyUsername) onChallengeAlly;
 
   @override
   Widget build(BuildContext context) {
@@ -385,6 +395,15 @@ class _ManageCirclesSheet extends StatelessWidget {
                             ),
                             child: const Text('Agregar'),
                           ),
+                      IconButton(
+                        tooltip: 'Retar a un duelo 1v1',
+                        icon: const Text(
+                          '🔥',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        onPressed: () =>
+                            _challengeAllyAndNotify(context, ally, onChallengeAlly),
+                      ),
                     ],
                   ),
                 ),
@@ -393,6 +412,23 @@ class _ManageCirclesSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Envía el reto y muestra el resultado en un SnackBar — el propio reto
+/// crea un círculo de duelo real (ver `HomeLogic.challengeAlly`), así que
+/// no hace falta ninguna otra confirmación acá.
+Future<void> _challengeAllyAndNotify(
+  BuildContext context,
+  String allyUsername,
+  Future<String?> Function(String) onChallengeAlly,
+) async {
+  final error = await onChallengeAlly(allyUsername);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(error ?? '¡Reto enviado a @$allyUsername!'),
+    ),
+  );
 }
 
 /// Si hay un solo círculo lo agrega directo; con varios, pide elegir cuál.

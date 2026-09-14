@@ -36,6 +36,9 @@ class CreateHabitPage extends StatefulWidget {
 }
 
 class _CreateHabitPageState extends State<CreateHabitPage> {
+  final _inviteCodeController = TextEditingController();
+  bool _joiningCircle = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +50,27 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
   void dispose() {
     widget.logic.habitNameController.removeListener(_onFieldsChanged);
     widget.logic.habitCategoryController.removeListener(_onFieldsChanged);
+    _inviteCodeController.dispose();
     super.dispose();
+  }
+
+  /// Une esta cuenta real a un círculo existente vía código de invitación
+  /// (competencia real contra otras cuentas, ver
+  /// `HomeLogic.joinCircleWithInviteCode`) — distinto de crear un círculo
+  /// nuevo o de "Invitar a un amigo" (que solo agrega un nombre local sin
+  /// backend dentro de un círculo ya creado por vos).
+  Future<void> _joinWithCode() async {
+    final code = _inviteCodeController.text.trim();
+    if (code.isEmpty || _joiningCircle) return;
+    setState(() => _joiningCircle = true);
+    final error = await widget.logic.joinCircleWithInviteCode(code);
+    if (!mounted) return;
+    setState(() => _joiningCircle = false);
+    if (error == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 
   /// Los controladores son de [widget.logic] (sobreviven a esta pantalla),
@@ -145,6 +168,56 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
               enabled: canSubmit,
               label: 'Crear círculo',
               icon: const Icon(Icons.add_circle_outlined),
+            ),
+            const SizedBox(height: AppSpacing.xl2),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                  child: Text(
+                    'o',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              '¿Ya tenés un código de invitación?',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Unite al círculo de un amigo — competencia real, no un '
+              'nombre simulado.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: _inviteCodeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Código de invitación',
+                prefixIcon: Icon(Icons.tag_rounded),
+              ),
+              onSubmitted: (_) => _joinWithCode(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AdaptiveGlassButton(
+              onTap: _joiningCircle ? () {} : _joinWithCode,
+              enabled: !_joiningCircle,
+              label: _joiningCircle ? 'Uniéndome...' : 'Unirme con código',
+              icon: const Icon(Icons.group_add_rounded),
             ),
           ],
           ),

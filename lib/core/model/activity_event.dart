@@ -15,18 +15,37 @@ class ActivityEvent {
     required this.message,
     required this.at,
     this.id,
-  });
+    this.circleId,
+    List<String>? reactedByUids,
+  }) : reactedByUids = reactedByUids ?? [];
 
   final String? id;
   final String emoji;
   final String message;
   final DateTime at;
 
+  /// ID del círculo dueño de este evento en Firestore (`circles/{circleId}`,
+  /// ver `HomeLogic._watchCircleActivityEvents`), o `null` para eventos
+  /// puramente locales (aliados, miembros simulados) — sin esto no hay
+  /// dónde escribir la reacción de [reactedByUids] cuando se sincroniza con
+  /// otros dispositivos (ver `HomeLogic.toggleActivityReaction`).
+  final String? circleId;
+
+  /// UIDs (o el `playerId` local si no hay sesión de Firebase, ver
+  /// `HomeLogic.toggleActivityReaction`) de quienes reaccionaron con 🔥 a
+  /// este evento — el Ágora deja de ser de solo lectura. Mutable a
+  /// propósito: se actualiza en el mismo objeto para que la UI (que sostiene
+  /// una referencia a través de `HomeLogic.activityFeed`) refleje el cambio
+  /// sin tener que reconstruir toda la lista.
+  final List<String> reactedByUids;
+
   Map<String, dynamic> toMap() => {
     'id': id,
     'emoji': emoji,
     'message': message,
     'at': at.toIso8601String(),
+    'circleId': circleId,
+    'reactedByUids': reactedByUids,
   };
 
   factory ActivityEvent.fromMap(Map<dynamic, dynamic> map) => ActivityEvent(
@@ -34,5 +53,9 @@ class ActivityEvent {
     emoji: map['emoji'] as String,
     message: map['message'] as String,
     at: DateTime.parse(map['at'] as String),
+    circleId: map['circleId'] as String?,
+    reactedByUids: (map['reactedByUids'] as List?)
+        ?.map((e) => e as String)
+        .toList(),
   );
 }

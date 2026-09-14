@@ -64,12 +64,23 @@ circles/{circleId}
 
   circles/{circleId}/activityEvents/{eventId}  -- solo Cloud Functions escribe (Fase 6, plan Blaze)
     actorId, type, emoji, message, payload, createdAt
+    reactedBy: string[]  -- ÚNICO campo que el cliente puede tocar (ver
+                          -- HomeLogic.toggleActivityReaction): reacción 🔥
+                          -- del Ágora, cualquier miembro del círculo puede
+                          -- agregarse/quitarse de esta lista.
 
 allyRequests/{fromUid_toUid}     -- escrito directo por el cliente (Fase 3), sin Cloud Function
   fromUserId, toUserId: string
   fromUsername, toUsername: string  -- denormalizados para no tener que leer users/{uid} aparte
   status: 'pending' | 'accepted' | 'rejected'
   sentAt: Timestamp
+
+challenges/{challengeId}         -- escrito directo por el cliente, sin Cloud Function
+  fromUid, toUid: string
+  fromUsername, toUsername: string
+  circleId, circleName, inviteCode: string  -- el círculo de 2 miembros del duelo
+  status: 'pending' | 'accepted' | 'declined'
+  createdAt: Timestamp
 
 triviaQuestions/{questionId}     -- banco del "Desafío del día" (mini-juego del dashboard)
   question: string
@@ -124,8 +135,9 @@ desde `functions/`). Usa IDs de documento determinísticos (`q-000`,
 | `HabitCircle.claimedFreezeMilestones` | `circles/{circleId}/streakShieldGrants` | |
 | `HabitCircle.streakDays` / `.longestStreakDays` / `.constancyDropsEarned` | `memberStats.*` | Calculados por `functions/src/streakLogic.ts`, mismo algoritmo que el getter Dart. |
 | `AllyRequest` + lista local `allies` | `allyRequests/{fromUid_toUid}` | El estado `accepted`/`rejected` reemplaza el flujo simulado. Los "aliados" son las solicitudes con `status == 'accepted'` (consulta directa, no hace falta colección aparte). |
-| `ActivityEvent` (círculo) | `circles/{circleId}/activityEvents` | Fase 6: lo escribe la Cloud Function correspondiente (trigger de `checkIns`/`members`/escudos), nunca el cliente — ver más abajo. |
-| `ActivityEvent` (aliados, miembros simulados) | Solo local (Hive), sin colección Firestore | No son eventos de un círculo compartido; cada dispositivo ya se entera por su propio listener de `allyRequests` (Fase 3) o no representan un usuario real (`addMemberToCircle`). |
+| `ActivityEvent` (círculo) | `circles/{circleId}/activityEvents` | Fase 6: lo escribe la Cloud Function correspondiente (trigger de `checkIns`/`members`/escudos), nunca el cliente — ver más abajo. `ActivityEvent.reactedByUids` es la excepción: mapea a `reactedBy`, el único campo que el cliente puede actualizar directo (reacción 🔥 del Ágora). |
+| `ActivityEvent` (aliados, miembros simulados) | Solo local (Hive), sin colección Firestore | No son eventos de un círculo compartido; cada dispositivo ya se entera por su propio listener de `allyRequests` (Fase 3) o no representan un usuario real (`addMemberToCircle`). Acá `reactedByUids` también es solo local (usa `HomeLogic._playerId` en vez de un uid real). |
+| `Challenge` | `challenges/{challengeId}` | Reto 1v1 entre dos aliados reales (ver `HomeLogic.challengeAlly`) — mismo patrón que `AllyRequest`, escrito directo por el cliente sin Cloud Function. |
 
 ## Por qué el feed y los escudos viven en Cloud Functions
 

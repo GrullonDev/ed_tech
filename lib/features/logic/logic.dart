@@ -22,6 +22,7 @@ import 'package:edtech_tiktok/core/data/trivia_bank.dart';
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
 import 'package:edtech_tiktok/core/model/app_user.dart';
+import 'package:edtech_tiktok/core/model/challenge.dart';
 import 'package:edtech_tiktok/core/model/check_in.dart';
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
 import 'package:edtech_tiktok/core/model/leaderboard_entry.dart';
@@ -102,6 +103,15 @@ class HomeLogic extends ChangeNotifier {
   _incomingAllyRequestsSubscription;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
   _outgoingAllyRequestsSubscription;
+
+  /// Suscripción a `challenges` con `toUid == miUid` (ver
+  /// [_watchIncomingChallenges]). Se cancela en [dispose].
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+  _incomingChallengesSubscription;
+
+  /// Retos 1v1 pendientes de aceptar/rechazar (ver [challengeAlly],
+  /// [acceptChallenge], [declineChallenge]).
+  List<Challenge> _incomingChallenges = [];
 
   /// Contador que se incrementa cada vez que se completa un hábito o
   /// check-in. Sirve como trigger para la micro-animación de pulso en el
@@ -254,6 +264,11 @@ class HomeLogic extends ChangeNotifier {
   List<AllyRequest> get pendingAllyRequests =>
       List.unmodifiable(_pendingAllyRequests);
   List<String> get allies => List.unmodifiable(_allies);
+
+  /// Retos 1v1 pendientes de aceptar/rechazar, recibidos de un aliado real
+  /// (ver [challengeAlly]).
+  List<Challenge> get incomingChallenges =>
+      List.unmodifiable(_incomingChallenges);
   List<ActivityEvent> get activityFeed => List.unmodifiable(_activityFeed);
 
   /// Contenido del código QR de "Invocar por QR": el ID de jugador local más
@@ -485,6 +500,7 @@ class HomeLogic extends ChangeNotifier {
     LocalStorageService.saveOpenedStreakCardMilestones(
       _openedStreakCardMilestones,
     );
+    unawaited(GameFeedbackService.milestone());
     _logAnalyticsEvent('streak_card_opened', {'milestone_days': milestoneDays});
     notifyListeners();
   }
@@ -742,6 +758,7 @@ class HomeLogic extends ChangeNotifier {
     }
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
+    _watchIncomingChallenges();
     _updatePrimaryCategoryUserProperty();
     unawaited(_syncTriviaQuestions());
     unawaited(_checkForUpdate());
@@ -868,6 +885,7 @@ class HomeLogic extends ChangeNotifier {
     // suscripciones a aliados/check-ins que dependen de él.
     _watchIncomingAllyRequests();
     _watchOutgoingAllyRequests();
+    _watchIncomingChallenges();
     for (final circle in _circles) {
       _watchCircleActivityEvents(circle);
     }
@@ -1360,18 +1378,43 @@ class HomeLogic extends ChangeNotifier {
       ) {
         var changed = false;
         for (final change in snapshot.docChanges) {
-          if (change.type != DocumentChangeType.added) continue;
-          if (_activityFeed.any((e) => e.id == change.doc.id)) continue;
           final data = change.doc.data();
           if (data == null) continue;
+          final reactedBy = (data['reactedBy'] as List?)
+              ?.map((e) => e as String)
+              .toList();
+          if (change.type == DocumentChangeType.modified) {
+            // Solo el campo `reactedBy` puede cambiar desde el cliente (ver
+            // firestore.rules) — actualiza en el mismo objeto para que la
+            // UI (que sostiene la referencia via `activityFeed`) refleje
+            // reacciones de otros miembros sin reconstruir la lista.
+            ActivityEvent? existing;
+            for (final e in _activityFeed) {
+              if (e.id == change.doc.id) {
+                existing = e;
+                break;
+              }
+            }
+            if (existing != null && reactedBy != null) {
+              existing.reactedByUids
+                ..clear()
+                ..addAll(reactedBy);
+              changed = true;
+            }
+            continue;
+          }
+          if (change.type != DocumentChangeType.added) continue;
+          if (_activityFeed.any((e) => e.id == change.doc.id)) continue;
           final createdAt = data['createdAt'] as Timestamp?;
           _activityFeed.insert(
             0,
             ActivityEvent(
               id: change.doc.id,
+              circleId: circle.id,
               emoji: data['emoji'] as String? ?? '🔥',
               message: data['message'] as String? ?? '',
               at: createdAt?.toDate() ?? DateTime.now(),
+              reactedByUids: reactedBy,
             ),
           );
           changed = true;
@@ -1390,6 +1433,61 @@ class HomeLogic extends ChangeNotifier {
       // Se ignora a propósito: sin Firebase configurado, la app sigue
       // funcionando 100% local con el feed de actividad generado en el
       // dispositivo (ver [_pushActivityEvent]).
+    }
+  }
+
+  /// `true` si el usuario actual ya reaccionó 🔥 a [event] — ver
+  /// [toggleActivityReaction].
+  bool hasReactedTo(ActivityEvent event) =>
+      event.reactedByUids.contains(_firebaseUid ?? _playerId);
+
+  /// Alterna la reacción 🔥 del usuario actual sobre [event] — el Ágora deja
+  /// de ser de solo lectura. Siempre actualiza el estado local primero
+  /// (feedback instantáneo, funciona incluso sin red o sin sesión de
+  /// Firebase, usando [_playerId] como identidad de respaldo — mismo
+  /// criterio que el resto de la app).
+  ///
+  /// Si [event] viene de un círculo compartido ([ActivityEvent.circleId] no
+  /// nulo) y hay sesión de Firebase, además escribe el cambio en
+  /// `circles/{circleId}/activityEvents/{eventId}.reactedBy` — el único
+  /// campo que `firestore.rules` permite tocar al cliente en ese documento
+  /// (el resto lo escriben solo las Cloud Functions, ver doc-comment de
+  /// [_watchCircleActivityEvents]) — así que **todos** los miembros del
+  /// círculo ven la misma cuenta de reacciones, no solo este dispositivo.
+  /// Eventos puramente locales (aliados, miembros simulados, `circleId ==
+  /// null`) se quedan solo con el toggle local.
+  Future<void> toggleActivityReaction(ActivityEvent event) async {
+    final myId = _firebaseUid ?? _playerId;
+    if (event.reactedByUids.contains(myId)) {
+      event.reactedByUids.remove(myId);
+    } else {
+      event.reactedByUids.add(myId);
+    }
+    LocalStorageService.saveActivityFeed(_activityFeed);
+    notifyListeners();
+
+    final circleId = event.circleId;
+    final eventId = event.id;
+    final uid = _firebaseUid;
+    if (circleId == null || eventId == null || uid == null) return;
+    try {
+      final ref = FirebaseFirestore.instance
+          .collection('circles')
+          .doc(circleId)
+          .collection('activityEvents')
+          .doc(eventId);
+      await ref.update({
+        'reactedBy': event.reactedByUids.contains(uid)
+            ? FieldValue.arrayUnion([uid])
+            : FieldValue.arrayRemove([uid]),
+      });
+    } catch (_) {
+      // Se ignora a propósito: la reacción ya quedó reflejada localmente
+      // (ver arriba); si falla la sincronización, el próximo evento
+      // `modified` de la suscripción (o simplemente tocarla de nuevo) la
+      // vuelve a intentar. No vale la pena revertir el toggle local por
+      // esto — es de bajo riesgo, a diferencia de un check-in o una gota
+      // gastada.
     }
   }
 
@@ -1564,6 +1662,132 @@ class HomeLogic extends ChangeNotifier {
       return e.message ?? 'No se pudo unir al círculo.';
     } catch (_) {
       return 'No se pudo unir al círculo. Probá de nuevo.';
+    }
+  }
+
+  /// Reta a [allyUsername] (un aliado real, ver [allies]) a un duelo 1v1 —
+  /// evolución del leaderboard por círculo hacia una competencia contra una
+  /// persona específica en vez de todo un círculo. Por debajo no inventa
+  /// una mecánica nueva: crea un círculo real de 2 miembros con
+  /// [createCircle] y usa `challenges` en Firestore solo como "invitación"
+  /// para que el aliado no tenga que escribir el código a mano (ver
+  /// [acceptChallenge]).
+  ///
+  /// Retorna `null` si el reto se envió con éxito, o un mensaje de error
+  /// para mostrarle al usuario. Requiere sesión de Firebase (para resolver
+  /// el `uid` del aliado por su username, igual que [sendAllyRequest]).
+  Future<String?> challengeAlly(String allyUsername) async {
+    final uid = _firebaseUid;
+    if (uid == null) {
+      return 'Necesitás conexión para retar a un aliado.';
+    }
+    try {
+      final matches = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: allyUsername)
+          .limit(1)
+          .get();
+      if (matches.docs.isEmpty) return 'No se encontró a @$allyUsername.';
+      final targetUid = matches.docs.first.id;
+
+      createCircle(
+        name: 'Duelo: $_username vs $allyUsername',
+        category: 'Duelo 1v1',
+      );
+      final circle = _circles.last;
+      // [createCircle] dispara el espejado a Firestore sin esperarlo
+      // (`unawaited`) — acá sí hace falta esperarlo: la Cloud Function
+      // `redeemInviteCode` que el aliado va a llamar al aceptar busca el
+      // círculo por `inviteCode` en Firestore, así que tiene que existir
+      // antes de que la invitación le llegue. Llamarlo de nuevo es
+      // inofensivo (mismo `set`, mismos datos).
+      await _mirrorCircleCreation(circle);
+
+      await FirebaseFirestore.instance.collection('challenges').add({
+        'fromUid': uid,
+        'fromUsername': _username,
+        'toUid': targetUid,
+        'toUsername': allyUsername,
+        'circleId': circle.id,
+        'circleName': circle.name,
+        'inviteCode': circle.inviteCode,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      _logAnalyticsEvent('challenge_sent', {});
+      return null;
+    } catch (_) {
+      return 'No se pudo enviar el reto. Probá de nuevo.';
+    }
+  }
+
+  /// Se suscribe a los retos 1v1 pendientes recibidos (`challenges` con
+  /// `toUid == miUid`), ver [challengeAlly]. No hace nada si no hay sesión
+  /// de Firebase.
+  void _watchIncomingChallenges() {
+    final uid = _firebaseUid;
+    if (uid == null || _incomingChallengesSubscription != null) return;
+    try {
+      _incomingChallengesSubscription = FirebaseFirestore.instance
+          .collection('challenges')
+          .where('toUid', isEqualTo: uid)
+          .where('status', isEqualTo: 'pending')
+          .snapshots()
+          .listen((snapshot) {
+            _incomingChallenges = snapshot.docs.map((doc) {
+              final data = doc.data();
+              final createdAt = data['createdAt'] as Timestamp?;
+              return Challenge(
+                id: doc.id,
+                fromUid: data['fromUid'] as String? ?? '',
+                fromUsername: data['fromUsername'] as String? ?? '',
+                toUid: data['toUid'] as String? ?? '',
+                toUsername: data['toUsername'] as String? ?? '',
+                circleId: data['circleId'] as String? ?? '',
+                circleName: data['circleName'] as String? ?? '',
+                inviteCode: data['inviteCode'] as String? ?? '',
+                status: data['status'] as String? ?? 'pending',
+                createdAt: createdAt?.toDate() ?? DateTime.now(),
+              );
+            }).toList();
+            notifyListeners();
+          }, onError: (_) {});
+    } catch (_) {
+      // Se ignora a propósito: sin sesión de Firebase no hay forma de
+      // recibir retos de otras cuentas de todas formas.
+    }
+  }
+
+  /// Acepta [challenge]: se une al círculo del duelo con el mismo camino
+  /// que [joinCircleWithInviteCode] y marca la invitación como aceptada.
+  /// Retorna `null` si todo salió bien, o un mensaje de error.
+  Future<String?> acceptChallenge(Challenge challenge) async {
+    final error = await joinCircleWithInviteCode(challenge.inviteCode);
+    if (error != null) return error;
+    try {
+      await FirebaseFirestore.instance
+          .collection('challenges')
+          .doc(challenge.id)
+          .update({'status': 'accepted'});
+    } catch (_) {
+      // El círculo ya se unió con éxito (lo de arriba) — que falle marcar
+      // el estado del reto no es grave, solo evita que desaparezca de la
+      // lista hasta el próximo `notifyListeners` de la suscripción.
+    }
+    return null;
+  }
+
+  /// Rechaza [challenge] — no se une al círculo, solo lo saca de
+  /// [incomingChallenges].
+  Future<void> declineChallenge(Challenge challenge) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('challenges')
+          .doc(challenge.id)
+          .update({'status': 'declined'});
+    } catch (_) {
+      // Se ignora a propósito: en el peor caso, sigue apareciendo hasta
+      // que la conexión vuelva y se pueda intentar de nuevo.
     }
   }
 
@@ -2029,6 +2253,7 @@ class HomeLogic extends ChangeNotifier {
     }
     unawaited(_incomingAllyRequestsSubscription?.cancel());
     unawaited(_outgoingAllyRequestsSubscription?.cancel());
+    unawaited(_incomingChallengesSubscription?.cancel());
     usernameController.dispose();
     habitNameController.dispose();
     habitCategoryController.dispose();

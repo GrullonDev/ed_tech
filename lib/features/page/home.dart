@@ -15,6 +15,7 @@ import 'package:edtech_tiktok/features/page/games.dart';
 import 'package:edtech_tiktok/features/page/profile.dart';
 import 'package:edtech_tiktok/features/page/qr_summon.dart';
 import 'package:edtech_tiktok/features/page/rachas.dart';
+import 'package:edtech_tiktok/features/page/tribe_founded.dart';
 import 'package:edtech_tiktok/features/widgets/dashboard.dart';
 import 'package:edtech_tiktok/features/widgets/game_tour.dart';
 import 'package:edtech_tiktok/features/widgets/game_ui.dart';
@@ -305,10 +306,26 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _openCreateHabit() {
-    Navigator.of(
-      context,
-    ).push(GamePageRoute(builder: (context) => CreateHabitPage(logic: _logic)));
+  Future<void> _openCreateHabit() async {
+    final circle = await Navigator.of(context).push<HabitCircle>(
+      GamePageRoute(builder: (context) => CreateHabitPage(logic: _logic)),
+    );
+    if (circle == null || !mounted) return;
+    Navigator.of(context).push(
+      GamePageRoute(
+        builder: (context) => TribeFoundedPage(
+          circle: circle,
+          onOpenCircleDetail: () {
+            Navigator.of(context).pop();
+            _openCircleDetail(circle);
+          },
+          onOpenAgora: () {
+            Navigator.of(context).pop();
+            _openAgora();
+          },
+        ),
+      ),
+    );
   }
 
   void _openProfile() {

@@ -1915,7 +1915,7 @@ class HomeLogic extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createCircle({required String name, required String category}) {
+  HabitCircle createCircle({required String name, required String category}) {
     final circle = HabitCircle(name: name, category: category);
     _circles.add(circle);
     LocalStorageService.saveCircles(_circles);
@@ -1926,21 +1926,23 @@ class HomeLogic extends ChangeNotifier {
     _watchCircleLeaderboard(circle);
     _updatePrimaryCategoryUserProperty();
     notifyListeners();
+    return circle;
   }
 
   /// Crea un círculo a partir de [habitNameController] y
-  /// [habitCategoryController], y limpia ambos campos. Retorna `false` sin
-  /// hacer nada si el nombre está vacío.
-  bool submitNewCircle() {
+  /// [habitCategoryController], y limpia ambos campos. Retorna `null` sin
+  /// hacer nada si el nombre está vacío, o el círculo recién creado (para
+  /// mostrar la pantalla "Fuego Sagrado Encendido" con sus datos reales).
+  HabitCircle? submitNewCircle() {
     final name = habitNameController.text.trim();
-    if (name.isEmpty) return false;
+    if (name.isEmpty) return null;
     final category = habitCategoryController.text.trim().isEmpty
         ? 'General'
         : habitCategoryController.text.trim();
-    createCircle(name: name, category: category);
+    final circle = createCircle(name: name, category: category);
     habitNameController.clear();
     habitCategoryController.clear();
-    return true;
+    return circle;
   }
 
   /// Envía una solicitud de aliado real a partir de [allyUsernameController]

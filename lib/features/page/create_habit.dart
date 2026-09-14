@@ -91,8 +91,9 @@ class _CreateHabitPageState extends State<CreateHabitPage> {
   void _onFieldsChanged() => setState(() {});
 
   void _submit() {
-    if (widget.logic.submitNewCircle()) {
-      Navigator.of(context).pop();
+    final circle = widget.logic.submitNewCircle();
+    if (circle != null) {
+      Navigator.of(context).pop(circle);
     }
   }
 

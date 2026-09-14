@@ -53,12 +53,33 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
 
       match /members/{uid} {
-        allow read: if isCircleMember(circleId);
+        // Lectura: el propio miembro, por ID de documento (`isSelf(uid)`,
+        // cubre también los documentos viejos sin el campo `uid`) o por el
+        // campo `uid` del propio documento. La segunda opción es la que
+        // permite la collectionGroup query de
+        // `HomeLogic._rehydrateCirclesFromFirestore` (repuebla los
+        // círculos de una cuenta real tras reinstalar la app, ver su
+        // doc-comment): a propósito NO usa `isCircleMember(circleId)`
+        // (que llama `exists()` sobre OTRO documento) para esa query,
+        // porque si algún documento del resultado potencial fallara esa
+        // condición, Firestore rechaza la query COMPLETA — con
+        // `resource.data.uid == request.auth.uid` alcanza con el propio
+        // documento, que es justo el mismo campo por el que ya filtra la
+        // query, así Firestore puede probar la seguridad sin leer nada más.
+        allow read: if isSelf(uid) ||
+          (isSignedIn() && resource.data.uid == request.auth.uid);
         // El propio usuario se inscribe a sí mismo. El canje de
         // invite_code se valida antes en la Cloud Function callable
         // `redeemInviteCode` (ver functions/src/index.ts); esta regla
-        // solo garantiza que nadie pueda inscribir a otra persona.
-        allow create: if isSelf(uid);
+        // solo garantiza que nadie pueda inscribir a otra persona. También
+        // exige que el campo `uid` del documento coincida con el ID de
+        // documento (mismo valor que ya escriben `_mirrorCircleCreation` y
+        // `redeemInviteCode`): sin esto, alguien podría crear su propio
+        // documento legítimo (`isSelf(uid)` lo permite) pero con el campo
+        // `uid` apuntando a OTRA cuenta, para que apareciera colado en el
+        // resultado de la collectionGroup query de esa otra cuenta (ver
+        // doc-comment de `allow read` arriba).
+        allow create: if isSelf(uid) && request.resource.data.uid == uid;
         allow delete: if isSelf(uid) ||
           (isSignedIn() &&
             get(/databases/$(database)/documents/circles/$(circleId)).data.ownerId == request.auth.uid);

@@ -300,10 +300,18 @@ export const redeemInviteCode = onCall({ invoker: 'public' }, async (request) =>
 
   const circleDoc = circlesSnap.docs[0];
   const memberRef = db.doc(`circles/${circleDoc.id}/members/${uid}`);
-  if ((await memberRef.get()).exists) {
+  const existingMember = await memberRef.get();
+  if (existingMember.exists) {
+    // Backfill del campo `uid` en membresías creadas antes de que
+    // HomeLogic._rehydrateCirclesFromFirestore lo necesitara — sin esto,
+    // una cuenta que ya era miembro desde antes de este cambio nunca
+    // aparecería en su propia collectionGroup query tras reinstalar.
+    if (existingMember.data()?.uid !== uid) {
+      await memberRef.set({ uid }, { merge: true });
+    }
     return { circleId: circleDoc.id, alreadyMember: true };
   }
-  await memberRef.set({ role: 'member', joinedAt: FieldValue.serverTimestamp() });
+  await memberRef.set({ uid, role: 'member', joinedAt: FieldValue.serverTimestamp() });
   return { circleId: circleDoc.id, alreadyMember: false };
 });
 

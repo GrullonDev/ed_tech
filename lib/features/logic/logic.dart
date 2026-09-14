@@ -17,6 +17,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import 'package:edtech_tiktok/core/data/avatar_catalog.dart';
 import 'package:edtech_tiktok/core/data/trivia_bank.dart';
 import 'package:edtech_tiktok/core/model/activity_event.dart';
 import 'package:edtech_tiktok/core/model/ally_request.dart';
@@ -160,6 +161,29 @@ class HomeLogic extends ChangeNotifier {
   /// Racha Semanal — ver doc-comment de [constancyDrops].
   int _duelBonusDrops = 0;
 
+  /// Total acumulado de Gotas de Constancia ganadas por el bono sorpresa
+  /// aleatorio del check-in (ver [toggleCheckIn] y [_kSurpriseBonusChance])
+  /// — ver doc-comment de [constancyDrops].
+  int _surpriseBonusDrops = 0;
+
+  /// Monto del último bono sorpresa recibido, o `null` si el check-in más
+  /// reciente no tuvo uno — la UI lo lee una vez para mostrar un aviso y
+  /// [clearLastSurpriseBonus] lo apaga para no repetir el aviso en el
+  /// próximo `notifyListeners()` que no venga de un check-in nuevo.
+  int? _lastSurpriseBonus;
+
+  /// IDs de `AvatarOption` (`core/data/avatar_catalog.dart`) desbloqueados
+  /// con Gotas de Constancia, sin contar el avatar gratis (ver
+  /// [unlockedAvatarIds], que sí lo incluye siempre).
+  List<String> _unlockedAvatarIds = [];
+
+  /// Avatar elegido para mostrar en el perfil — ver [selectAvatar].
+  String _selectedAvatarId = AvatarCatalog.defaultAvatarId;
+
+  /// Total de Gotas de Constancia gastadas desbloqueando avatares — ver
+  /// doc-comment de [constancyDrops] (se resta, no se suma).
+  int _avatarShopSpentDrops = 0;
+
   /// `true` si el usuario ya vio el tour de "cómo se juega" (ver
   /// `lib/features/widgets/game_tour.dart` y [completeGameTour]) —
   /// controla si `page/home.dart` lo muestra automáticamente justo
@@ -265,6 +289,25 @@ class HomeLogic extends ChangeNotifier {
   /// en el Nivel 1 aunque el usuario no tenga racha todavía.
   int get userLevel => (overallStreakDays ~/ 7) + 1;
 
+  /// Título de progresión asociado a [userLevel] — puramente cosmético
+  /// (personalización a largo plazo), no desbloquea nada por sí mismo a
+  /// diferencia de los avatares ([unlockAvatar]).
+  static const List<(int minLevel, String title)> _levelTitles = [
+    (1, 'Aprendiz'),
+    (3, 'Constante'),
+    (6, 'Guerrero de la Racha'),
+    (11, 'Veterano de la Tribu'),
+    (21, 'Leyenda Tribal'),
+  ];
+
+  String get userLevelTitle {
+    var title = _levelTitles.first.$2;
+    for (final entry in _levelTitles) {
+      if (userLevel >= entry.$1) title = entry.$2;
+    }
+    return title;
+  }
+
   /// "Gotas de Constancia": moneda blanda del juego. Se derivan casi por
   /// completo de datos reales (ver [HabitCircle.constancyDropsEarned]: 10
   /// gotas por check-in que escalan hasta x3 cuanto más larga sea la racha
@@ -295,7 +338,70 @@ class HomeLogic extends ChangeNotifier {
         _triviaBonusDrops +
         _wheelBonusDrops +
         _duelBonusDrops +
-        _predictionNetDrops;
+        _predictionNetDrops +
+        _surpriseBonusDrops -
+        _avatarShopSpentDrops;
+  }
+
+  /// Monto del último bono sorpresa recibido en un check-in, o `null` si no
+  /// hay ninguno pendiente de mostrar — ver [_kSurpriseBonusChance] en
+  /// [toggleCheckIn]. La UI lo lee una vez para mostrar un aviso especial y
+  /// llama a [clearLastSurpriseBonus] para no repetirlo.
+  int? get lastSurpriseBonus => _lastSurpriseBonus;
+
+  void clearLastSurpriseBonus() {
+    if (_lastSurpriseBonus == null) return;
+    _lastSurpriseBonus = null;
+    notifyListeners();
+  }
+
+  /// IDs de avatares disponibles para elegir: el gratis
+  /// ([AvatarCatalog.defaultAvatarId]) siempre está, más los que se hayan
+  /// desbloqueado con Gotas de Constancia (ver [unlockAvatar]).
+  List<String> get unlockedAvatarIds => [
+    AvatarCatalog.defaultAvatarId,
+    ..._unlockedAvatarIds,
+  ];
+
+  String get selectedAvatarId => _selectedAvatarId;
+
+  /// Emoji del avatar actualmente elegido, listo para mostrar en el perfil.
+  String get selectedAvatarEmoji =>
+      AvatarCatalog.byId(_selectedAvatarId).emoji;
+
+  /// Gasta las Gotas de Constancia de [AvatarOption.cost] para desbloquear
+  /// [avatarId] y lo deja seleccionado de una — retorna `false` sin hacer
+  /// nada si ya estaba desbloqueado, si el id no existe en el catálogo, o
+  /// si no alcanzan las gotas.
+  bool unlockAvatar(String avatarId) {
+    if (unlockedAvatarIds.contains(avatarId)) return false;
+    AvatarOption? option;
+    for (final candidate in AvatarCatalog.all) {
+      if (candidate.id == avatarId) {
+        option = candidate;
+        break;
+      }
+    }
+    if (option == null || constancyDrops < option.cost) return false;
+    _avatarShopSpentDrops += option.cost;
+    _unlockedAvatarIds = [..._unlockedAvatarIds, avatarId];
+    _selectedAvatarId = avatarId;
+    LocalStorageService.saveAvatarShopSpentDrops(_avatarShopSpentDrops);
+    LocalStorageService.saveUnlockedAvatarIds(_unlockedAvatarIds);
+    LocalStorageService.saveSelectedAvatarId(_selectedAvatarId);
+    _logAnalyticsEvent('avatar_unlocked', {'avatar_id': avatarId});
+    notifyListeners();
+    return true;
+  }
+
+  /// Cambia el avatar mostrado en el perfil — no hace nada si [avatarId]
+  /// todavía no está desbloqueado (ver [unlockAvatar]).
+  void selectAvatar(String avatarId) {
+    if (!unlockedAvatarIds.contains(avatarId)) return;
+    if (_selectedAvatarId == avatarId) return;
+    _selectedAvatarId = avatarId;
+    LocalStorageService.saveSelectedAvatarId(_selectedAvatarId);
+    notifyListeners();
   }
 
   /// Cuántas gotas otorga responder bien el desafío de trivia de hoy.
@@ -607,6 +713,12 @@ class HomeLogic extends ChangeNotifier {
     _wheelBonusDrops = LocalStorageService.readWheelBonusDrops();
     _duelRewardedWeekMonday = LocalStorageService.readDuelRewardedWeekMonday();
     _duelBonusDrops = LocalStorageService.readDuelBonusDrops();
+    _surpriseBonusDrops = LocalStorageService.readSurpriseBonusDrops();
+    _unlockedAvatarIds = LocalStorageService.readUnlockedAvatarIds();
+    _selectedAvatarId =
+        LocalStorageService.readSelectedAvatarId() ??
+        AvatarCatalog.defaultAvatarId;
+    _avatarShopSpentDrops = LocalStorageService.readAvatarShopSpentDrops();
 
     _hasUsername = savedUser != null;
     _username = savedUser?.username ?? '';
@@ -1493,6 +1605,33 @@ class HomeLogic extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Probabilidad de que un check-in dispare un bono sorpresa — variedad y
+  /// sorpresa en el loop principal (a diferencia de la Ruleta diaria, que
+  /// es un giro deliberado una vez al día, esto puede pasar en cualquier
+  /// check-in, de cualquier círculo, sin que el usuario lo busque).
+  static const double _kSurpriseBonusChance = 0.15;
+  static const List<int> _kSurpriseBonusAmounts = [10, 15, 25, 50];
+  static final Random _surpriseBonusRandom = Random();
+
+  /// Con probabilidad [_kSurpriseBonusChance], suma un monto aleatorio de
+  /// [_kSurpriseBonusAmounts] a [_surpriseBonusDrops] y lo deja en
+  /// [_lastSurpriseBonus] para que la UI muestre un aviso especial (ver
+  /// `HomeLogic.lastSurpriseBonus`). No hace nada el resto de las veces —
+  /// intencionalmente no hay forma de "forzar" el bono, para que se sienta
+  /// como una sorpresa real y no como parte del cálculo esperado del
+  /// check-in.
+  void _maybeGrantSurpriseBonus() {
+    if (_surpriseBonusRandom.nextDouble() >= _kSurpriseBonusChance) return;
+    final amount =
+        _kSurpriseBonusAmounts[_surpriseBonusRandom.nextInt(
+          _kSurpriseBonusAmounts.length,
+        )];
+    _surpriseBonusDrops += amount;
+    _lastSurpriseBonus = amount;
+    LocalStorageService.saveSurpriseBonusDrops(_surpriseBonusDrops);
+    _logAnalyticsEvent('surprise_bonus', {'amount': amount});
+  }
+
   void toggleCheckIn(HabitCircle circle) {
     final wasCheckedIn = circle.checkedInToday;
     final wasPerfect = circle.isPerfect;
@@ -1503,6 +1642,7 @@ class HomeLogic extends ChangeNotifier {
       _streakPulseTick++;
       _celebrationTick++;
       unawaited(GameFeedbackService.checkIn());
+      _maybeGrantSurpriseBonus();
       _recordCircleActivity(
         circle,
         emoji: '🔥',

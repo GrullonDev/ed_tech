@@ -6,6 +6,7 @@ import 'package:confetti/confetti.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:edtech_tiktok/core/model/habit_circle.dart';
+import 'package:edtech_tiktok/core/theme/app_theme.dart';
 import 'package:edtech_tiktok/features/logic/logic.dart';
 import 'package:edtech_tiktok/features/page/agora.dart';
 import 'package:edtech_tiktok/features/page/circle_detail.dart';
@@ -51,6 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _lastCelebrationTick = _logic.celebrationTick;
     _logic.addListener(_maybeShowUpdateDialog);
     _logic.addListener(_maybeCelebrate);
+    _logic.addListener(_maybeShowSurpriseBonus);
   }
 
   @override
@@ -58,6 +60,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _logic.removeListener(_maybeShowUpdateDialog);
     _logic.removeListener(_maybeCelebrate);
     _confettiController.dispose();
+    _logic.removeListener(_maybeShowSurpriseBonus);
     _logic.dispose();
     super.dispose();
   }
@@ -66,6 +69,27 @@ class _MyHomePageState extends State<MyHomePage> {
     if (_logic.celebrationTick == _lastCelebrationTick) return;
     _lastCelebrationTick = _logic.celebrationTick;
     _confettiController.play();
+  }
+
+  /// Aviso especial del bono sorpresa aleatorio del check-in (ver
+  /// `HomeLogic._maybeGrantSurpriseBonus`) — variedad/sorpresa del loop
+  /// principal, distinto del resultado normal del check-in. Se limpia con
+  /// [HomeLogic.clearLastSurpriseBonus] apenas se muestra, para no repetir
+  /// el mismo SnackBar en el próximo `notifyListeners()` que no venga de un
+  /// check-in nuevo.
+  void _maybeShowSurpriseBonus() {
+    final bonus = _logic.lastSurpriseBonus;
+    if (bonus == null) return;
+    _logic.clearLastSurpriseBonus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🎁 ¡Bono sorpresa! +$bonus Gotas de Constancia'),
+          backgroundColor: AppColors.secondary,
+        ),
+      );
+    });
   }
 
   void _maybeShowUpdateDialog() {
@@ -316,6 +340,12 @@ class _MyHomePageState extends State<MyHomePage> {
             pendingStreakCardMilestones: _logic.pendingStreakCardMilestones,
             onOpenStreakCard: _logic.openStreakCard,
             onOpenGameTour: _openGameTour,
+            userLevelTitle: _logic.userLevelTitle,
+            selectedAvatarEmoji: _logic.selectedAvatarEmoji,
+            selectedAvatarId: _logic.selectedAvatarId,
+            unlockedAvatarIds: _logic.unlockedAvatarIds,
+            onUnlockAvatar: _logic.unlockAvatar,
+            onSelectAvatar: _logic.selectAvatar,
           ),
         ),
       ),

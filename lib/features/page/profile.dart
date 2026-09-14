@@ -258,6 +258,13 @@ class ProfilePage extends StatelessWidget {
                             fontWeight: FontWeight.w800,
                           ),
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _memberSinceLabel(memberSince),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           '✨ ${userLevelTitle.toUpperCase()}',
@@ -570,8 +577,6 @@ class ProfilePage extends StatelessWidget {
     return 'Miembro desde ${_kMonthNames[memberSince.month - 1]} de '
         '${memberSince.year}';
   }
-
-  static String _currentMonthName() => _kMonthNames[DateTime.now().month - 1];
 }
 
 /// Retos 1v1 pendientes de un aliado real (ver `HomeLogic.challengeAlly`) —

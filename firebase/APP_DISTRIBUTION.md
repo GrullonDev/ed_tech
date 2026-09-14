@@ -153,6 +153,26 @@ importar qué se publique. El script ahora reemplaza el objeto
 vez y el parámetro queda sano para siempre — no hace falta tocar la
 consola a mano.
 
+**Si el paso corre "en verde" (o falla con "Process completed with exit
+code 1" pero sin imprimir NINGUNO de los mensajes `::warning::` que el
+script agrega para diagnosticar)**: root cause confirmado revisando los
+logs completos de un run — GitHub Actions invoca todo `run:` step con
+`bash -e {0}` por default (se ve literal en el log como
+`shell: /usr/bin/bash -e {0}`), y ese `-e` (errexit) queda activo para
+todo el script sin importar que el script mismo declare
+`set -uo pipefail` (sin `-e`, a propósito, para poder chequear el código
+de salida a mano) — esa declaración solo agrega `-u` y pipefail, nunca
+apaga el `-e` con el que bash ya arrancó. El problema: una asignación
+simple como `TOKEN=$(gcloud auth print-access-token ...)` **no** está
+exenta de errexit (solo lo están los comandos que son la condición de un
+`if`/`&&`/`||`), así que en cuanto ese comando — o cualquiera de los dos
+`curl` que asignan `GET_STATUS`/`PUT_STATUS` — devolvía un código
+distinto de 0, bash cortaba el script ahí mismo, antes de llegar al `if`
+que iba a imprimir el diagnóstico. El paso ahora fija
+`shell: bash --noprofile --norc {0}` explícitamente (sin `-e`), así que
+los `if` del script sí llegan a correr y el próximo fallo real va a
+imprimir su `::warning::` correspondiente en vez de morir en silencio.
+
 Publicar los cambios en Remote Config tarda en tomar efecto — Remote
 Config los cachea hasta 1 hora (`minimumFetchInterval` en `main.dart`),
 así que un tester puede tardar hasta esa ventana en ver el diálogo tras

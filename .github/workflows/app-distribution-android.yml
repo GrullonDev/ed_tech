@@ -106,6 +106,23 @@ jobs:
         continue-on-error: true
         env:
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        # shell explícito para pisar el shell "bash -e {0}" que GitHub usa
+        # por default en TODO run step (visible en el log del workflow como
+        # "shell: /usr/bin/bash -e {0}") — con ese -e heredado, aunque el
+        # script haga acá abajo "set -uo pipefail" (sin -e a propósito, para
+        # poder chequear el código de salida a mano con los "if" de más
+        # abajo), el -e original nunca se apaga. Eso causaba que el paso
+        # muriera en silencio: una asignación simple como
+        # `TOKEN=$(gcloud auth print-access-token ...)` NO está exenta de
+        # errexit (solo lo están los comandos que son la condición de un
+        # if/&&/||), así que en cuanto ese comando (o cualquiera de los dos
+        # curl) devolvía un código distinto de 0, bash cortaba el script ahí
+        # mismo, antes de llegar al "if" que iba a imprimir el diagnóstico —
+        # confirmado en los logs de runs #20 y #21: el script corre ~6s
+        # (las llamadas de red reales) y salta directo a "Process completed
+        # with exit code 1" sin un solo echo/::warning:: de los que agrega
+        # este mismo paso más abajo, ni siquiera el de éxito final.
+        shell: bash --noprofile --norc {0}
         run: |
           set -uo pipefail
           echo "$SA_JSON" > /tmp/sa.json

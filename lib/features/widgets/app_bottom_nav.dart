@@ -62,7 +62,7 @@ class AppBottomNav extends StatelessWidget {
           children: [
             _NavItem(
               icon: Icons.group_rounded,
-              label: 'Círculos',
+              label: 'Inicio',
               selected: currentTab == AppTab.circles,
               onTap: onOpenCircles,
             ),
@@ -72,7 +72,7 @@ class AppBottomNav extends StatelessWidget {
               selected: currentTab == AppTab.rachas,
               onTap: onOpenRachas,
             ),
-            _AddButton(onTap: onCreateCircle),
+            _TribuButton(onTap: onCreateCircle),
             _NavItem(
               icon: Icons.sports_esports_rounded,
               label: 'Juegos',
@@ -92,8 +92,15 @@ class AppBottomNav extends StatelessWidget {
   }
 }
 
-class _AddButton extends StatelessWidget {
-  const _AddButton({required this.onTap});
+/// Ítem central de la nav — abre el flujo de fundar/unirse a una tribu
+/// (`CreateHabitPage`, ver `create_habit.dart`), igual acción que el viejo
+/// botón "Crear", solo restyleado como el aro de fuego destacado de la
+/// mockup de Stitch en vez de un simple "+". El aro/gradiente es plano
+/// (`Container`, no `AdaptiveGlassCard`) a propósito: la píldora que lo
+/// envuelve ya resuelve el modo Liquid Glass on/off, y un segundo efecto de
+/// vidrio anidado adentro se vería sobrecargado en ambos modos.
+class _TribuButton extends StatelessWidget {
+  const _TribuButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -103,32 +110,49 @@ class _AddButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: 2,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.add_circle_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
-              SizedBox(height: 3),
-              Text(
-                'Crear',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 11,
-                  height: 1.1,
-                  fontWeight: FontWeight.w500,
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary,
+                      AppColors.secondary,
+                      AppColors.tertiary,
+                    ],
+                  ),
+                  boxShadow: AppShadows.streak,
+                ),
+                child: const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
-              SizedBox(height: 2),
-              SizedBox(width: 4, height: 4),
+              const SizedBox(height: 3),
+              const Text(
+                'TRIBU',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 10,
+                  height: 1.1,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.06,
+                ),
+              ),
             ],
           ),
         ),

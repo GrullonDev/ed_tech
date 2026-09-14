@@ -225,6 +225,7 @@ class _MyHomePageState extends State<MyHomePage> {
             onCheckIn: () => _logic.toggleCheckIn(circle),
             onInviteMember: (name) => _logic.addMemberToCircle(circle, name),
             leaderboard: _logic.leaderboardFor(circle.id),
+            onOpenGames: _openGames,
           ),
         ),
       ),

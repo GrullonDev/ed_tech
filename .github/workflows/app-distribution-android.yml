@@ -153,7 +153,6 @@ jobs:
           # seguía mostrando la última publicación manual de días atrás
           # pese a runs "exitosos").
           GET_STATUS=$(curl -sS -o /tmp/rc_get_response.json -w '%{http_code}' \
-            -D /tmp/rc_headers.txt \
             -H "Authorization: Bearer $TOKEN" \
             "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig")
           if [ "$GET_STATUS" -lt 200 ] || [ "$GET_STATUS" -ge 300 ]; then
@@ -162,12 +161,19 @@ jobs:
             exit 1
           fi
           RESPONSE=$(cat /tmp/rc_get_response.json)
-          ETAG=$(grep -i '^etag:' /tmp/rc_headers.txt | sed 's/[Ee][Tt][Aa][Gg]:[[:space:]]*//' | tr -d '\r')
-          if [ -z "$ETAG" ]; then
-            echo "::warning::No se pudo leer el ETag de la respuesta de Remote Config. Headers crudos recibidos:"
-            cat -A /tmp/rc_headers.txt
-            exit 1
-          fi
+
+          # Se intentó leer el header ETag para hacer el PUT con
+          # concurrencia optimista (If-Match: <etag>), pero un volcado de
+          # headers crudos en un run real (ver historial de este archivo)
+          # confirmó que esta API, para este proyecto, no devuelve header
+          # ETag en el GET (headers vistos: content-type, vary x3, date,
+          # server, x-xss-protection, x-frame-options,
+          # x-content-type-options, alt-svc, accept-ranges — sin etag).
+          # No es un bug de parseo: nunca hubo nada que leer. Por eso el
+          # PUT usa "If-Match: *", la forma que la propia doc de Remote
+          # Config ofrece para saltear el control de concurrencia cuando
+          # no hay riesgo de pisar una publicación manual concurrente —
+          # este workflow es el único que escribe estos parámetros.
 
           # OJO: reemplaza el objeto `defaultValue` entero (no solo el campo
           # `.value`) a propósito. Si el parámetro se creó a mano en la
@@ -190,7 +196,7 @@ jobs:
           PUT_STATUS=$(curl -sS -o /tmp/rc_put_response.json -w '%{http_code}' -X PUT \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json; UTF-8" \
-            -H "If-Match: $ETAG" \
+            -H "If-Match: *" \
             -d @/tmp/rc_updated.json \
             "https://firebaseremoteconfig.googleapis.com/v1/projects/rachatribu/remoteConfig")
           if [ "$PUT_STATUS" -lt 200 ] || [ "$PUT_STATUS" -ge 300 ]; then

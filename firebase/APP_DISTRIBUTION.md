@@ -138,6 +138,21 @@ escapados dentro del JSON en saltos de línea reales, o se comió el
    imprimir el mensaje de error real de gcloud antes de cortar (se
    agregó captura explícita de stderr para este diagnóstico).
 
+**Si el paso corre en verde pero el diálogo nunca aparece en la app**
+(confirmado el caso real: varios runs seguidos en éxito, cero avisos):
+el problema no es que el script falle, es que escribe un valor que
+Firebase ignora. Si alguno de los dos parámetros se creó a mano desde
+la consola con el toggle "Usar configuración predeterminada en la
+app" activado, queda como `defaultValue: {useInAppDefault: true}` en
+Firestore. El script viejo hacía `.defaultValue.value = $build`, que
+solo **agrega** el campo `value` a ese objeto sin sacar
+`useInAppDefault` — con ese flag en `true`, Firebase sigue sirviendo
+el default de la app (`0`, ver `_initRemoteConfig` en `main.dart`) sin
+importar qué se publique. El script ahora reemplaza el objeto
+`defaultValue` completo (`{value: "..."}` sin más), así que corre una
+vez y el parámetro queda sano para siempre — no hace falta tocar la
+consola a mano.
+
 Publicar los cambios en Remote Config tarda en tomar efecto — Remote
 Config los cachea hasta 1 hora (`minimumFetchInterval` en `main.dart`),
 así que un tester puede tardar hasta esa ventana en ver el diálogo tras

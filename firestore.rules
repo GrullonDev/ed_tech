@@ -149,6 +149,20 @@ service cloud.firestore {
     // pero sin el patrón de ID compuesto porque puede haber más de un reto
     // histórico entre las mismas dos personas.
     // ------------------------------------------------------------------
+    // ------------------------------------------------------------------
+    // deviceAccounts/{deviceId}: mapeo dispositivo → uid (ver
+    // functions/src/index.ts: registerDeviceAccount/checkDeviceAccount),
+    // para detectar en el onboarding que este dispositivo ya tiene una
+    // cuenta real y evitar crear una anónima duplicada. Nunca se lee ni
+    // escribe directo desde el cliente (por eso `allow: if false`): solo
+    // esas dos Cloud Functions, con el Admin SDK, que ignora estas
+    // reglas — así ningún dispositivo puede leer a qué uid está asociado
+    // otro dispositivo, ni falsear la asociación.
+    // ------------------------------------------------------------------
+    match /deviceAccounts/{deviceId} {
+      allow read, write: if false;
+    }
+
     match /challenges/{challengeId} {
       allow read: if isSignedIn() &&
         (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);

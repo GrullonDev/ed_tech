@@ -279,8 +279,16 @@ export const applyPendingShields = onSchedule('5 0 * * *', async () => {
  * leer `circles` para buscar por código (las reglas exigen ya ser
  * miembro), así que esta función usa el Admin SDK para encontrar el
  * círculo dueño del código y crear la membresía por el usuario.
+ *
+ * `invoker: 'public'` fuerza a que el deploy vuelva a otorgar
+ * `roles/run.invoker` a `allUsers` en el servicio de Cloud Run subyacente
+ * (el protocolo callable manda el token de Firebase Auth en el body, no
+ * como credencial IAM, así que Cloud Run igual tiene que aceptar la
+ * invocación a nivel de transporte). Sin este binding, Cloud Run devuelve
+ * 401 "access token could not be verified" antes de que la request
+ * siquiera llegue a este código, aunque el usuario esté bien autenticado.
  */
-export const redeemInviteCode = onCall(async (request) => {
+export const redeemInviteCode = onCall({ invoker: 'public' }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Debes iniciar sesión.');
 
@@ -297,4 +305,58 @@ export const redeemInviteCode = onCall(async (request) => {
   }
   await memberRef.set({ role: 'member', joinedAt: FieldValue.serverTimestamp() });
   return { circleId: circleDoc.id, alreadyMember: false };
+});
+
+/**
+ * Callable pública (sin sesión): consultada por la app al arrancar, antes
+ * de decidir si crear una cuenta anónima nueva (ver
+ * `HomeLogic._checkDeviceForExistingAccount` en
+ * lib/features/logic/logic.dart). Busca `deviceAccounts/{deviceId}` con el
+ * Admin SDK y devuelve solo lo mínimo para que la UI pueda ofrecer
+ * "iniciar sesión" en vez de "crear cuenta" — nunca el uid real, para no
+ * filtrar esa asociación a quien solo comparte el dispositivo físico.
+ *
+ * `invoker: 'public'` por el mismo motivo que en `redeemInviteCode`: sin
+ * sesión de Firebase Auth todavía (es antes del onboarding), la única
+ * forma de que Cloud Run acepte la invocación es permitiendo `allUsers`.
+ */
+export const checkDeviceAccount = onCall({ invoker: 'public' }, async (request) => {
+  const deviceId = (request.data?.deviceId as string | undefined)?.trim();
+  if (!deviceId) return { hasAccount: false, providers: [] as string[] };
+
+  const deviceDoc = await db.doc(`deviceAccounts/${deviceId}`).get();
+  if (!deviceDoc.exists) return { hasAccount: false, providers: [] as string[] };
+
+  const providers = (deviceDoc.data()?.providers as string[] | undefined) ?? [];
+  return { hasAccount: true, providers };
+});
+
+/**
+ * Callable: asocia el `deviceId` del dispositivo actual con el `uid` ya
+ * autenticado, para que [checkDeviceAccount] pueda reconocerlo en un
+ * reinstalo futuro. Se llama justo después de vincular (o iniciar sesión
+ * con) Google/Apple/email — nunca para cuentas puramente anónimas, así
+ * que una reinstalación sin haber creado cuenta real vuelve a pasar por
+ * onboarding normal. Escribe con el Admin SDK (no hay reglas de
+ * Firestore para `deviceAccounts`: el cliente no puede leerla ni
+ * escribirla directamente, solo a través de estas dos funciones).
+ */
+export const registerDeviceAccount = onCall({ invoker: 'public' }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Debes iniciar sesión.');
+
+  const deviceId = (request.data?.deviceId as string | undefined)?.trim();
+  if (!deviceId) throw new HttpsError('invalid-argument', 'Falta deviceId.');
+
+  const provider = (request.data?.provider as string | undefined)?.trim();
+
+  await db.doc(`deviceAccounts/${deviceId}`).set(
+    {
+      uid,
+      ...(provider ? { providers: FieldValue.arrayUnion(provider) } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+  return { ok: true };
 });

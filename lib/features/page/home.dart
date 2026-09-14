@@ -179,6 +179,18 @@ class _MyHomePageState extends State<MyHomePage> {
       listenable: _logic,
       builder: (context, _) {
         if (!_logic.hasUsername) {
+          if (!_logic.deviceAccountCheckDone) {
+            return const DeviceAccountCheckSplash();
+          }
+          if (_logic.deviceHasExistingAccount) {
+            return ExistingAccountLogin(
+              providers: _logic.existingAccountProviders,
+              onSignInWithGoogle: _logic.signInExistingWithGoogle,
+              onSignInWithEmailPassword:
+                  _logic.signInExistingWithEmailPassword,
+              onCreateNewAccountInstead: _logic.dismissExistingAccountPrompt,
+            );
+          }
           return Onboarding(
             usernameController: _logic.usernameController,
             onContinue: _logic.completeOnboarding,

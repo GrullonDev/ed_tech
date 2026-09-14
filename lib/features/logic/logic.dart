@@ -6,9 +6,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:android_id/android_id.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_performance/firebase_performance.dart';
@@ -53,6 +55,26 @@ class HomeLogic extends ChangeNotifier {
   String _username = '';
   DateTime? _memberSince;
   String _playerId = '';
+
+  /// `true` una vez que [_checkDeviceForExistingAccount] terminó de
+  /// consultar el backend (o decidió no consultarlo). Mientras sea
+  /// `false`, `page/home.dart` mantiene una pantalla de carga en vez de
+  /// arrancar el onboarding de cuenta anónima, para no crear una cuenta
+  /// duplicada mientras todavía no se sabe si este dispositivo ya tiene
+  /// una cuenta real.
+  bool _deviceAccountCheckDone = false;
+
+  /// `true` si la Cloud Function `checkDeviceAccount` encontró que este
+  /// dispositivo ya vinculó una cuenta real (Google/Apple/email) antes —
+  /// típicamente tras desinstalar y reinstalar la app. En ese caso
+  /// `page/home.dart` muestra [ExistingAccountLogin] en vez de
+  /// [Onboarding], para no crear una segunda cuenta anónima huérfana.
+  bool _deviceHasExistingAccount = false;
+
+  /// Proveedores (`'google.com'`, `'password'`, `'apple.com'`) ya
+  /// vinculados a la cuenta detectada en este dispositivo, para que la UI
+  /// de login sepa qué botón ofrecer primero.
+  List<String> _existingAccountProviders = [];
 
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController habitNameController = TextEditingController();
@@ -241,6 +263,9 @@ class HomeLogic extends ChangeNotifier {
   int _predictionNetDrops = 0;
 
   bool get hasUsername => _hasUsername;
+  bool get deviceAccountCheckDone => _deviceAccountCheckDone;
+  bool get deviceHasExistingAccount => _deviceHasExistingAccount;
+  List<String> get existingAccountProviders => _existingAccountProviders;
   bool get hasSeenGameTour => _hasSeenGameTour;
   bool get liquidGlassEnabled => _liquidGlassEnabled;
   bool get hasUpdateAvailable => _hasUpdateAvailable;
@@ -763,7 +788,99 @@ class HomeLogic extends ChangeNotifier {
     unawaited(_syncTriviaQuestions());
     unawaited(_checkForUpdate());
     unawaited(_refreshStreakReminder());
+    if (!_hasUsername) {
+      unawaited(_checkDeviceForExistingAccount());
+    } else {
+      _deviceAccountCheckDone = true;
+    }
     notifyListeners();
+  }
+
+  /// Identificador estable del dispositivo físico, usado solo para
+  /// [_checkDeviceForExistingAccount]/[_registerDeviceAccount] — nunca se
+  /// muestra en la UI ni se manda a Analytics. En Android es el
+  /// `Settings.Secure.ANDROID_ID` (estable entre desinstalaciones de esta
+  /// app mientras no cambien la clave de firma, ver paquete `android_id`);
+  /// en iOS es `identifierForVendor` (se resetea si se desinstalan *todas*
+  /// las apps de Racha Tribu del dispositivo — no hay una alternativa
+  /// pública más estable sin pedir permiso de tracking). `null` si falla
+  /// o la plataforma no es ni Android ni iOS (ej. tests de escritorio).
+  Future<String?> _getDeviceId() async {
+    try {
+      if (Platform.isAndroid) {
+        return await const AndroidId().getId();
+      }
+      if (Platform.isIOS) {
+        final info = await DeviceInfoPlugin().iosInfo;
+        return info.identifierForVendor;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Consulta la Cloud Function pública `checkDeviceAccount` (ver
+  /// functions/src/index.ts) para saber si este dispositivo ya vinculó
+  /// una cuenta real antes de que [Onboarding] pueda crear una nueva
+  /// cuenta anónima — evita que reinstalar la app genere un `uid`
+  /// huérfano cada vez que el jugador borre y reinstale (ver también
+  /// [_registerDeviceAccount], que es quien completa `deviceAccounts` en
+  /// primer lugar). Solo se llama desde [_loadFromStorage] cuando todavía
+  /// no hay usuario local. Falla en silencio (sin red, sin deviceId, etc):
+  /// en ese caso el onboarding sigue el camino de siempre.
+  Future<void> _checkDeviceForExistingAccount() async {
+    try {
+      final deviceId = await _getDeviceId();
+      if (deviceId == null) return;
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('checkDeviceAccount')
+          .call({'deviceId': deviceId});
+      final data = result.data as Map<Object?, Object?>?;
+      final hasAccount = data?['hasAccount'] as bool? ?? false;
+      if (!hasAccount) return;
+      _deviceHasExistingAccount = true;
+      _existingAccountProviders =
+          (data?['providers'] as List<Object?>?)?.whereType<String>().toList() ??
+          [];
+    } catch (_) {
+      // Se ignora a propósito: ver doc-comment.
+    } finally {
+      _deviceAccountCheckDone = true;
+      notifyListeners();
+    }
+  }
+
+  /// El jugador vio [ExistingAccountLogin] pero prefiere no iniciar sesión
+  /// con la cuenta detectada (dispositivo compartido, cuenta de otra
+  /// persona) — cae al onboarding normal de cuenta anónima, igual que si
+  /// nunca se hubiera detectado nada.
+  void dismissExistingAccountPrompt() {
+    _deviceHasExistingAccount = false;
+    notifyListeners();
+  }
+
+  /// Asocia este dispositivo con la cuenta recién vinculada/iniciada, vía
+  /// la Cloud Function `registerDeviceAccount`, para que un futuro
+  /// reinstalo la detecte en [_checkDeviceForExistingAccount]. Se llama
+  /// tras [linkWithGoogle], [linkWithApple], [linkWithEmailPassword] y
+  /// [signInExistingWithGoogle]/[signInExistingWithEmailPassword] — nunca
+  /// para la cuenta anónima inicial, que es justo la que no queremos que
+  /// sobreviva a una reinstalación. Fire-and-forget: si falla (sin red),
+  /// en el peor caso el próximo reinstalo no reconoce el dispositivo y
+  /// vuelve a pasar por onboarding, no se pierde nada ya vinculado.
+  void _registerDeviceAccount(String provider) {
+    unawaited(() async {
+      try {
+        final deviceId = await _getDeviceId();
+        if (deviceId == null) return;
+        await FirebaseFunctions.instance
+            .httpsCallable('registerDeviceAccount')
+            .call({'deviceId': deviceId, 'provider': provider});
+      } catch (_) {
+        // Se ignora a propósito: ver doc-comment.
+      }
+    }());
   }
 
   /// Reprograma el recordatorio local de las 8pm ("no pierdas tu racha") vía
@@ -1159,6 +1276,7 @@ class HomeLogic extends ChangeNotifier {
         idToken: googleAuth.idToken,
       );
       await FirebaseAuth.instance.currentUser!.linkWithCredential(credential);
+      _registerDeviceAccount('google.com');
       notifyListeners();
       return null;
     } on FirebaseAuthException catch (e) {
@@ -1197,6 +1315,7 @@ class HomeLogic extends ChangeNotifier {
         accessToken: appleCredential.authorizationCode,
       );
       await FirebaseAuth.instance.currentUser!.linkWithCredential(credential);
+      _registerDeviceAccount('apple.com');
       notifyListeners();
       return null;
     } on SignInWithAppleAuthorizationException catch (e) {
@@ -1244,6 +1363,7 @@ class HomeLogic extends ChangeNotifier {
         password: password,
       );
       await FirebaseAuth.instance.currentUser!.linkWithCredential(credential);
+      _registerDeviceAccount('password');
       notifyListeners();
       return null;
     } on FirebaseAuthException catch (e) {
@@ -1260,6 +1380,131 @@ class HomeLogic extends ChangeNotifier {
     } catch (_) {
       return 'No se pudo vincular la cuenta. Intenta de nuevo.';
     }
+  }
+
+  /// Inicia sesión con una cuenta de Google *real* ya existente — a
+  /// diferencia de [linkWithGoogle] (que vincula la sesión anónima
+  /// actual), esto se usa cuando [deviceHasExistingAccount] detectó que
+  /// este dispositivo ya tiene cuenta y el jugador todavía no pasó por
+  /// onboarding, así que no hay ninguna sesión anónima que preservar:
+  /// [FirebaseAuth.signInWithCredential] reemplaza cualquier uid anónimo
+  /// residual por el uid real de esa cuenta de Google. Tras el sign-in,
+  /// recarga el estado local desde el perfil de Firestore (ver
+  /// [_adoptSignedInAccount]) para que la UI muestre esa cuenta en vez de
+  /// pedir un apodo nuevo. Retorna `null` si funcionó (o si el usuario
+  /// canceló el selector de cuentas, que no es un error), o un mensaje
+  /// para mostrar en la UI si falló.
+  ///
+  /// Nota: esto recupera el `uid`/username de la cuenta, no la lista de
+  /// círculos — [HomeLogic] todavía no hidrata `_circles` desde Firestore
+  /// (ver doc-comment de [_mirrorCircleCreation]: hoy solo escribe, nunca
+  /// lee de vuelta), así que los círculos existentes solo reaparecen si el
+  /// jugador vuelve a unirse a cada uno con su código de invitación. Igual
+  /// que hoy, es una limitación previa a este cambio, no algo que este
+  /// método deba resolver.
+  Future<String?> signInExistingWithGoogle() async {
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return null;
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user;
+      if (user == null) return 'No se pudo iniciar sesión con Google.';
+      _registerDeviceAccount('google.com');
+      await _adoptSignedInAccount(user);
+      return null;
+    } on FirebaseAuthException catch (_) {
+      return 'No se pudo iniciar sesión con Google. Intenta de nuevo.';
+    } catch (_) {
+      return 'No se pudo iniciar sesión con Google. Intenta de nuevo.';
+    }
+  }
+
+  /// Inicia sesión con email/contraseña reales ya existentes — mismo
+  /// criterio y mismo caso de uso que [signInExistingWithGoogle], pero
+  /// para la cuenta que se registró con [linkWithEmailPassword]. Retorna
+  /// `null` si funcionó, o un mensaje para mostrar en la UI si falló.
+  Future<String?> signInExistingWithEmailPassword(
+    String email,
+    String password,
+  ) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty || !trimmedEmail.contains('@')) {
+      return 'Ingresa un email válido.';
+    }
+    if (password.isEmpty) return 'Ingresa tu contraseña.';
+    try {
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: trimmedEmail, password: password);
+      final user = userCredential.user;
+      if (user == null) return 'No se pudo iniciar sesión.';
+      _registerDeviceAccount('password');
+      await _adoptSignedInAccount(user);
+      return null;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+        case 'invalid-credential':
+          return 'No encontramos una cuenta con ese email y contraseña.';
+        case 'wrong-password':
+          return 'Contraseña incorrecta.';
+        case 'invalid-email':
+          return 'Ese email no es válido.';
+        default:
+          return 'No se pudo iniciar sesión. Intenta de nuevo.';
+      }
+    } catch (_) {
+      return 'No se pudo iniciar sesión. Intenta de nuevo.';
+    }
+  }
+
+  /// Trae el perfil de [user] desde `users/{uid}` en Firestore y lo adopta
+  /// como estado local (Hive + [HomeLogic]) tras un sign-in real ([
+  /// signInExistingWithGoogle]/[signInExistingWithEmailPassword]) — ese uid
+  /// ya tenía círculos/racha antes de que este dispositivo lo reconociera,
+  /// así que no corresponde generar un [_playerId] ni un username nuevo
+  /// como hace [completeOnboarding], solo reflejar los ya existentes.
+  /// Si el documento de perfil no existe todavía (raro, pero posible si
+  /// falló su escritura original), usa el `displayName` de Firebase Auth
+  /// como último recurso para no dejar la app en un estado sin nombre.
+  Future<void> _adoptSignedInAccount(User user) async {
+    String resolvedUsername = user.displayName ?? '';
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final profileUsername = snapshot.data()?['username'] as String?;
+      if (profileUsername != null && profileUsername.isNotEmpty) {
+        resolvedUsername = profileUsername;
+      }
+    } catch (_) {
+      // Se ignora a propósito: sin red, se sigue con displayName/uid.
+    }
+    if (resolvedUsername.isEmpty) resolvedUsername = 'Jugador';
+
+    _playerId = user.uid;
+    _username = resolvedUsername;
+    _hasUsername = true;
+    _deviceHasExistingAccount = false;
+    usernameController.text = resolvedUsername;
+    await LocalStorageService.saveUser(
+      AppUser(
+        username: resolvedUsername,
+        memberSince: DateTime.now(),
+        playerId: _playerId,
+      ),
+    );
+    _watchIncomingAllyRequests();
+    _watchOutgoingAllyRequests();
+    _watchIncomingChallenges();
+    notifyListeners();
   }
 
   /// Espeja la creación de [circle] en Firestore (`circles/{id}` +
